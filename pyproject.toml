@@ -50,10 +50,14 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "N", "RUF", "PT", "NPY", "PERF", "S"]
-ignore = ["S101"]  # assert is fine in tests
+# S101: assert is fine in tests. N803/N806: matrices keep their math names (X, B, G, M, P).
+ignore = ["S101", "N803", "N806"]
+# Docstrings and messages use the notation of docs/spec/04_ALGORITHMS.md.
+allowed-confusables = ["×", "α", "β", "γ", "ε", "θ", "λ", "π", "Π", "–", "−", "·", "∈", "ŝ"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["S603", "S607"]  # gh is called on purpose
+"tests/*" = ["S311"]  # seeded test data, not cryptography
 
 [tool.mypy]
 python_version = "3.12"
