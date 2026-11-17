@@ -32,6 +32,7 @@ CHECKSUMS = Path("data/checksums.txt")
 SPLIT_JSON = Path("data/split.json")
 STATS_JSON = Path("data/stats.json")
 DEMO_SLICE = Path("data/export/demo-slice.json")
+DEMO_REVIEWS = Path("data/export/reviews.json")
 WEB_SLICE = Path("web/public/data/demo-slice.json")
 WEB_MODEL = Path("web/public/data/model.json")
 WEB_GOLDENS = Path("web/src/engine/__goldens__/goldens.json")
@@ -189,3 +190,69 @@ def export_model(
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(payload, separators=(",", ":"), sort_keys=True) + "\n")
     typer.echo(f"c_B={model.c_B:.6g} c_Pi={model.c_Pi:.6g}; wrote {model_out} and {goldens_out}")
+
+
+@export_app.command("reviews")
+def export_reviews(
+    out: Annotated[Path, typer.Option(help="Where to write the evidence.")] = DEMO_REVIEWS,
+    slice_path: Annotated[Path, typer.Option("--slice", help="Demo slice.")] = DEMO_SLICE,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Write review evidence for the demo slice: community terms and short quotes per game."""
+    import json
+
+    import pandas as pd
+
+    from whyfinder.data.clean import hash_user, parse_dates
+    from whyfinder.export.reviews import review_evidence
+
+    p = load_params(params)
+    games = json.loads(slice_path.read_text())["games"]
+    ids = [int(g["id"]) for g in games]
+    t1 = pd.Timestamp(str(pipeline.read_json(SPLIT_JSON)["t1"]))
+    meta = pd.read_parquet(
+        INTERIM / "reviews.parquet",
+        columns=["review_id", "username", "game", "hours", "date"],
+        filters=[("game", "in", ids)],
+    )
+    meta = meta.loc[meta["username"].notna()]
+    meta["date"] = parse_dates(meta["date"])
+    meta = meta.loc[meta["date"] < t1]
+    # Text only for the reviews that will be read (the first per game by ID); the rest still
+    # count for which other games each player reviewed.
+    cap = param(p, "demo.reviews_per_game", int)
+    meta = meta.sort_values("review_id", kind="mergesort")
+    wanted = meta.groupby("game", sort=False).head(cap)["review_id"].tolist()
+    text = pd.read_parquet(
+        INTERIM / "review_text.parquet",
+        columns=["review_id", "text"],
+        filters=[("review_id", "in", wanted)],
+    )
+    df = meta.merge(text, on="review_id", how="left")
+    salt = param(p, "data.user_salt", str)
+    df = pd.DataFrame(
+        {
+            "review_id": df["review_id"].astype("int64"),
+            "user": [hash_user(u, salt) for u in df["username"]],
+            "game": df["game"].astype("int64"),
+            "hours": df["hours"].fillna(0.0).astype("float64"),
+            "year": df["date"].dt.year,
+            "text": df["text"],
+        }
+    )
+    payload = review_evidence(
+        df,
+        games,
+        quotes_per_game=param(p, "demo.quotes_per_game", int),
+        terms_per_game=param(p, "demo.terms_per_game", int),
+        max_reviews_per_game=cap,
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        json.dumps(payload, separators=(",", ":"), sort_keys=True, ensure_ascii=False) + "\n"
+    )
+    quotes = sum(len(g["quotes"]) for g in payload["games"].values())
+    read = int(df["text"].notna().sum())
+    typer.echo(
+        f"wrote {out}: {quotes} quotes from {read} of {len(df)} reviews before {t1:%Y-%m-%d}"
+    )
