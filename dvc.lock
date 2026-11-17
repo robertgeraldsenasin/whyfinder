@@ -1,0 +1,272 @@
+schema: '2.0'
+stages:
+  fetch:
+    cmd: uv run whyfinder data fetch --out data/raw
+    deps:
+    - path: data/checksums.txt
+      hash: md5
+      md5: 7ac48c88e42020cf0ae129079291c6e4
+      size: 174
+    - path: src/whyfinder/data/fetch.py
+      hash: md5
+      md5: 80010111cea35cfc847e69479e07a31a
+      size: 5766
+    - path: src/whyfinder/data/sources.py
+      hash: md5
+      md5: 4ae00d2ed51e788ef754806aff497f25
+      size: 1866
+    outs:
+    - path: data/raw
+      hash: md5
+      md5: 86f913d6aae295de71ed1dd6ebf0f857.dir
+      size: 1332434414
+      nfiles: 2
+  parse:
+    cmd: uv run whyfinder data parse --workers 4
+    deps:
+    - path: data/raw
+      hash: md5
+      md5: 86f913d6aae295de71ed1dd6ebf0f857.dir
+      size: 1332434414
+      nfiles: 2
+    - path: src/whyfinder/data/parse.py
+      hash: md5
+      md5: 808f485452a8ab6b4e6d89ff88f329fa
+      size: 9614
+    params:
+      params.yaml:
+        data.parse_tolerance: 0.001
+    outs:
+    - path: data/interim
+      hash: md5
+      md5: 17c74a266ad0d9f2166e9e36fde8c341.dir
+      size: 1258736234
+      nfiles: 4
+  clean:
+    cmd: uv run whyfinder data clean
+    deps:
+    - path: data/interim
+      hash: md5
+      md5: 17c74a266ad0d9f2166e9e36fde8c341.dir
+      size: 1258736234
+      nfiles: 4
+    - path: src/whyfinder/data/clean.py
+      hash: md5
+      md5: f8e09bdbacf2934a4c4b0322129cc03e
+      size: 6142
+    - path: src/whyfinder/data/contracts.py
+      hash: md5
+      md5: 8fe9f015981f45d7cfff54ec959f4667
+      size: 3889
+    params:
+      params.yaml:
+        data.hours_clip_quantile: 0.999
+        data.user_salt: whyfinder-v1
+    outs:
+    - path: data/processed/clean_stats.json
+      hash: md5
+      md5: 9d76eaf02e1db28d09cdfa012e71afbf
+      size: 367
+    - path: data/processed/games.parquet
+      hash: md5
+      md5: 340905ead154d27927ca65aba8b54097
+      size: 1710625
+    - path: data/processed/interactions_clean.parquet
+      hash: md5
+      md5: d299730dc09b3bad50c7879f2ca8dbac
+      size: 115980257
+  kcore:
+    cmd: uv run whyfinder data kcore
+    deps:
+    - path: data/processed/interactions_clean.parquet
+      hash: md5
+      md5: d299730dc09b3bad50c7879f2ca8dbac
+      size: 115980257
+    - path: src/whyfinder/data/kcore.py
+      hash: md5
+      md5: e74c49fb92d92a38d25542c63d32193c
+      size: 1017
+    params:
+      params.yaml:
+        data.kcore: 5
+    outs:
+    - path: data/processed/interactions.parquet
+      hash: md5
+      md5: f48ed5ba0da43e6076575ad65cb5624f
+      size: 43863808
+    - path: data/processed/kcore_stats.json
+      hash: md5
+      md5: fa3346930b9646a3aba2a19c58f44f63
+      size: 145
+  split:
+    cmd: uv run whyfinder data split
+    deps:
+    - path: data/processed/interactions.parquet
+      hash: md5
+      md5: f48ed5ba0da43e6076575ad65cb5624f
+      size: 43863808
+    - path: src/whyfinder/data/split.py
+      hash: md5
+      md5: 986cfa69a5f1dba5f2c4b57ac262bea8
+      size: 5725
+    params:
+      params.yaml:
+        split:
+          valid_quantile: 0.8
+          test_quantile: 0.9
+          cold_max_train_items: 4
+          max_missing_date: 0.1
+    outs:
+    - path: data/processed/cold.parquet
+      hash: md5
+      md5: 284bd8e06c722583b0f279a21b491496
+      size: 2779556
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: f353ce434950bfa0c8628dbab4a93b81
+      size: 3032762
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 98950485d2da2558ec8bdb0dd9016a99
+      size: 35907398
+    - path: data/processed/valid.parquet
+      hash: md5
+      md5: 3e3e41bb3b8168bae857a42b1f369b23
+      size: 3367676
+    - path: data/split.json
+      hash: md5
+      md5: 4c953e6dd4ead1e6c2dc84e58b7fb11b
+      size: 905
+  features:
+    cmd: uv run whyfinder data features
+    deps:
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 98950485d2da2558ec8bdb0dd9016a99
+      size: 35907398
+    - path: src/whyfinder/data/features.py
+      hash: md5
+      md5: ed03f087753bf3d3d2f83d5a162b55fe
+      size: 2229
+    params:
+      params.yaml:
+        data.confidence:
+          alpha: 1.0
+          eps: 1.0
+        data.item_cap: 8000
+    outs:
+    - path: data/processed/X_train.npz
+      hash: md5
+      md5: 3cc9b128f266dab8999b689b634ad406
+      size: 13537359
+    - path: data/processed/features_stats.json
+      hash: md5
+      md5: a9cbf4c63c2bb6d7f4270d26cc9c0119
+      size: 177
+    - path: data/processed/items.parquet
+      hash: md5
+      md5: 6476e8eb5935fd97bcb19bf00de0b069
+      size: 110603
+    - path: data/processed/users.parquet
+      hash: md5
+      md5: 9d5fe1cd454ea84c29eb6a5f77c3767b
+      size: 5555072
+  subsample:
+    cmd: uv run whyfinder data subsample
+    deps:
+    - path: data/processed/cold.parquet
+      hash: md5
+      md5: 284bd8e06c722583b0f279a21b491496
+      size: 2779556
+    - path: data/processed/games.parquet
+      hash: md5
+      md5: 340905ead154d27927ca65aba8b54097
+      size: 1710625
+    - path: data/processed/test.parquet
+      hash: md5
+      md5: f353ce434950bfa0c8628dbab4a93b81
+      size: 3032762
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 98950485d2da2558ec8bdb0dd9016a99
+      size: 35907398
+    - path: data/processed/valid.parquet
+      hash: md5
+      md5: 3e3e41bb3b8168bae857a42b1f369b23
+      size: 3367676
+    - path: src/whyfinder/data/subsample.py
+      hash: md5
+      md5: 29ae9186d0551975948f4789c732d530
+      size: 1078
+    params:
+      params.yaml:
+        data.ci_user_fraction: 0.05
+    outs:
+    - path: data/ci
+      hash: md5
+      md5: 38b78e4d72b80f009f7bcc6888431585.dir
+      size: 4290811
+      nfiles: 6
+  stats:
+    cmd: uv run whyfinder data stats
+    deps:
+    - path: data/ci/manifest.json
+      hash: md5
+      md5: f2766d9996f8bae4c2c7b0f2a1ac2448
+      size: 225
+    - path: data/interim/parse_stats.json
+      hash: md5
+      md5: d4d8c3f5167d733e4dde770e5dd773d4
+      size: 167
+    - path: data/processed/clean_stats.json
+      hash: md5
+      md5: 9d76eaf02e1db28d09cdfa012e71afbf
+      size: 367
+    - path: data/processed/features_stats.json
+      hash: md5
+      md5: a9cbf4c63c2bb6d7f4270d26cc9c0119
+      size: 177
+    - path: data/processed/kcore_stats.json
+      hash: md5
+      md5: fa3346930b9646a3aba2a19c58f44f63
+      size: 145
+    - path: data/split.json
+      hash: md5
+      md5: 4c953e6dd4ead1e6c2dc84e58b7fb11b
+      size: 905
+    outs:
+    - path: data/stats.json
+      hash: md5
+      md5: 119a42c1142ba062fadb07b7feafd560
+      size: 2251
+  export_demo:
+    cmd: uv run whyfinder export demo
+    deps:
+    - path: data/processed/games.parquet
+      hash: md5
+      md5: 340905ead154d27927ca65aba8b54097
+      size: 1710625
+    - path: data/processed/train.parquet
+      hash: md5
+      md5: 98950485d2da2558ec8bdb0dd9016a99
+      size: 35907398
+    - path: data/split.json
+      hash: md5
+      md5: 4c953e6dd4ead1e6c2dc84e58b7fb11b
+      size: 905
+    - path: src/whyfinder/export/demo.py
+      hash: md5
+      md5: d74e7b7981148caba794576c6d8e7071
+      size: 6500
+    params:
+      params.yaml:
+        demo:
+          games: 500
+          layout_neighbors: 10
+          layout_iterations: 400
+        graph.tags_per_game: 20
+    outs:
+    - path: data/export/demo-slice.json
+      hash: md5
+      md5: 5e6753da6baae8a45151bd97cbb9951c
+      size: 645676

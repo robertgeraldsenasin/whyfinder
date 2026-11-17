@@ -5,8 +5,8 @@ Architecture decision records in the Hasik format (context, options, decision, c
 | ADR | Decision | Status |
 | --- | --- | --- |
 | [0001](ADR-0001-python-core-hand-written-algorithms.md) | Python core, hand-written algorithms, libraries as oracles | Accepted |
-| [0002](ADR-0002-interactions-and-time-split.md) | Interactions from dated reviews, global time split | Proposed (confirm in M0) |
-| [0003](ADR-0003-pipeline-and-data-versioning.md) | DVC pipeline; CI uses a pinned subsample | Proposed |
+| [0002](ADR-0002-interactions-and-time-split.md) | Interactions from dated reviews, global time split | Accepted (confirmed in M0) |
+| [0003](ADR-0003-pipeline-and-data-versioning.md) | DVC pipeline without a remote; data runs on GitHub Actions; CI uses a pinned subsample | Accepted |
 | [0004](ADR-0004-item-cap-and-confidence.md) | Item cap for EASE^R and confidence weighting | Proposed |
 | [0005](ADR-0005-gate-statistics.md) | Quality gates: paired bootstrap non-inferiority, sealed test set | Accepted |
 | [0006](ADR-0006-targets-and-margins.md) | Success targets and gate margins | Proposed (fix after M1 baselines) |

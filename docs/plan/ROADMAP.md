@@ -27,12 +27,12 @@ gantt
 
 ## M0 · Foundation (3 days) → `v0.0.1`
 
-- [ ] Repo from this kickoff pack; branch protection; labels, milestones and issues via `scripts/bootstrap_github.py`
-- [ ] `uv` project; ruff, mypy, pytest, import-linter, pre-commit; `ci.yml` green (NFR-05)
-- [ ] `whyfinder data fetch` with checksums; confirm Version 2 date/hours coverage (FR-01, ADR-0002)
-- [ ] DVC stages `parse → clean → kcore → split` with Pandera contracts (FR-02, FR-03)
-- [ ] Publish the CI subsample `data-ci-v1`; record `data/stats.json`
-- [ ] Finalise ADR-0002, ADR-0003
+- [x] Repo from this kickoff pack; branch protection (set in Settings); labels, milestones and issues via `scripts/bootstrap_github.py`
+- [x] `uv` project; ruff, mypy, pytest, import-linter, pre-commit; `ci.yml` green (NFR-05)
+- [x] `whyfinder data fetch` with checksums; confirm Version 2 date/hours coverage (FR-01, ADR-0002)
+- [x] DVC stages `parse → clean → kcore → split` with Pandera contracts (FR-02, FR-03)
+- [x] Publish the CI subsample `data-ci-v1`; record `data/stats.json`
+- [x] Finalise ADR-0002, ADR-0003
 - [ ] Demo track: demo data slice export (`whyfinder export demo`); demo shell (Vite + Svelte + TypeScript, Star Atlas themes, fonts, star map, architecture view) deployed to Pages (FR-22, ADR-0015, ADR-0016)
 
 ## M1 · Glass-box core + gate (7 days) → `v0.1.0` (first resume bullet)
