@@ -15,6 +15,10 @@ split:                    # ADR-0002
   max_missing_date: 0.10  # above this, fall back to leave-last-out
 ease:
   lambda: 500.0
+demo:                     # ADR-0015: the slice the browser engine runs on
+  games: 500
+  layout_neighbors: 10
+  layout_iterations: 400
 graph:
   restart_alpha: 0.15
   push_eps: 1.0e-6

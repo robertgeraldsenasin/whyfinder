@@ -6,7 +6,7 @@ from typer.testing import CliRunner
 import whyfinder
 from whyfinder.cli import app
 
-SUBPACKAGES = ["data", "core", "graph", "rerank", "explain", "rag", "eval", "serve"]
+SUBPACKAGES = ["data", "core", "graph", "rerank", "explain", "rag", "eval", "export", "serve"]
 
 
 def test_version_is_semver() -> None:

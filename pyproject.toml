@@ -97,7 +97,7 @@ name = "Layers: serve on top, core at the bottom"
 type = "layers"
 layers = [
   "whyfinder.cli",
-  "whyfinder.serve | whyfinder.eval",
+  "whyfinder.serve | whyfinder.eval | whyfinder.export",
   "whyfinder.rag",
   "whyfinder.explain",
   "whyfinder.rerank",
@@ -110,10 +110,10 @@ layers = [
 name = "core depends on nothing else in whyfinder"
 type = "forbidden"
 source_modules = ["whyfinder.core"]
-forbidden_modules = ["whyfinder.data", "whyfinder.graph", "whyfinder.rerank", "whyfinder.explain", "whyfinder.rag", "whyfinder.eval", "whyfinder.serve"]
+forbidden_modules = ["whyfinder.data", "whyfinder.graph", "whyfinder.rerank", "whyfinder.explain", "whyfinder.rag", "whyfinder.eval", "whyfinder.export", "whyfinder.serve"]
 
 [[tool.importlinter.contracts]]
 name = "Nothing imports serve"
 type = "forbidden"
-source_modules = ["whyfinder.data", "whyfinder.core", "whyfinder.graph", "whyfinder.rerank", "whyfinder.explain", "whyfinder.rag", "whyfinder.eval"]
+source_modules = ["whyfinder.data", "whyfinder.core", "whyfinder.graph", "whyfinder.rerank", "whyfinder.explain", "whyfinder.rag", "whyfinder.eval", "whyfinder.export"]
 forbidden_modules = ["whyfinder.serve"]
