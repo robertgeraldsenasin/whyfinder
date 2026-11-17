@@ -28,7 +28,7 @@ Issues and PRs cite these IDs (`FR-07`), so every change traces back to a story.
 | FR-19 | `whyfinder eval` writes metrics JSON and a Markdown report with intervals | Must | Report produced on every CI gate run | US-09 | M1 |
 | FR-20 | Quality-gate PR comment; merge blocked on significant regression | Must | See 07_EVALUATION.md | US-09 | M1 |
 | FR-21 | REST API: `/recommend`, `/explain`, `/search`, `/healthz`, `/version` | Must | OpenAPI committed; Schemathesis contract tests pass | US-01 | M4 |
-| FR-22 | Star-atlas web demo (TypeScript) on GitHub Pages | Should | Works from exported artifacts with no server; axe 0 violations, light and dark | US-08 | M4 |
+| FR-22 | Star-atlas web demo (TypeScript) on GitHub Pages with a live in-browser engine (ADR-0015) | Should | Works from exported artifacts with no server; the TypeScript engine reproduces the Python goldens (1e-9, identical picks); axe 0 violations, light and dark | US-08 | M0–M4 |
 | FR-23 | Filters: tag, price, release year | Should | Filtered picks never violate a filter; empty results explained | US-07 | M3 |
 
 ## Non-functional requirements

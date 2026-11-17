@@ -28,6 +28,7 @@ way.
 | **Grounded words** | Hybrid BM25 + dense retrieval (hand-written HNSW) over reviews; a local LLM may only voice the exact reasons; a claim checker rejects anything unverifiable | [06](docs/spec/06_RAG.md) |
 | **The rival** | iALS, a latent-factor model the glass-box blend must match | [04 §A3](docs/spec/04_ALGORITHMS.md) |
 | **Gates** | Paired-bootstrap non-inferiority on ranking, explanation and RAG metrics for every PR; a sealed test set scored only at release | [07](docs/spec/07_EVALUATION.md) |
+| **Live demo** | The same glass-box engine, ported to TypeScript and golden-matched to Python, runs in your browser on a 500-game slice: watch every step, from your history to the reasons | [ADR-0015](docs/decisions/ADR-0015-live-engine-demo.md) |
 
 Architecture (C4 diagrams): [docs/spec/08_ARCHITECTURE.md](docs/spec/08_ARCHITECTURE.md).
 Design language ("Star Atlas"): [docs/spec/11_DESIGN_SYSTEM.md](docs/spec/11_DESIGN_SYSTEM.md).

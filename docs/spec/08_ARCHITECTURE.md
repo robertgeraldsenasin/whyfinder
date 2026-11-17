@@ -31,7 +31,7 @@ flowchart TB
   models --> art[(Versioned artifacts<br/>M.npz · graph.npz · hnsw.bin · catalogue)]
   idx --> art
   art --> api[FastAPI service<br/>/recommend · /explain · /search]
-  art -->|whyfinder export| web[Star-atlas demo<br/>TypeScript, static JSON]
+  art -->|whyfinder export demo| web[Star-atlas demo<br/>TypeScript, live engine in a Web Worker]
   api --> ollama[Ollama<br/>local LLM]
   web -.->|optional| api
 ```
@@ -82,10 +82,10 @@ sequenceDiagram
 whyfinder/
 ├─ src/whyfinder/{data,core,graph,rerank,explain,rag,eval,serve}/, cli.py
 ├─ tests/{unit,property,golden,contract}/
-├─ web/                 TypeScript star-atlas demo (Vite), reads exported JSON
+├─ web/                 Star-atlas demo (Vite + Svelte + TypeScript), live engine on an exported slice
 ├─ docs/{spec,decisions,plan,guide,design}/
 ├─ results/             metrics JSON the README tables are generated from
-├─ scripts/             bootstrap_github.sh, gen_readme_tables.py
+├─ scripts/             bootstrap_github.py, gen_readme_tables.py
 ├─ docker/              Dockerfile.api (multi-stage, non-root)
 ├─ .github/             workflows, issue and PR templates, CODEOWNERS, dependabot
 ├─ dvc.yaml  params.yaml  pyproject.toml  uv.lock  Makefile  CITATION.cff

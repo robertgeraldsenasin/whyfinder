@@ -1,6 +1,6 @@
 # ADR-0013: Design language: Star Atlas
 
-- **Status:** Accepted
+- **Status:** Accepted; motion and space-effect rules amended by [ADR-0016](ADR-0016-cinematic-motion.md)
 - **Date:** 2026-11-17
 - **Deciders:** Robert Gerald Senasin
 
