@@ -18,12 +18,15 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import scipy.sparse as sp
 
 from whyfinder.data import contracts
 from whyfinder.data.clean import clean_games, clean_interactions
+from whyfinder.data.features import build_features
 from whyfinder.data.kcore import kcore
 from whyfinder.data.parse import parse_games, parse_reviews
 from whyfinder.data.sources import SOURCES
+from whyfinder.data.split import time_split
 
 SPLITS = ("train", "valid", "test", "cold")
 
@@ -91,4 +94,55 @@ def stage_kcore(processed: Path, *, k: int) -> dict[str, Any]:
         "density": len(core) / (core["user"].nunique() * core["game"].nunique()),
     }
     write_json(processed / "kcore_stats.json", payload)
+    return payload
+
+
+def stage_split(
+    processed: Path,
+    split_json: Path,
+    *,
+    valid_quantile: float,
+    test_quantile: float,
+    cold_max: int,
+    max_missing_date: float,
+) -> dict[str, Any]:
+    df = pd.read_parquet(processed / "interactions.parquet")
+    split = time_split(
+        df,
+        valid_quantile=valid_quantile,
+        test_quantile=test_quantile,
+        cold_max=cold_max,
+        max_missing_date=max_missing_date,
+    )
+    t1, t2 = split.info["t1"], split.info["t2"]
+    contracts.check_split(
+        split.train,
+        split.valid,
+        split.test,
+        t1=t1 if isinstance(t1, str) else None,
+        t2=t2 if isinstance(t2, str) else None,
+        cold_max=cold_max,
+    )
+    for name in SPLITS:
+        getattr(split, name).to_parquet(processed / f"{name}.parquet", index=False)
+    write_json(split_json, split.info)
+    return split.info
+
+
+def stage_features(processed: Path, *, item_cap: int, alpha: float, eps: float) -> dict[str, Any]:
+    train = pd.read_parquet(processed / "train.parquet")
+    features = build_features(train, item_cap=item_cap, alpha=alpha, eps=eps)
+    sp.save_npz(processed / "X_train.npz", features.X, compressed=True)
+    features.items.to_parquet(processed / "items.parquet", index=False)
+    features.users.to_parquet(processed / "users.parquet", index=False)
+    capped = int(features.X.nnz)
+    payload = {
+        "item_cap": item_cap,
+        "items": len(features.items),
+        "users": len(features.users),
+        "nnz": capped,
+        "train_rows_covered": capped / len(train) if len(train) else 0.0,
+        "confidence": {"alpha": alpha, "eps": eps},
+    }
+    write_json(processed / "features_stats.json", payload)
     return payload

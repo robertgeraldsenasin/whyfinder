@@ -91,3 +91,31 @@ def data_kcore(params: ParamsOption = Path("params.yaml")) -> None:
     """Keep the k-core of users and games (FR-02)."""
     s = pipeline.stage_kcore(PROCESSED, k=param(load_params(params), "data.kcore", int))
     typer.echo(f"{s['rows_out']} interactions after {s['passes']} passes (k={s['k']})")
+
+
+@data_app.command("split")
+def data_split(params: ParamsOption = Path("params.yaml")) -> None:
+    """Global time split into train, valid, test and cold (FR-03)."""
+    p = load_params(params)
+    info = pipeline.stage_split(
+        PROCESSED,
+        SPLIT_JSON,
+        valid_quantile=param(p, "split.valid_quantile", float),
+        test_quantile=param(p, "split.test_quantile", float),
+        cold_max=param(p, "split.cold_max_train_items", int),
+        max_missing_date=param(p, "split.max_missing_date", float),
+    )
+    typer.echo(f"{info['method']}: T1={info['t1']} T2={info['t2']} rows={info['rows']}")
+
+
+@data_app.command("features")
+def data_features(params: ParamsOption = Path("params.yaml")) -> None:
+    """Build X_train with confidence weights and the item cap (FR-02, ADR-0004)."""
+    p = load_params(params)
+    s = pipeline.stage_features(
+        PROCESSED,
+        item_cap=param(p, "data.item_cap", int),
+        alpha=param(p, "data.confidence.alpha", float),
+        eps=param(p, "data.confidence.eps", float),
+    )
+    typer.echo(f"X_train: {s['users']} users × {s['items']} games, {s['nnz']} non-zeros")

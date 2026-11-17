@@ -38,6 +38,9 @@ dev = [
   "scipy-stubs>=1.14",
   "types-pyyaml>=6.0",
 ]
+pipeline = [
+    "dvc>=3.55",
+]
 
 [build-system]
 requires = ["hatchling>=1.25"]
