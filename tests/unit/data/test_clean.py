@@ -3,7 +3,13 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from whyfinder.data.clean import clean_games, clean_interactions, hash_user, parse_dates
+from whyfinder.data.clean import (
+    clean_games,
+    clean_interactions,
+    hash_user,
+    parse_dates,
+    unescape,
+)
 
 
 def reviews(rows: list[tuple[object, ...]]) -> pd.DataFrame:
@@ -86,3 +92,24 @@ def test_clean_games_adds_year_and_title() -> None:
     assert out["release_year"].isna().tolist() == [True, False]
     assert out.loc[1, "release_year"] == 2017
     assert out.loc[0, "genres"] == []
+
+
+def test_clean_games_decodes_html_entities() -> None:
+    games = pd.DataFrame(
+        {
+            "game": [1],
+            "title": ["Heroes &amp; Generals"],
+            "developer": ["Aspyr (Mac &amp; Linux)"],
+            "publisher": [None],
+            "release_date": ["2016"],
+            "genres": [["Action"]],
+            "tags": [["Hack &amp; Slash"]],
+            "specs": [[]],
+        }
+    )
+    out = clean_games(games)
+    assert out.loc[0, "title"] == "Heroes & Generals"
+    assert out.loc[0, "developer"] == "Aspyr (Mac & Linux)"
+    assert out.loc[0, "publisher"] is None
+    assert out.loc[0, "tags"] == ["Hack & Slash"]
+    assert unescape(3) == 3

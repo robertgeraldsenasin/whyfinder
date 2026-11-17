@@ -8,6 +8,7 @@ at the 99.9th percentile. Dates that don't parse become NaT and are counted.
 from __future__ import annotations
 
 import hashlib
+import html
 from dataclasses import asdict, dataclass
 
 import numpy as np
@@ -131,9 +132,24 @@ def clean_interactions(
     return out, stats
 
 
+def unescape(value: object) -> object:
+    """Decode HTML entities ("Heroes &amp; Generals"); lists element-wise; None stays None."""
+    if isinstance(value, str):
+        return html.unescape(value)
+    if isinstance(value, np.ndarray):
+        value = value.tolist()
+    if isinstance(value, list | tuple):
+        return [html.unescape(v) if isinstance(v, str) else v for v in value]
+    return value
+
+
 def clean_games(games: pd.DataFrame) -> pd.DataFrame:
-    """Parsed metadata → catalogue sorted by game ID, with `release_year` and a non-empty title."""
+    """Parsed metadata → catalogue sorted by game ID, with `release_year`, a non-empty title and
+    HTML entities decoded (the raw metadata has "&amp;" in titles, developers and tags)."""
     df = games.sort_values("game", kind="mergesort").drop_duplicates("game").copy()
+    for column in ("title", "developer", "publisher", "genres", "tags", "specs"):
+        if column in df:
+            df[column] = df[column].map(unescape)
     df["title"] = df["title"].fillna(df["game"].map(lambda g: f"App {g}"))
     year = df["release_date"].astype("str").str.extract(r"((?:19|20)\d\d)", expand=False)
     df["release_year"] = pd.to_numeric(year, errors="coerce").astype("Int64")
