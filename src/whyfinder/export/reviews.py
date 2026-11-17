@@ -60,7 +60,7 @@ GENERIC = _words(
     love loved enjoy enjoyed amazing awesome nice pretty first new make makes made want think
     know see say going go goes come back need lot people friend friends overall definitely
     actually still get sale early access update updates version developer developers dev devs
-    gameplay
+    gameplay install installed uninstall download downloaded
     """
 )
 POSITIVE = _words(
@@ -77,14 +77,31 @@ NEGATIVE = _words(
     """
     annoying avoid awful bad boring broken buggy crash crashes crashing disappointed
     disappointing garbage hate horrible laggy mediocre meh refund refunded terrible trash
-    unplayable useless waste worse worst
+    unplayable useless waste worse worst ruined ruin ruins dead died dying sadly unfortunately
+    hackers hacker hacking cheaters cheater cheating scam overpriced greedy cons flawed
+    frustrating grindy repetitive shame absurd lag uninstall uninstalled problem problems
     """
 )
 NEGATIONS = frozenset(
     {"not", "no", "never", "don't", "doesn't", "didn't", "isn't", "wasn't", "can't"}
 )
 #: Stems that disqualify a sentence for public display (profanity and slurs).
-BLOCKED_STEMS = ("fuck", "shit", "cunt", "nigg", "fag", "retard", "whore", "slut", "rape", "bitch")
+BLOCKED_STEMS = (
+    "fuck",
+    "shit",
+    "cunt",
+    "nigg",
+    "fag",
+    "retard",
+    "whore",
+    "slut",
+    "rape",
+    "bitch",
+    "drug",
+    "used to",
+    "that's it",
+    "~",
+)
 BOILERPLATE = (
     "early access review",
     "product received for free",
@@ -149,19 +166,40 @@ def displayable(sentence: str) -> bool:
     return sum(w in STOPWORDS for w in words) >= 2
 
 
+#: Lead-ins that make a sentence read as a fragment when quoted alone.
+FRAGMENT_START = frozenset(
+    {"and", "but", "or", "so", "because", "is", "was", "which", "then", "also"}
+)
+LEAD_IN = re.compile(
+    r"^(?:in conclusion|conclusion|verdict|tl;?dr|summary|recommendation)\s*[:,-]\s*", re.I
+)
+PUNCT_RUN = re.compile(r"[!?.]{3,}|[!?]{2,}")
+
+
+def tidy(sentence: str) -> str:
+    """Light copy-editing that keeps the reviewer's words: lead-ins, stray spaces, doubled marks."""
+    sentence = LEAD_IN.sub("", sentence.strip(" -*•\"'"))
+    sentence = re.sub(r"\s+([,.!?;:])", r"\1", sentence)
+    sentence = re.sub(r"[,;:]+([.!?])$", r"\1", sentence)
+    return re.sub(r"!+$", "!", sentence)
+
+
 def best_sentence(text: str, terms: frozenset[str]) -> tuple[str, float] | None:
     """The most quotable sentence (6–25 words, positive, no negative words) and its score."""
     best: tuple[str, float] | None = None
     for raw in SENTENCE.split(clean_text(text)):
-        sentence = raw.strip(" -*•\"'")
+        well_formed = raw[:1].isupper() and raw.rstrip().endswith((".", "!", "?"))
+        sentence = tidy(raw)
         words = sentence.split()
+        if not words or words[0].lower().strip(",") in FRAGMENT_START or PUNCT_RUN.search(sentence):
+            continue
         if not MIN_WORDS <= len(words) <= MAX_WORDS or not displayable(sentence):
             continue
         toks = tokens(sentence)
         pos, neg = polarity(toks)
         if pos == 0 or neg > 0:
             continue
-        score = pos + 0.5 * sum(t in terms for t in set(toks))
+        score = pos + 0.5 * sum(t in terms for t in set(toks)) + 0.5 * well_formed
         if not sentence.endswith((".", "!", "?")):
             sentence += "."
         if best is None or score > best[1]:
@@ -216,7 +254,17 @@ def distinctive_terms(
             if z >= min_z:
                 scored.append((term, z))
         scored.sort(key=lambda tz: (-tz[1], tz[0]))
-        out[g] = [(t, round(z, 2)) for t, z in scored[:top]]
+        kept: list[tuple[str, float]] = []
+        stems: set[str] = set()
+        for t, z in scored:
+            stem = t[:-1] if t.endswith("s") and len(t) > 3 else t
+            if stem in stems:
+                continue  # "quests" after "quest": one idea, one chip
+            stems.add(stem)
+            kept.append((t, round(z, 2)))
+            if len(kept) == top:
+                break
+        out[g] = kept
     return out
 
 
