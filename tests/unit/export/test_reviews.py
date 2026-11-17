@@ -18,6 +18,7 @@ from whyfinder.export.reviews import (
     doc_frequencies,
     polarity,
     review_evidence,
+    tidy,
     tokens,
 )
 
@@ -55,7 +56,7 @@ def test_best_sentence_picks_a_short_positive_sentence() -> None:
     assert found is not None
     sentence, score = found
     assert sentence == "This game is a masterpiece and the soundtrack is wonderful."
-    assert score == 2.5
+    assert score == 3.0  # two positive words, one top term, well formed
     assert best_sentence("It is bad and boring and I want a refund now.", frozenset()) is None
 
 
@@ -156,3 +157,53 @@ def test_export_reviews_cli(tmp_path: Path) -> None:
     assert len(payload["games"]["20"]["quotes"]) == 2
     kept = meta["game"].isin([10, 20]) & (meta["date"] < "2017")
     assert f"from 10 of {int(kept.sum())} reviews before 2017-05-31" in result.output
+
+
+@pytest.mark.parametrize(
+    ("raw", "clean"),
+    [
+        ("Conclusion: A beautiful story and a fun world.", "A beautiful story and a fun world."),
+        (
+            "Specal Ops , Multiplayer and more , all fun.",
+            "Specal Ops, Multiplayer and more, all fun.",
+        ),
+        ("It is worth it in my opinion,.", "It is worth it in my opinion."),
+        (
+            "Awesome game and multiplayer is just so fun!!!!!",
+            "Awesome game and multiplayer is just so fun!",
+        ),
+    ],
+)
+def test_tidy_keeps_words_and_fixes_punctuation(raw: str, clean: str) -> None:
+    assert tidy(raw) == clean
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "But I still remember all the great and scary fun I had with it.",
+        "This used to be my favorite game until the publisher ruined it.",
+        "The music is awesome and the game is pretty fun, but that's it.",
+        "I LOVE it......a great game with great scares and more.",
+        "Even when the hackers came it was still a pretty fun game.",
+    ],
+)
+def test_best_sentence_skips_fragments_and_backhanded_praise(text: str) -> None:
+    assert best_sentence(text, frozenset()) is None
+
+
+def test_well_formed_sentences_score_higher() -> None:
+    a = best_sentence("A wonderful game with a lovely story.", frozenset())
+    b = best_sentence("a wonderful game with a lovely story", frozenset())
+    assert a is not None
+    assert b is not None
+    assert a[1] == b[1] + 0.5
+
+
+def test_distinctive_terms_merge_plurals() -> None:
+    docs = {1: [{"quest", "quests"} for _ in range(20)], 2: [{"aim"} for _ in range(20)]}
+    freq = {g: doc_frequencies(d) for g, d in docs.items()}
+    counts = {g: c for g, (c, _) in freq.items()}
+    sizes = {g: n for g, (_, n) in freq.items()}
+    terms = distinctive_terms(counts, sizes, top=5, min_docs=5, prior=10.0, min_z=1.0)
+    assert [t for t, _ in terms[1]] == ["quest"]
