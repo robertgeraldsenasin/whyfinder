@@ -4,7 +4,8 @@ stages:
   fetch:
     cmd: uv run whyfinder data fetch --out data/raw
     deps: [data/checksums.txt, src/whyfinder/data/fetch.py, src/whyfinder/data/sources.py]
-    outs: [data/raw]
+    outs:
+      - data/raw: {persist: true, cache: false}  # verified in place; never deleted or re-downloaded
   parse:
     cmd: uv run whyfinder data parse --workers 4
     deps: [data/raw, src/whyfinder/data/parse.py]
@@ -35,6 +36,16 @@ stages:
     deps: [data/processed/train.parquet, src/whyfinder/data/features.py]
     params: [data.item_cap, data.confidence]
     outs: [data/processed/X_train.npz, data/processed/items.parquet, data/processed/users.parquet, data/processed/features_stats.json]
+  subsample:
+    cmd: uv run whyfinder data subsample
+    deps: [data/processed/train.parquet, data/processed/valid.parquet, data/processed/test.parquet, data/processed/cold.parquet, data/processed/games.parquet, src/whyfinder/data/subsample.py]
+    params: [data.ci_user_fraction]
+    outs: [data/ci]
+  stats:
+    cmd: uv run whyfinder data stats
+    deps: [data/interim/parse_stats.json, data/processed/clean_stats.json, data/processed/kcore_stats.json, data/split.json, data/processed/features_stats.json, data/ci/manifest.json]
+    outs:
+      - data/stats.json: {cache: false}
   # build:    (M1) uv run whyfinder build ease graph blend ials
   # index:    (M3) uv run whyfinder index reviews
   # eval:     (M1) uv run whyfinder eval --split valid   metrics: results/valid.json

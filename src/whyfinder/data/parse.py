@@ -10,8 +10,9 @@ from __future__ import annotations
 import ast
 import gzip
 import multiprocessing
+from collections import deque
 from collections.abc import Callable, Iterator
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import Future, ProcessPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -77,7 +78,8 @@ def _batches(path: Path) -> Iterator[list[bytes]]:
 def iter_records(path: Path, workers: int = 1) -> Iterator[Record | None]:
     """Yield each non-blank line parsed (None when malformed), in file order.
 
-    With `workers > 1`, batches of lines are parsed in a process pool; order is preserved.
+    With `workers > 1`, batches of lines are parsed in a process pool. At most `2 × workers`
+    batches are in flight, so memory stays bounded however large the file is; order is preserved.
     """
     if workers < 1:
         raise ValueError("workers must be at least 1")
@@ -87,8 +89,13 @@ def iter_records(path: Path, workers: int = 1) -> Iterator[Record | None]:
         return
     context = multiprocessing.get_context("spawn")  # fork is unsafe in threaded parents
     with ProcessPoolExecutor(max_workers=workers, mp_context=context) as pool:
-        for parsed in pool.map(_parse_batch, _batches(path), chunksize=1):
-            yield from parsed
+        pending: deque[Future[list[Record | None]]] = deque()
+        for batch in _batches(path):
+            pending.append(pool.submit(_parse_batch, batch))
+            if len(pending) >= 2 * workers:
+                yield from pending.popleft().result()
+        while pending:
+            yield from pending.popleft().result()
 
 
 def _text(value: object) -> str | None:

@@ -119,3 +119,18 @@ def data_features(params: ParamsOption = Path("params.yaml")) -> None:
         eps=param(p, "data.confidence.eps", float),
     )
     typer.echo(f"X_train: {s['users']} users × {s['items']} games, {s['nnz']} non-zeros")
+
+
+@data_app.command("subsample")
+def data_subsample(params: ParamsOption = Path("params.yaml")) -> None:
+    """Write the pinned CI subsample (NFR-01)."""
+    fraction = param(load_params(params), "data.ci_user_fraction", float)
+    s = pipeline.stage_subsample(PROCESSED, CI, fraction=fraction)
+    typer.echo(f"CI subsample ({fraction:.0%} of users): {s['rows']}")
+
+
+@data_app.command("stats")
+def data_stats() -> None:
+    """Merge every stage's counts into data/stats.json."""
+    pipeline.stage_stats(INTERIM, PROCESSED, SPLIT_JSON, CI, STATS_JSON)
+    typer.echo(f"wrote {STATS_JSON}")

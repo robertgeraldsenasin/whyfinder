@@ -27,6 +27,7 @@ from whyfinder.data.kcore import kcore
 from whyfinder.data.parse import parse_games, parse_reviews
 from whyfinder.data.sources import SOURCES
 from whyfinder.data.split import time_split
+from whyfinder.data.subsample import subsample
 
 SPLITS = ("train", "valid", "test", "cold")
 
@@ -145,4 +146,37 @@ def stage_features(processed: Path, *, item_cap: int, alpha: float, eps: float) 
         "confidence": {"alpha": alpha, "eps": eps},
     }
     write_json(processed / "features_stats.json", payload)
+    return payload
+
+
+def stage_subsample(processed: Path, out: Path, *, fraction: float) -> dict[str, Any]:
+    tables = {name: pd.read_parquet(processed / f"{name}.parquet") for name in SPLITS}
+    sampled = subsample(tables, fraction)
+    out.mkdir(parents=True, exist_ok=True)
+    for name, df in sampled.items():
+        df.to_parquet(out / f"{name}.parquet", index=False)
+    games = pd.read_parquet(processed / "games.parquet")
+    games.to_parquet(out / "games.parquet", index=False)
+    payload = {
+        "fraction": fraction,
+        "rows": {name: len(df) for name, df in sampled.items()},
+        "users": {name: int(df["user"].nunique()) for name, df in sampled.items()},
+        "games": len(games),
+    }
+    write_json(out / "manifest.json", payload)
+    return payload
+
+
+def stage_stats(
+    interim: Path, processed: Path, split_json: Path, ci: Path, stats_json: Path
+) -> dict[str, Any]:
+    payload = {
+        "parse": read_json(interim / "parse_stats.json"),
+        "clean": read_json(processed / "clean_stats.json"),
+        "kcore": read_json(processed / "kcore_stats.json"),
+        "split": read_json(split_json),
+        "features": read_json(processed / "features_stats.json"),
+        "ci_subsample": read_json(ci / "manifest.json"),
+    }
+    write_json(stats_json, payload)
     return payload
