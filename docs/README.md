@@ -3,7 +3,7 @@
 | Folder | What's inside |
 | --- | --- |
 | [spec/](spec/) | The specification, numbered in reading order |
-| [decisions/](decisions/README.md) | Architecture decision records (ADR-0001 … 0014) |
+| [decisions/](decisions/README.md) | Architecture decision records (ADR-0001 … 0016) |
 | [plan/](plan/) | [Roadmap](plan/ROADMAP.md), [risks](plan/RISKS.md), [backlog](plan/BACKLOG.csv) (imported as issues by `scripts/bootstrap_github.py`) |
 | [guide/](guide/) | [Workflow](guide/WORKFLOW.md), [glossary](guide/GLOSSARY.md) |
 | [design/](design/) | Tokens, logo, static mockup and its screenshots |

@@ -1,9 +1,10 @@
-# Star-atlas web demo (milestone M4)
+# Star-atlas web demo
 
-TypeScript + Vite, static: it reads JSON exported by `whyfinder export` and needs no server. Design:
-`docs/spec/11_DESIGN_SYSTEM.md`, tokens in `docs/design/tokens.css`, look and layout in
-`docs/design/mockup.html` (screenshots in `docs/design/screenshots/`).
+TypeScript + Vite + Svelte, static on GitHub Pages. Unlike a viewer, it runs the glass-box engine live
+in a Web Worker on a 500-game slice of the catalogue (ADR-0015): EASE^R, PPR forward push, the blend,
+DPP re-ranking, exact attributions and counterfactuals, each one golden-matched to the Python core.
 
-Planned: query bar with anchor/filter parsing, star map (SVG) with a list alternative for screen readers,
-pick list, why panel (attribution bars, counterfactual, verified claims with evidence chips), Deep Field
-and Atlas Paper themes, Playwright + axe tests.
+Design: `docs/spec/11_DESIGN_SYSTEM.md`, tokens in `docs/design/tokens.css`, motion in ADR-0016.
+
+Views: **Discover** (your games, picks, why panel), **Under the hood** (the pipeline step by step on
+your history) and **Architecture** (the system as a live diagram).

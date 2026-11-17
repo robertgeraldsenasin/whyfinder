@@ -6,6 +6,8 @@ Streaming parser for the Python-literal files,M0,type:feat;area:data,0.5,FR-02,"
 "Clean, dedupe, hash usernames, k-core",M0,type:feat;area:data,0.5,FR-02,Pandera contracts pass; k-core property test on random graphs
 Time split + cold-start set; confirm date coverage,M0,type:feat;area:data,0.5,FR-03,"split.json records T1, T2 and hashes; data/stats.json records date/hours coverage; ADR-0002 finalised"
 Publish CI subsample data-ci-v1,M0,type:chore;area:data,0.25,NFR-01,Release asset with SHA-256; CI fetch helper verifies it
+Demo data slice: whyfinder export demo,M0,type:feat;area:data;area:web,0.5,FR-22,"500-game slice from the train split (G, tags, developers, publishers, year, price, layout, constants) with SHA-256; no user rows or review text; contract test"
+"Demo shell: Svelte + Vite, Star Atlas themes, star map, architecture view, Pages deploy",M0,type:feat;area:web,1,FR-22,Deployed to Pages with a health check; both themes; reduced motion respected; axe 0 violations; Playwright smoke test in CI
 Popularity and item-kNN baselines,M1,type:feat;area:core,0.5,FR-04,Oracle test vs dense computation; both appear in reports
 EASE^R with item cap,M1,type:feat;area:core,1,FR-05,Matches dense inverse on 300-item fixture to 1e-8; diag(B)=0; peak memory logged
 Game graph builder,M1,type:feat;area:graph,1,FR-06,Graph contract passes; edge-type weights from params.yaml
@@ -15,18 +17,22 @@ iALS rival (Cholesky + CG),M1,type:feat;area:core,1,FR-09,Loss decreases each sw
 "Metrics, bootstrap, Holm, eval report",M1,type:feat;area:eval,1,FR-19,Identical models pass; NDCG cut 10% fails; Markdown report generated
 quality-gate.yml with PR comment,M1,type:feat;area:infra,0.5,FR-20,Comment posted/updated; merge blocked on regression; demo PR screenshot saved
 README tables from results/ + ADR-0006,M1,type:docs,0.25,NFR-10,scripts/gen_readme_tables.py --check passes in CI
+"Live engine: EASE^R, PPR push and blend in TypeScript, golden-matched",M1,type:feat;area:web,1,FR-05;FR-07;FR-08;FR-22,"Vitest reproduces the Python goldens within 1e-9 (B rows, Π rows, blend scores, ranked lists); runs in a Web Worker"
+"Under the hood: history, EASE^R, PPR push, blend",M1,type:feat;area:web,1,FR-22,"Each step shows the live computation, its equation, cost and source file; keyboard step-through; reduced-motion path tested"
 Exact attributions with EASE/PPR split,M2,type:feat;area:explain,0.5,FR-10,Sum to score within 1e-9 (property test)
 Counterfactuals: live greedy + offline exact,M2,type:feat;area:explain,1.5,FR-11,100% valid with full pipeline re-run; exact minimum for size ≤ 3 on fixtures; minimality gap metric
 iALS counterfactuals with Sherman–Morrison,M2,type:feat;area:explain,0.5,FR-11,Rank-one update equals full re-solve to 1e-8
 DPP greedy MAP re-ranking + variety flag,M2,type:feat;area:rerank,1,FR-12,Matches brute-force first pick on 12-item fixtures; θ tuned; flag computed
 Graph path explanations,M2,type:feat;area:explain,0.5,FR-13,Every path exists; at most 2 shown; rarity ranking tested
 Explanation checks in the gate,M2,type:feat;area:eval,1,,"Deletion test, validity, minimality gap, randomisation check in the PR comment"
+"Live engine: DPP, attributions, counterfactuals + Discover why panel",M2,type:feat;area:web,1,FR-10;FR-11;FR-12;FR-22,"Picks, variety flags, attributions and counterfactual sets match the Python goldens; why panel shows exact shares and the guarantee"
+"Under the hood: filter, DPP, explain; architecture replay",M2,type:feat;area:web,0.5,FR-22,DPP steps and counterfactual search replay the real computation; architecture view replays a request with live timings
 "Review sample, chunking, BM25",M3,type:feat;area:rag,1,FR-14,BM25 matches rank-bm25 on fixture; chunk contract passes
 Embeddings + hand-written HNSW + RRF,M3,type:feat;area:rag,1.5,FR-15,Recall@10 ≥ 0.95 vs exact; hnswlib benchmark table; ADR-0010 finalised
 Label 150 retrieval queries,M3,type:chore;area:rag,1,,Labelling guide written; 30 double-labelled; Cohen's κ reported
 "Grounded generation, checker, fallback, cache",M3,type:feat;area:rag,1.5,FR-16;FR-17,Adversarial fixtures rejected; cache replay in CI; ADR-0009 model recorded
 Natural-language queries and filters,M3,type:feat;area:rag,0.5,FR-18;FR-23,Anchors resolve; filters never violated; unresolved terms returned
 FastAPI service + OpenAPI + Schemathesis + Docker,M4,type:feat;area:serve,1.5,FR-21,Contract tests pass; image builds non-root; /healthz degrades gracefully without LLM
-Star-atlas web demo,M4,type:feat;area:web,2.5,FR-22,"Query bar, star map, why panel, list alternative, two themes; axe 0 violations; Playwright e2e"
+"Demo finish: query bar, filters, API mode, grounded words",M4,type:feat;area:web,1.5,FR-18;FR-22;FR-23,Natural-language anchors and filters in the UI; optional live API; Under the hood step 8; Playwright e2e + axe 0 in both themes
 pages.yml deploy + health check; ADR-0008,M4,type:chore;area:infra,0.5,FR-22,Deploy green; health check verifies JSON artifacts load
 "Release v1.0: sealed test results, model card, case study",M4,type:docs,1,NFR-10,results/ + README from release.yml; model card; demo GIF
