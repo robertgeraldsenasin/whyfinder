@@ -14,6 +14,7 @@ from whyfinder.export.reviews import (
     Quote,
     best_sentence,
     clean_text,
+    co_review_counts,
     cover,
     displayable,
     distinctive_terms,
@@ -236,3 +237,11 @@ def test_generic_praise_is_not_quoted() -> None:
         "The puzzles twist portals in clever and satisfying ways.", frozenset()
     )
     assert specific is not None
+
+
+def test_co_review_counts_match_pair_counting() -> None:
+    owned = [{0, 1}, {0, 1, 2}, {2}, set(), {1, 2}]
+    c = co_review_counts(owned, 4)
+    expected = [[0, 2, 1, 0], [2, 0, 2, 0], [1, 2, 0, 0], [0, 0, 0, 0]]
+    assert c.tolist() == expected
+    assert co_review_counts([], 2).tolist() == [[0, 0], [0, 0]]
