@@ -8,6 +8,11 @@ data:
   user_salt: whyfinder-v1 # pseudonymises usernames (NFR-07); public on purpose: the raw data is public
   hours_clip_quantile: 0.999
   parse_tolerance: 0.001  # malformed-line share that fails the parse
+split:                    # ADR-0002
+  valid_quantile: 0.8     # T1: 80% of dated interactions fall before it
+  test_quantile: 0.9      # T2
+  cold_max_train_items: 4 # users with 1-4 train items form the cold-start set
+  max_missing_date: 0.10  # above this, fall back to leave-last-out
 ease:
   lambda: 500.0
 graph:

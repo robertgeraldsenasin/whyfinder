@@ -1,14 +1,40 @@
-# Pipeline design (docs/spec/03_DATA.md). Commands are implemented milestone by milestone;
-# stages whose command doesn't exist yet are listed as comments until their milestone.
+# Pipeline design (docs/spec/03_DATA.md). Stages whose command lands in a later milestone are listed
+# as comments until then. Run everything with `uv run dvc repro`; data.yml runs it on GitHub's runners.
 stages:
   fetch:
     cmd: uv run whyfinder data fetch --out data/raw
+    deps: [data/checksums.txt, src/whyfinder/data/fetch.py, src/whyfinder/data/sources.py]
     outs: [data/raw]
-  # parse:    (M0) uv run whyfinder data parse   deps: data/raw              outs: data/interim
-  # clean:    (M0) uv run whyfinder data clean   deps: data/interim          outs: data/processed/interactions.parquet
-  # kcore:    (M0) uv run whyfinder data kcore   params: data.kcore
-  # split:    (M0) uv run whyfinder data split   outs: data/processed/{train,valid,test,cold}.parquet
-  # features: (M0) uv run whyfinder data features params: data.item_cap, data.confidence
+  parse:
+    cmd: uv run whyfinder data parse --workers 4
+    deps: [data/raw, src/whyfinder/data/parse.py]
+    params: [data.parse_tolerance]
+    outs: [data/interim]
+  clean:
+    cmd: uv run whyfinder data clean
+    deps: [data/interim, src/whyfinder/data/clean.py, src/whyfinder/data/contracts.py]
+    params: [data.user_salt, data.hours_clip_quantile]
+    outs: [data/processed/interactions_clean.parquet, data/processed/games.parquet, data/processed/clean_stats.json]
+  kcore:
+    cmd: uv run whyfinder data kcore
+    deps: [data/processed/interactions_clean.parquet, src/whyfinder/data/kcore.py]
+    params: [data.kcore]
+    outs: [data/processed/interactions.parquet, data/processed/kcore_stats.json]
+  split:
+    cmd: uv run whyfinder data split
+    deps: [data/processed/interactions.parquet, src/whyfinder/data/split.py]
+    params: [split]
+    outs:
+      - data/processed/train.parquet
+      - data/processed/valid.parquet
+      - data/processed/test.parquet
+      - data/processed/cold.parquet
+      - data/split.json: {cache: false}
+  features:
+    cmd: uv run whyfinder data features
+    deps: [data/processed/train.parquet, src/whyfinder/data/features.py]
+    params: [data.item_cap, data.confidence]
+    outs: [data/processed/X_train.npz, data/processed/items.parquet, data/processed/users.parquet, data/processed/features_stats.json]
   # build:    (M1) uv run whyfinder build ease graph blend ials
   # index:    (M3) uv run whyfinder index reviews
   # eval:     (M1) uv run whyfinder eval --split valid   metrics: results/valid.json

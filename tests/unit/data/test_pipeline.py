@@ -44,3 +44,18 @@ def test_parse_clean_kcore(workdir: Path) -> None:
     assert core["rows_out"] <= clean["rows_out"]
     games = pd.read_parquet(processed / "games.parquet")
     assert len(games) == clean["catalogue_games"] == 15
+
+
+def test_split_and_features(workdir: Path) -> None:
+    for stage in ("parse", "clean", "kcore", "split", "features"):
+        run("data", stage)
+    split = json.loads((workdir / "data" / "split.json").read_text())
+    assert split["method"] == "global_time"
+    assert split["t1"] < split["t2"]
+    processed = workdir / "data" / "processed"
+    train = pd.read_parquet(processed / "train.parquet")
+    test = pd.read_parquet(processed / "test.parquet")
+    assert train["date"].max() < test["date"].min()
+    features = json.loads((processed / "features_stats.json").read_text())
+    assert features["items"] <= 12
+    assert 0 < features["train_rows_covered"] <= 1
