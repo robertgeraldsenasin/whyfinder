@@ -30,8 +30,12 @@
   --star: var(--starlight);
   color-scheme: dark;
 
-  --font-display: 'Bodoni Moda', 'Didot', 'Bodoni 72', Georgia, serif;
-  --font-body: 'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Prata: a sharp, high-contrast display serif with wedge terminals, in the spirit of game title
+     lockups like Reverse: 1999 and Arknights. Josefin Sans: vintage geometric for the interface.
+     Cutive Mono: a typewriter for what players wrote, like notes in a case file. */
+  --font-display: 'Prata', 'Didot', Georgia, serif;
+  --font-body: 'Josefin Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-note: 'Cutive Mono', 'Courier New', ui-monospace, monospace;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
   --space-1: 4px;
@@ -43,15 +47,22 @@
   --space-7: 48px;
   --space-8: 72px;
 
-  --radius-sm: 6px;
-  --radius: 14px;
-  --radius-pill: 999px;
+  /* Deco frames: cut corners instead of rounded ones. */
+  --cut: 12px;
+  --cut-sm: 7px;
+  --octagon: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
+  --octagon-sm: polygon(var(--cut-sm) 0, calc(100% - var(--cut-sm)) 0, 100% var(--cut-sm), 100% calc(100% - var(--cut-sm)), calc(100% - var(--cut-sm)) 100%, var(--cut-sm) 100%, 0 calc(100% - var(--cut-sm)), 0 var(--cut-sm));
+  --slant: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  --radius-sm: 2px;
+  --radius: 2px;
+  --radius-pill: 2px;
   --border: 1px solid var(--line);
+  --frame-line: color-mix(in srgb, var(--gold) 34%, var(--line));
 
-  /* Type scale: a perfect fourth from 15px. */
-  --text-xs: 12.5px;
-  --text-sm: 14px;
-  --text-md: 15.5px;
+  /* Type scale: a perfect fourth from 16px (Josefin Sans runs small). */
+  --text-xs: 13px;
+  --text-sm: 14.5px;
+  --text-md: 16px;
   --text-lg: 20px;
   --text-xl: 27px;
   --text-2xl: 36px;

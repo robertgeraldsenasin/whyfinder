@@ -408,7 +408,7 @@
     align-items: center;
     gap: 10px;
     padding: 8px 10px;
-    border-radius: 8px;
+    border-radius: 0;
     border: 1px solid transparent;
     background: transparent;
     color: var(--muted);
@@ -490,7 +490,7 @@
   .eq {
     background: var(--bg);
     border: var(--border);
-    border-radius: 6px;
+    border-radius: 0;
     padding: 8px 10px;
     font-size: 12px !important;
     color: var(--text);
@@ -689,7 +689,7 @@
   .speed select {
     background: var(--bg);
     border: var(--border);
-    border-radius: 6px;
+    border-radius: 0;
     padding: 2px 6px;
   }
   .scrub {

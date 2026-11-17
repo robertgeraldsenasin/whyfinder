@@ -123,7 +123,6 @@
   }
   legend {
     font-family: var(--font-display);
-    font-style: italic;
     font-size: var(--text-lg);
     margin-bottom: 4px;
     padding: 0;
@@ -138,7 +137,7 @@
     grid-template-columns: 18px minmax(0, 1fr);
     gap: var(--space-2);
     padding: 8px;
-    border-radius: 10px;
+    border-radius: 0;
     cursor: pointer;
   }
   .option:hover {
@@ -146,7 +145,7 @@
   }
   .option:has(input:checked) {
     background: var(--raised);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 45%, transparent);
+    box-shadow: inset 2px 0 0 var(--gold);
   }
   input[type='radio'],
   input[type='checkbox'] {
@@ -162,8 +161,7 @@
     font-weight: 600;
   }
   .swatch {
-    height: 6px;
-    border-radius: var(--radius-pill);
+    height: 5px;
   }
   .desc {
     font-size: var(--text-xs);

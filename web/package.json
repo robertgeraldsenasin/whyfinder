@@ -14,9 +14,10 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
-    "@fontsource/bodoni-moda": "^5.3.0",
-    "@fontsource/hanken-grotesk": "^5.3.0",
+    "@fontsource/cutive-mono": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/josefin-sans": "^5.3.0",
+    "@fontsource/prata": "^5.3.0",
     "@playwright/test": "^1.65.1",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@tsconfig/svelte": "^5.0.9",

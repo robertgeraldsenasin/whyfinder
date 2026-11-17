@@ -74,7 +74,7 @@
     width: 100%;
     aspect-ratio: 1;
     image-rendering: pixelated;
-    border-radius: 6px;
+    border-radius: 0;
     border: var(--border);
   }
 </style>

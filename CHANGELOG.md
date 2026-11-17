@@ -11,7 +11,7 @@ and [Semantic Versioning](https://semver.org/).
   - community terms per game, by log-odds with an informative Dirichlet prior;
   - twelve specific, positive quotes of at most 25 words, chosen to cover the game's neighbour games so the demo can quote players who also played yours.
 - Starfall, a new design language for the demo (ADR-0017):
-  - midnight sky, gold and violet, Bodoni Moda and Hanken Grotesk;
+  - midnight sky, gold and violet; Prata for the slashed wordmark and titles, Josefin Sans for the interface, Cutive Mono for player quotes; cut-corner frames and slanted buttons;
   - picks fall into the sky with beams, impact frames, shockwaves, embers and shake;
   - the sky recolours by closeness (√ of the relative score, five named tiers, three colour modes);
   - synthesized sound effects;

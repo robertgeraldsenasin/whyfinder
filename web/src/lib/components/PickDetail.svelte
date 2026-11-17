@@ -67,7 +67,7 @@
               onerror={() => (artFailed = true)}
             />
           {:else}
-            <div class="plate" aria-hidden="true"><span class="display">{game.title}</span></div>
+            <div class="plate" aria-hidden="true"><span>{game.title}</span></div>
           {/if}
           <figcaption class="tier-pill" style:--tier={colorAt(settings.palette, c)}>
             <span class="dot" aria-hidden="true"></span>{t.name}
@@ -197,6 +197,7 @@
   .detail {
     padding: 0;
     overflow: hidden;
+    clip-path: var(--octagon);
     display: flex;
     flex-direction: column;
     max-height: 100%;
@@ -249,7 +250,8 @@
       radial-gradient(circle at 30% 30%, rgb(142 107 240 / 0.45), transparent 60%),
       radial-gradient(circle at 75% 70%, rgb(242 193 78 / 0.25), transparent 55%),
       var(--midnight);
-    font-size: var(--text-xl);
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
     color: var(--gold-bright);
   }
   .tier-pill {
@@ -259,19 +261,19 @@
     z-index: 1;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 12px 4px 10px;
-    border-radius: var(--radius-pill);
-    background: rgb(7 11 30 / 0.85);
-    border: 1px solid color-mix(in srgb, var(--tier) 60%, transparent);
+    gap: 9px;
+    padding: 6px 18px 4px 14px;
+    background: rgb(7 11 30 / 0.88);
+    clip-path: var(--slant);
+    box-shadow: inset 0 -2px 0 var(--tier);
     font-size: var(--text-sm);
     font-weight: 600;
     color: var(--text);
   }
   .tier-pill .dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
+    width: 8px;
+    height: 8px;
+    transform: rotate(45deg);
     background: var(--tier);
     box-shadow: 0 0 12px var(--tier);
   }
@@ -318,18 +320,16 @@
   }
   .scale {
     position: relative;
-    height: 6px;
-    border-radius: var(--radius-pill);
+    height: 4px;
   }
   .marker {
     position: absolute;
     top: 50%;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
+    width: 13px;
+    height: 13px;
     border: 2px solid var(--starlight);
     background: var(--midnight);
-    transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%) rotate(45deg);
     box-shadow: 0 0 14px rgb(255 255 255 / 0.6);
   }
   .closeness p {
@@ -345,7 +345,6 @@
     padding: var(--space-2) var(--space-3);
     border-left: 2px solid var(--violet);
     background: color-mix(in srgb, var(--violet) 10%, transparent);
-    border-radius: 0 8px 8px 0;
     font-size: var(--text-sm);
   }
   .enter > section {
@@ -387,8 +386,7 @@
   }
   .track {
     grid-column: 1 / -1;
-    height: 6px;
-    border-radius: var(--radius-pill);
+    height: 5px;
     background: color-mix(in srgb, var(--midnight) 70%, transparent);
     overflow: hidden;
   }
@@ -396,7 +394,6 @@
     display: block;
     height: 100%;
     background: var(--violet);
-    border-radius: var(--radius-pill);
     transform-origin: left;
     animation: grow var(--dur-draw) var(--ease-out);
   }
@@ -423,9 +420,9 @@
     color: var(--muted);
   }
   .key {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
+    width: 9px;
+    height: 9px;
+    transform: rotate(45deg);
   }
   .key.violet {
     margin-left: var(--space-3);
@@ -440,19 +437,22 @@
     font-size: var(--text-xs);
     color: var(--muted);
   }
+  /* What players wrote reads like typed notes in a case file. */
   .quote {
     margin: 0 0 var(--space-3);
-    padding: var(--space-3) var(--space-4);
-    background: color-mix(in srgb, var(--midnight) 55%, transparent);
-    border-radius: 12px;
+    padding: var(--space-3) var(--space-4) var(--space-2);
+    background:
+      repeating-linear-gradient(180deg, transparent 0 25px, rgb(169 174 211 / 0.06) 25px 26px),
+      color-mix(in srgb, var(--midnight) 60%, transparent);
     border-left: 2px solid var(--gold);
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
   }
   blockquote {
     margin: 0;
-    font-family: var(--font-display);
-    font-style: italic;
-    font-size: 17px;
-    line-height: 1.45;
+    font-family: var(--font-note);
+    font-size: 15px;
+    line-height: 26px;
+    color: var(--starlight);
   }
   blockquote::before {
     content: '“';
@@ -463,6 +463,7 @@
   .quote figcaption {
     margin-top: var(--space-2);
     font-size: var(--text-xs);
+    font-style: italic;
     color: var(--muted);
   }
   .terms {
@@ -474,11 +475,12 @@
     gap: 6px;
   }
   .terms li {
-    padding: 3px 11px;
-    border-radius: var(--radius-pill);
-    border: 1px solid color-mix(in srgb, var(--violet) 50%, transparent);
+    padding: 5px 14px 3px;
+    background: color-mix(in srgb, var(--violet) 16%, transparent);
+    clip-path: var(--slant);
     color: var(--link);
     font-size: var(--text-sm);
+    font-weight: 600;
   }
   section p {
     margin: 0;

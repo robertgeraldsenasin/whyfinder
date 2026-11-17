@@ -50,8 +50,8 @@
   .title {
     margin: 0;
     font-family: var(--font-display);
-    font-weight: 600;
-    font-size: var(--text-lg);
+    font-weight: 400;
+    font-size: 22px;
     padding-right: 20px;
   }
   .facts,
@@ -73,7 +73,6 @@
     display: grid;
     place-items: center;
     border: 0;
-    border-radius: 50%;
     background: transparent;
     color: var(--muted);
     cursor: pointer;

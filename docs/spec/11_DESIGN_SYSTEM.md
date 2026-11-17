@@ -64,12 +64,26 @@ Colour modes (Settings, remembered), interpolated in OKLab from distant to close
 
 | Role | Font (OFL, self-hosted) | Use |
 | --- | --- | --- |
-| Display | Bodoni Moda italic 500/700 | wordmark, headings, game titles, quotes, rank numerals |
-| Body and UI | Hanken Grotesk 400–700 | everything else, sentence case, tabular figures |
+| Display | Prata 400 | the wordmark, headings, game titles, rank numerals, starter skies |
+| Interface | Josefin Sans 400–700 (and italic) | everything else, sentence case |
+| Player quotes | Cutive Mono 400 | what players wrote, on faintly ruled cards |
 | Code | JetBrains Mono 500 | equations and source paths only |
 
-Scale (a perfect fourth): 12.5, 14, 15.5, 20, 27, 36 px; hero 40–68 px. No tracked capitals, no
-middle-dot meta strings, no arrows appended to buttons.
+The wordmark is WHYFINDER in Prata capitals tracked 0.09em, with gold double hairlines cut through the
+Y and the D. On the title screen it sits large with a spaced gold line beneath ("— 500 STARS —"), the
+way game logos carry a subtitle; elsewhere capitals are not used for labels. Scale (a perfect fourth
+from 16 px, since Josefin Sans runs small): 13, 14.5, 16, 20, 27, 36 px; wordmark 88 px on the title
+screen, 21 px in the bar. No middle-dot meta strings, no arrows appended to buttons.
+
+## Frames and shapes
+
+- Panels: cut corners (12 px), drawn by two clipped layers behind the content (a 1 px line, then the
+  fill), so dropdowns and focus rings are never clipped. Data panels get a gold frame.
+- Buttons: slanted plates (10 px slant); the primary one is gold. Ghost buttons are plain text that
+  underlines in gold.
+- Tags, community terms and the closeness tier: slanted; markers, bullets and legend keys: diamonds.
+- Inputs: square, with a gold underline when they matter (the title-screen search).
+- Nothing is rounded except stars.
 
 ## Layout
 
@@ -78,7 +92,6 @@ middle-dot meta strings, no arrows appended to buttons.
 - Discover with results: "Your sky" and "Where the stars fell" on the left (340 px), the sky in the
   centre, the pick on the right (420 px). Below 1180 px the pick moves under the sky; on phones
   everything stacks under a 46vh sky.
-- Radius: 14 px panels, 12 px rows, pills for buttons, chips and the search.
 
 ## Components
 
@@ -123,4 +136,4 @@ mute and volume are remembered.
 ## Logo
 
 A Y-shaped constellation ("why"): two violet-joined white stars and a centre star, with a gold
-four-point star below it (the pick). Wordmark "Whyfinder" in Bodoni Moda italic 700.
+four-point star below it (the pick). Wordmark: see Type.
