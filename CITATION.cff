@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use Whyfinder, please cite it and the Steam dataset papers listed under references."
+title: "Whyfinder: an explainable Steam game recommender"
+authors:
+  - family-names: Senasin
+    given-names: Robert Gerald
+    email: robertgeraldsenasin@gmail.com
+license: MIT
+repository-code: "https://github.com/robertgeraldsenasin/whyfinder"
+references:
+  - type: conference-paper
+    title: "Self-attentive sequential recommendation"
+    authors: [{family-names: Kang, given-names: Wang-Cheng}, {family-names: McAuley, given-names: Julian}]
+    conference: {name: "ICDM"}
+    year: 2018
+  - type: conference-paper
+    title: "Item recommendation on monotonic behavior chains"
+    authors: [{family-names: Wan, given-names: Mengting}, {family-names: McAuley, given-names: Julian}]
+    conference: {name: "RecSys"}
+    year: 2018
+  - type: conference-paper
+    title: "Generating and personalizing bundle recommendations on Steam"
+    authors: [{family-names: Pathak, given-names: Apurva}, {family-names: Gupta, given-names: Kshitiz}, {family-names: McAuley, given-names: Julian}]
+    conference: {name: "SIGIR"}
+    year: 2017

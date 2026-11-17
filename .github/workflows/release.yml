@@ -1,0 +1,29 @@
+# Enabled in M1 (first release v0.1.0): replace `on: workflow_dispatch` with the tag trigger below.
+name: release
+
+on:
+  workflow_dispatch:
+  # push:
+  #   tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen --group dev
+      - name: Score the sealed test set and regenerate README tables
+        run: echo "TODO(M1) uv run whyfinder eval --split test --out results/ && uv run python scripts/gen_readme_tables.py"
+      - name: Build and push the API image to GHCR
+        run: echo "TODO(M4) docker build -f docker/Dockerfile.api ..."
+      - name: GitHub release with model card
+        run: echo "TODO(M1) gh release create with docs/model-card.md"

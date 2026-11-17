@@ -1,0 +1,25 @@
+# ADR-0008: Hosting: static demo on GitHub Pages, optional live API
+
+- **Status:** Proposed (decide in M4)
+- **Date:** 2026-11-17
+- **Deciders:** Robert Gerald Senasin
+
+## Context
+
+The demo must stay up for free; a live API is nice but not required.
+
+## Options considered
+
+1. GitHub Pages only (precomputed JSON)
+2. Render
+3. Fly.io
+4. Hugging Face Spaces
+5. Google Cloud Run
+
+## Decision
+
+Ship the demo as static JSON on GitHub Pages (works with no server). Decide the optional API host in M4 after checking current free-tier terms; record the choice and its limits here.
+
+## Consequences
+
+The portfolio link never breaks; live explanations for arbitrary queries depend on the API host.

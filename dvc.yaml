@@ -1,0 +1,14 @@
+# Pipeline design (docs/spec/03_DATA.md). Commands are implemented milestone by milestone;
+# stages whose command doesn't exist yet are listed as comments until their milestone.
+stages:
+  fetch:
+    cmd: uv run whyfinder data fetch --out data/raw
+    outs: [data/raw]
+  # parse:    (M0) uv run whyfinder data parse   deps: data/raw              outs: data/interim
+  # clean:    (M0) uv run whyfinder data clean   deps: data/interim          outs: data/processed/interactions.parquet
+  # kcore:    (M0) uv run whyfinder data kcore   params: data.kcore
+  # split:    (M0) uv run whyfinder data split   outs: data/processed/{train,valid,test,cold}.parquet
+  # features: (M0) uv run whyfinder data features params: data.item_cap, data.confidence
+  # build:    (M1) uv run whyfinder build ease graph blend ials
+  # index:    (M3) uv run whyfinder index reviews
+  # eval:     (M1) uv run whyfinder eval --split valid   metrics: results/valid.json

@@ -1,0 +1,19 @@
+# Enabled in M4: switch to `workflow_run` after release, and deploy web/dist.
+name: pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the star-atlas demo
+        run: echo "TODO(M4) cd web && npm ci && npm run build"

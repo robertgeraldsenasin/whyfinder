@@ -1,0 +1,32 @@
+title,milestone,labels,estimate_days,requirements,acceptance
+"Scaffold: uv project, ruff, mypy, pytest, import-linter, pre-commit",M0,type:chore;area:infra,0.5,NFR-05,`make verify` passes locally and in ci.yml on Python 3.12 and 3.13
+"Bootstrap GitHub: labels, milestones, issues, branch protection",M0,type:chore;area:infra,0.25,,"scripts/bootstrap_github.py ran; main protected (PR + ci required, squash only)"
+Data fetch with checksums,M0,type:feat;area:data,0.5,FR-01,`whyfinder data fetch` downloads all files and verifies data/checksums.txt; retries with backoff; unit tests mock the network
+Streaming parser for the Python-literal files,M0,type:feat;area:data,0.5,FR-02,"Parses each file line by line with ast.literal_eval; malformed lines counted; < 0.1% tolerated, else error"
+"Clean, dedupe, hash usernames, k-core",M0,type:feat;area:data,0.5,FR-02,Pandera contracts pass; k-core property test on random graphs
+Time split + cold-start set; confirm date coverage,M0,type:feat;area:data,0.5,FR-03,"split.json records T1, T2 and hashes; data/stats.json records date/hours coverage; ADR-0002 finalised"
+Publish CI subsample data-ci-v1,M0,type:chore;area:data,0.25,NFR-01,Release asset with SHA-256; CI fetch helper verifies it
+Popularity and item-kNN baselines,M1,type:feat;area:core,0.5,FR-04,Oracle test vs dense computation; both appear in reports
+EASE^R with item cap,M1,type:feat;area:core,1,FR-05,Matches dense inverse on 300-item fixture to 1e-8; diag(B)=0; peak memory logged
+Game graph builder,M1,type:feat;area:graph,1,FR-06,Graph contract passes; edge-type weights from params.yaml
+PPR forward push and Π matrix,M1,type:feat;area:graph,1,FR-07,"|power iteration − push| ≤ ε·deg on 2,000-node fixture; truncation loss reported"
+Glass-box blend and scoring,M1,type:feat;area:core,0.5,FR-08,"Scoring is a sparse product; β, c_B, c_Π recorded; owned games excluded"
+iALS rival (Cholesky + CG),M1,type:feat;area:core,1,FR-09,Loss decreases each sweep; NDCG@10 within 2% of implicit
+"Metrics, bootstrap, Holm, eval report",M1,type:feat;area:eval,1,FR-19,Identical models pass; NDCG cut 10% fails; Markdown report generated
+quality-gate.yml with PR comment,M1,type:feat;area:infra,0.5,FR-20,Comment posted/updated; merge blocked on regression; demo PR screenshot saved
+README tables from results/ + ADR-0006,M1,type:docs,0.25,NFR-10,scripts/gen_readme_tables.py --check passes in CI
+Exact attributions with EASE/PPR split,M2,type:feat;area:explain,0.5,FR-10,Sum to score within 1e-9 (property test)
+Counterfactuals: live greedy + offline exact,M2,type:feat;area:explain,1.5,FR-11,100% valid with full pipeline re-run; exact minimum for size ≤ 3 on fixtures; minimality gap metric
+iALS counterfactuals with Sherman–Morrison,M2,type:feat;area:explain,0.5,FR-11,Rank-one update equals full re-solve to 1e-8
+DPP greedy MAP re-ranking + variety flag,M2,type:feat;area:rerank,1,FR-12,Matches brute-force first pick on 12-item fixtures; θ tuned; flag computed
+Graph path explanations,M2,type:feat;area:explain,0.5,FR-13,Every path exists; at most 2 shown; rarity ranking tested
+Explanation checks in the gate,M2,type:feat;area:eval,1,,"Deletion test, validity, minimality gap, randomisation check in the PR comment"
+"Review sample, chunking, BM25",M3,type:feat;area:rag,1,FR-14,BM25 matches rank-bm25 on fixture; chunk contract passes
+Embeddings + hand-written HNSW + RRF,M3,type:feat;area:rag,1.5,FR-15,Recall@10 ≥ 0.95 vs exact; hnswlib benchmark table; ADR-0010 finalised
+Label 150 retrieval queries,M3,type:chore;area:rag,1,,Labelling guide written; 30 double-labelled; Cohen's κ reported
+"Grounded generation, checker, fallback, cache",M3,type:feat;area:rag,1.5,FR-16;FR-17,Adversarial fixtures rejected; cache replay in CI; ADR-0009 model recorded
+Natural-language queries and filters,M3,type:feat;area:rag,0.5,FR-18;FR-23,Anchors resolve; filters never violated; unresolved terms returned
+FastAPI service + OpenAPI + Schemathesis + Docker,M4,type:feat;area:serve,1.5,FR-21,Contract tests pass; image builds non-root; /healthz degrades gracefully without LLM
+Star-atlas web demo,M4,type:feat;area:web,2.5,FR-22,"Query bar, star map, why panel, list alternative, two themes; axe 0 violations; Playwright e2e"
+pages.yml deploy + health check; ADR-0008,M4,type:chore;area:infra,0.5,FR-22,Deploy green; health check verifies JSON artifacts load
+"Release v1.0: sealed test results, model card, case study",M4,type:docs,1,NFR-10,results/ + README from release.yml; model card; demo GIF

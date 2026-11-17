@@ -1,0 +1,38 @@
+# Every tunable lives here; DVC tracks it. Values are starting points (docs/spec/04_ALGORITHMS.md).
+seed: 20261117
+data:
+  kcore: 5
+  item_cap: 8000          # ADR-0004
+  ci_user_fraction: 0.05
+  confidence: {alpha: 1.0, eps: 1.0}
+ease:
+  lambda: 500.0
+graph:
+  restart_alpha: 0.15
+  push_eps: 1.0e-6
+  top_m: 200
+  tags_per_game: 20
+  coplay_per_game: 20
+  weights: {tag: 1.0, developer: 1.0, publisher: 0.5, coplay: 1.0}
+blend:
+  beta: 0.5
+  top_k_per_row: 500
+dpp:
+  candidates: 100
+  theta: 2.0
+ials:
+  factors: 64
+  reg: 0.01
+  alpha: 10.0
+  sweeps: 15
+rag:
+  reviews_per_game: 20
+  chunk_words: 100
+  chunk_overlap: 20
+  bm25: {k1: 1.2, b: 0.75}
+  hnsw: {M: 16, ef_construction: 200, ef_search: 64}
+  rrf_k: 60
+eval:
+  k: 10
+  bootstrap_resamples: 2000
+  margins: {ndcg_at_10: 0.005, recall_at_20: 0.005, rate: 0.01}

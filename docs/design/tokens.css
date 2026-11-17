@@ -1,0 +1,74 @@
+/* Whyfinder "Star Atlas" design tokens. See docs/spec/11_DESIGN_SYSTEM.md. */
+:root,
+[data-theme='deep-field'] {
+  --bg: #0a0f1f;
+  --surface: #111a2e;
+  --raised: #18233b;
+  --line: #2a3654;
+  --text: #e8edf7;
+  --muted: #a3aec7;
+  --pick: #f4b860;
+  --link: #7dd3e3;
+  --nebula: #8b7cf0;
+  --good: #6fd8a3;
+  --bad: #f28b8b;
+  --on-pick: #0a0f1f;
+  --star: #f6f3ea;
+  color-scheme: dark;
+}
+
+[data-theme='atlas-paper'] {
+  --bg: #f5f1e6;
+  --surface: #fffcf4;
+  --raised: #efe9da;
+  --line: #d6cdb8;
+  --text: #172038;
+  --muted: #555f75;
+  --pick: #9a5a00;
+  --link: #17707f;
+  --nebula: #5b4bc4;
+  --good: #1e7a4e;
+  --bad: #b3261e;
+  --on-pick: #fffcf4;
+  --star: #172038;
+  color-scheme: light;
+}
+
+:root {
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --radius: 10px;
+  --radius-pill: 999px;
+  --border: 1px solid var(--line);
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 150ms;
+  --dur-draw: 600ms;
+
+  --nebula-opacity: 0.12;
+  --starfield-opacity: 0.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-draw: 0ms;
+  }
+}

@@ -1,0 +1,28 @@
+name: Feature
+description: A new capability tied to a requirement
+labels: ["type:feat"]
+body:
+  - type: input
+    id: requirements
+    attributes:
+      label: Requirement IDs
+      description: From docs/spec/02_REQUIREMENTS.md, e.g. FR-05
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criterion
+      description: What a test or CI job will check
+    validations:
+      required: true
+  - type: input
+    id: estimate
+    attributes:
+      label: Estimate (days)

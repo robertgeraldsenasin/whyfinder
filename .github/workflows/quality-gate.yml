@@ -1,0 +1,32 @@
+# Enabled in M1 (docs/plan/ROADMAP.md): replace `on: workflow_dispatch` with the pull_request trigger
+# below once `whyfinder gate` exists, and make the job a required check on main.
+name: quality-gate
+
+on:
+  workflow_dispatch:
+  # pull_request:
+  #   paths: ["src/whyfinder/**", "!src/whyfinder/serve/**", "params.yaml", "dvc.yaml"]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --frozen --group dev
+      - name: Fetch the pinned CI subsample (data-ci-v1)
+        run: echo "TODO(M1) uv run whyfinder data fetch-ci --tag data-ci-v1"
+      - name: Build base (main) and head with the same seeds, run the gate
+        run: echo "TODO(M1) uv run whyfinder gate --base origin/main --head HEAD --out gate.md"
+      - name: Post or update the PR comment
+        run: echo "TODO(M1) gh api to create or update the comment marked <!-- whyfinder-gate -->"

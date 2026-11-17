@@ -1,0 +1,25 @@
+name: Experiment
+description: A model or parameter change judged by the quality gate
+labels: ["type:feat", "area:eval"]
+body:
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis
+      description: What should change, and why
+    validations:
+      required: true
+  - type: input
+    id: metric
+    attributes:
+      label: Primary metric and expected effect
+      description: e.g. NDCG@10 +0.004
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Gate mode
+      options: ["non-inferiority (default)", "superiority (label model:gainer)"]
+    validations:
+      required: true

@@ -1,0 +1,73 @@
+# Roadmap
+
+Five milestones, about 26 focused days of issues (`docs/plan/BACKLOG.csv`) plus a little buffer, ending with **v1.0 on January 24, 2027** if M0 starts
+November 18 and work runs part-time (~2 days/week) during Bantay (Nov 23 – Dec 20). Every milestone
+ends with a tagged release that is useful on its own: if time runs out, something real still ships.
+
+```mermaid
+gantt
+  title Whyfinder v1 (2026–2027)
+  dateFormat YYYY-MM-DD
+  axisFormat %b %d
+  section Context
+  Bantay (with a teammate)      :crit, 2026-11-23, 2026-12-20
+  section Whyfinder
+  M0 Foundation                 :m0, 2026-11-18, 2026-11-22
+  M1 Glass-box core + gate      :m1, 2026-11-24, 2026-12-12
+  v0.1 gate live                :milestone, 2026-12-12, 0d
+  M2 Explanations + variety     :m2, 2026-12-14, 2026-12-30
+  M3 Grounded RAG               :m3, 2027-01-02, 2027-01-13
+  M4 Star-atlas demo, API, v1.0 :m4, 2027-01-14, 2027-01-24
+  v1.0 release                  :milestone, 2027-01-24, 0d
+```
+
+## M0 · Foundation (3 days) → `v0.0.1`
+
+- [ ] Repo from this kickoff pack; branch protection; labels, milestones and issues via `scripts/bootstrap_github.sh`
+- [ ] `uv` project; ruff, mypy, pytest, import-linter, pre-commit; `ci.yml` green (NFR-05)
+- [ ] `whyfinder data fetch` with checksums; confirm Version 2 date/hours coverage (FR-01, ADR-0002)
+- [ ] DVC stages `parse → clean → kcore → split` with Pandera contracts (FR-02, FR-03)
+- [ ] Publish the CI subsample `data-ci-v1`; record `data/stats.json`
+- [ ] Finalise ADR-0002, ADR-0003
+
+## M1 · Glass-box core + gate (7 days) → `v0.1.0` (first resume bullet)
+
+- [ ] Popularity, item-kNN (FR-04)
+- [ ] EASE^R with item cap (FR-05, ADR-0004)
+- [ ] Game graph + PPR forward push + Π (FR-06, FR-07)
+- [ ] Blend M, scoring, β tuning (FR-08)
+- [ ] iALS rival with oracle test (FR-09)
+- [ ] Metrics, per-user arrays, bootstrap, Holm; `whyfinder eval` (FR-19)
+- [ ] `quality-gate.yml` live with PR comment (FR-20); prove it with a deliberately worse PR and keep the screenshot
+- [ ] README tables from `results/`; ADR-0006 fixed from baselines
+
+## M2 · Explanations + variety (5 days) → `v0.2.0`
+
+- [ ] Exact attributions with EASE/PPR split (FR-10)
+- [ ] Counterfactuals: live greedy + offline exact; iALS Sherman–Morrison variant (FR-11, ADR-0012)
+- [ ] DPP re-ranking + "kept for variety" flag (FR-12)
+- [ ] Graph paths (FR-13)
+- [ ] Explanation checks in the gate (deletion, validity, minimality gap, sanity check)
+
+## M3 · Grounded RAG (6 days) → `v0.3.0`
+
+- [ ] Review sample, chunking, BM25 (FR-14)
+- [ ] Embeddings + hand-written HNSW + RRF (FR-15, ADR-0010)
+- [ ] Label 150 (pick, aspect) queries with a written guide (~1 day)
+- [ ] Ollama generation, claim schema, checker, fallback, cache (FR-16, FR-17, ADR-0009)
+- [ ] Natural-language queries and filters (FR-18, FR-23)
+- [ ] Entailment + attribution-agreement metrics; the unconstrained-LLM ablation
+
+## M4 · Star-atlas demo, API, v1.0 (6 days) → `v1.0.0`
+
+- [ ] FastAPI + OpenAPI + Schemathesis; Docker image to GHCR (FR-21)
+- [ ] TypeScript demo: query bar, star map, why panel, list alternative, themes (FR-22, 11_DESIGN_SYSTEM)
+- [ ] `pages.yml` deploy with health check; ADR-0008
+- [ ] Sealed test-set results, model card, demo GIF, portfolio case study, paper draft in `docs/paper/`
+
+## Definition of done
+
+- **Issue:** its acceptance criterion passes in CI; tests include a failure path; `make verify` passes;
+  docs/ADR updated if a decision changed; no new warnings.
+- **Milestone:** gates green on `main`; tagged release with notes; README + CHANGELOG updated; a GIF or
+  screenshot of what's new.
