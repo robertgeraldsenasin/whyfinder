@@ -100,7 +100,7 @@ def test_clean_games_decodes_html_entities() -> None:
             "game": [1],
             "title": ["Heroes &amp; Generals"],
             "developer": ["Aspyr (Mac &amp; Linux)"],
-            "publisher": [None],
+            "publisher": ["2K Games, Aspyr (Mac &amp;amp; Linux)"],
             "release_date": ["2016"],
             "genres": [["Action"]],
             "tags": [["Hack &amp; Slash"]],
@@ -110,6 +110,7 @@ def test_clean_games_decodes_html_entities() -> None:
     out = clean_games(games)
     assert out.loc[0, "title"] == "Heroes & Generals"
     assert out.loc[0, "developer"] == "Aspyr (Mac & Linux)"
-    assert out.loc[0, "publisher"] is None
+    assert out.loc[0, "publisher"] == "2K Games, Aspyr (Mac & Linux)"
     assert out.loc[0, "tags"] == ["Hack & Slash"]
     assert unescape(3) == 3
+    assert unescape(None) is None

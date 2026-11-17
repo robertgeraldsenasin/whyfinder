@@ -132,14 +132,24 @@ def clean_interactions(
     return out, stats
 
 
+def _unescape_text(text: str) -> str:
+    # Some raw strings are escaped twice ("&amp;amp;"): decode until nothing changes.
+    for _ in range(3):
+        decoded = html.unescape(text)
+        if decoded == text:
+            break
+        text = decoded
+    return text
+
+
 def unescape(value: object) -> object:
     """Decode HTML entities ("Heroes &amp; Generals"); lists element-wise; None stays None."""
     if isinstance(value, str):
-        return html.unescape(value)
+        return _unescape_text(value)
     if isinstance(value, np.ndarray):
         value = value.tolist()
     if isinstance(value, list | tuple):
-        return [html.unescape(v) if isinstance(v, str) else v for v in value]
+        return [_unescape_text(v) if isinstance(v, str) else v for v in value]
     return value
 
 
