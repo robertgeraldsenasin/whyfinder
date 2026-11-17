@@ -5,6 +5,11 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-11-17
+
+M0 Foundation: the repository, the data pipeline and its first full run, and the live star-atlas demo
+(<https://robertgeraldsenasin.github.io/whyfinder/>).
+
 ### Added
 
 - Project scaffold: uv package `whyfinder`, CLI, CI (ruff, mypy strict, import-linter, pytest + coverage).
@@ -16,7 +21,11 @@ and [Semantic Versioning](https://semver.org/).
 - `whyfinder export demo` and `whyfinder export model`; the TypeScript engine in `web/src/engine/` reproduces the Python goldens (Vitest).
 - Star Atlas web demo: Discover, Under the hood and Architecture views; Playwright + axe in CI; deployed to GitHub Pages by `pages.yml` with a health check.
 - `docs/guide/IMPLEMENTATION.md`: the step-by-step build guide.
+- `tidy-text` workflow: keeps owner-written issue and pull request text free of appended tool footers.
 
 ### Fixed
 
 - HTML entities (including doubly escaped ones) in game titles, developers, publishers and tags.
+
+[Unreleased]: https://github.com/robertgeraldsenasin/whyfinder/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v0.0.1
