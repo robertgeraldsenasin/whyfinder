@@ -24,3 +24,13 @@ export function list(names: string[]): string {
 const GITHUB = 'https://github.com/robertgeraldsenasin/whyfinder';
 export const source = (path: string): string => `${GITHUB}/blob/main/${path}`;
 export const repo = GITHUB;
+
+/** "Firaxis,Feral Interactive (Mac),Feral Interactive (Linux)" → "Firaxis, Feral Interactive". */
+export function studio(raw: string | null): string {
+  if (!raw) return '';
+  const names = raw
+    .split(',')
+    .map((x) => x.replace(/\([^)]*\)/g, '').trim())
+    .filter(Boolean);
+  return [...new Set(names)].join(', ');
+}

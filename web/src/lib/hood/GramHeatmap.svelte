@@ -9,7 +9,6 @@
 
   $effect(() => {
     const ready = app.ready;
-    void app.theme;
     if (!ready || !canvas) return;
     const n = Math.round(Math.sqrt(ready.gramImage.length));
     const css = getComputedStyle(document.documentElement);
@@ -33,7 +32,6 @@
   $effect(() => {
     void sweep;
     void rows;
-    void app.theme;
     const ready = app.ready;
     const ctx = canvas?.getContext('2d');
     if (!ctx || !image || !ready) return;
@@ -62,7 +60,7 @@
 <figure>
   <canvas bind:this={canvas} aria-hidden="true"></canvas>
   <span class="sr-only">Heat map of the co-play matrix G for 500 games; your games' rows are marked in amber.</span>
-  <figcaption class="micro">G = XᵀX · brighter = more shared players · amber = your games</figcaption>
+  <figcaption class="micro">G = XᵀX. Brighter means more shared players; gold marks your games.</figcaption>
 </figure>
 
 <style>

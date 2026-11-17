@@ -3,9 +3,10 @@ import type { Explained } from '../engine/engine';
 import type { Progress, ReadyInfo } from '../engine/protocol';
 import type { ModelFile, Slice } from '../engine/types';
 import { EngineClient } from './engine-client';
+import type { Evidence } from './evidence';
+import { settings } from './settings.svelte';
 
 export type View = 'discover' | 'hood' | 'architecture';
-export type Theme = 'deep-field' | 'atlas-paper';
 
 export interface SceneLine {
   from: number;
@@ -27,6 +28,10 @@ export interface Scene {
   hubGlow: Map<number, number> | null;
   dim: number;
   key: string;
+  /** Closeness of every game to your taste (NaN for yours); colours the whole sky. */
+  closeness?: Float32Array | null;
+  /** When this changes, the picks fall from the sky instead of appearing. */
+  fall?: string | null;
 }
 
 export const emptyScene = (): Scene => ({
@@ -47,20 +52,6 @@ export interface HistoryItem {
   hours: number;
 }
 
-const THEME_KEY = 'whyfinder.theme';
-
-function readTheme(): Theme {
-  try {
-    const saved = localStorage.getItem(THEME_KEY);
-    if (saved === 'deep-field' || saved === 'atlas-paper') return saved;
-  } catch {
-    /* storage can be unavailable */
-  }
-  return typeof matchMedia !== 'undefined' && matchMedia('(prefers-color-scheme: light)').matches
-    ? 'atlas-paper'
-    : 'deep-field';
-}
-
 export function viewFromHash(hash: string): View {
   if (hash.startsWith('#/hood')) return 'hood';
   if (hash.startsWith('#/architecture')) return 'architecture';
@@ -69,7 +60,6 @@ export function viewFromHash(hash: string): View {
 
 class AppState {
   view = $state<View>('discover');
-  theme = $state<Theme>('deep-field');
   reducedMotion = $state(false);
   slice = $state.raw<Slice | null>(null);
   model = $state.raw<ModelFile | null>(null);
@@ -86,6 +76,12 @@ class AppState {
   theta = $state(2);
   stage = $state(0);
   scene = $state.raw<Scene>(emptyScene());
+  /** How many picks have landed in the current starfall (all of them when it is over). */
+  landed = $state(0);
+  falling = $state(false);
+  /** Ask the atlas to finish the starfall at once. */
+  skipFall = $state(0);
+  evidence = $state.raw<Evidence | null>(null);
   verified = $state.raw<{ cB: number; cPi: number; seconds: number; cBModel: number; cPiModel: number } | null>(null);
   client: EngineClient | null = null;
 
@@ -97,16 +93,6 @@ class AppState {
     return this.result !== null && this.resultFor !== this.historyKey;
   }
 
-  setTheme(theme: Theme): void {
-    this.theme = theme;
-    document.documentElement.dataset.theme = theme;
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      /* ignore */
-    }
-  }
-
   go(view: View): void {
     const hash = view === 'discover' ? '#/' : `#/${view}`;
     if (location.hash !== hash) history.pushState(null, '', hash);
@@ -114,7 +100,7 @@ class AppState {
   }
 
   async load(base: string): Promise<void> {
-    this.setTheme(readTheme());
+    settings.load();
     try {
       const [slice, model] = await Promise.all([
         fetch(`${base}data/demo-slice.json`).then((r) => r.json() as Promise<Slice>),
@@ -127,6 +113,11 @@ class AppState {
       this.client = new EngineClient();
       this.ready = await this.client.init(slice, model, (p) => (this.progress = p));
       this.progress = null;
+      // Review evidence is optional: the demo works without it.
+      fetch(`${base}data/reviews.json`)
+        .then((r) => (r.ok ? (r.json() as Promise<Evidence>) : null))
+        .then((ev) => (this.evidence = ev))
+        .catch(() => (this.evidence = null));
     } catch (error) {
       this.error = error instanceof Error ? error.message : String(error);
     }

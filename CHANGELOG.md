@@ -5,6 +5,23 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Review evidence (`whyfinder export reviews`, DVC stage `export_reviews`):
+  - community terms per game, by log-odds with an informative Dirichlet prior;
+  - twelve specific, positive quotes of at most 25 words, chosen to cover the game's neighbour games so the demo can quote players who also played yours.
+- Starfall, a new design language for the demo (ADR-0017):
+  - midnight sky, gold and violet, Bodoni Moda and Hanken Grotesk;
+  - picks fall into the sky with beams, impact frames, shockwaves, embers and shake;
+  - the sky recolours by closeness (√ of the relative score, five named tiers, three colour modes);
+  - synthesized sound effects;
+  - settings for colours, sound and impact effects.
+- Pick panel with Steam art and store link, exact shares, bridge quotes, shared community terms, the counterfactual and how the pick connects to your games.
+
+### Changed
+
+- The light theme is retired; ADR-0013's palette and type are superseded by ADR-0017.
+
 ## [0.0.1] - 2026-11-17
 
 M0 Foundation: the repository, the data pipeline and its first full run, and the live star-atlas demo

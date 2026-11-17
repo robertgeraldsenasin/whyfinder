@@ -1,42 +1,37 @@
-/* Whyfinder "Star Atlas" design tokens. See docs/spec/11_DESIGN_SYSTEM.md. */
-:root,
-[data-theme='deep-field'] {
-  --bg: #0a0f1f;
-  --surface: #111a2e;
-  --raised: #18233b;
-  --line: #2a3654;
-  --text: #e8edf7;
-  --muted: #a3aec7;
-  --pick: #f4b860;
-  --link: #7dd3e3;
-  --nebula: #8b7cf0;
-  --good: #6fd8a3;
-  --bad: #f28b8b;
-  --on-pick: #0a0f1f;
-  --star: #f6f3ea;
-  color-scheme: dark;
-}
-
-[data-theme='atlas-paper'] {
-  --bg: #f5f1e6;
-  --surface: #fffcf4;
-  --raised: #efe9da;
-  --line: #d6cdb8;
-  --text: #172038;
-  --muted: #555f75;
-  --pick: #9a5a00;
-  --link: #17707f;
-  --nebula: #5b4bc4;
-  --good: #1e7a4e;
-  --bad: #b3261e;
-  --on-pick: #fffcf4;
-  --star: #172038;
-  color-scheme: light;
-}
-
+/* Whyfinder "Starfall" design tokens (ADR-0017). See docs/spec/11_DESIGN_SYSTEM.md. */
 :root {
-  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Sky */
+  --midnight: #070b1e;
+  --deep: #0d1433;
+  --raised: #151d49;
+  --line: #273068;
+  /* Light */
+  --starlight: #f5f2ff;
+  --dust: #a9aed3;
+  --gold: #f2c14e;
+  --gold-bright: #ffe39a;
+  --gold-deep: #a8781a;
+  --violet: #8e6bf0;
+  --violet-text: #b8a4ff;
+  --ember: #ff9a4d;
+  --good: #7fe0b0;
+  --bad: #ff8f8f;
+
+  /* Roles: views use these, not the raw colours. */
+  --bg: var(--midnight);
+  --surface: color-mix(in srgb, var(--deep) 97%, transparent);
+  --surface-solid: var(--deep);
+  --text: var(--starlight);
+  --muted: var(--dust);
+  --pick: var(--gold);
+  --on-pick: #1a1204;
+  --link: var(--violet-text);
+  --nebula: var(--violet);
+  --star: var(--starlight);
+  color-scheme: dark;
+
+  --font-display: 'Bodoni Moda', 'Didot', 'Bodoni 72', Georgia, serif;
+  --font-body: 'Hanken Grotesk', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
   --space-1: 4px;
@@ -46,29 +41,33 @@
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
+  --space-8: 72px;
 
-  --radius: 10px;
+  --radius-sm: 6px;
+  --radius: 14px;
   --radius-pill: 999px;
   --border: 1px solid var(--line);
 
-  --text-xs: 12px;
+  /* Type scale: a perfect fourth from 15px. */
+  --text-xs: 12.5px;
   --text-sm: 14px;
-  --text-md: 16px;
+  --text-md: 15.5px;
   --text-lg: 20px;
-  --text-xl: 24px;
-  --text-2xl: 32px;
+  --text-xl: 27px;
+  --text-2xl: 36px;
+  --text-3xl: clamp(40px, 6vw, 76px);
 
-  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --dur-fast: 150ms;
-  --dur-draw: 600ms;
-
-  --nebula-opacity: 0.12;
-  --starfield-opacity: 0.5;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --dur-fast: 160ms;
+  --dur-mid: 320ms;
+  --dur-draw: 700ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
     --dur-fast: 0ms;
+    --dur-mid: 0ms;
     --dur-draw: 0ms;
   }
 }
