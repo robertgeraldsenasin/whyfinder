@@ -15,8 +15,12 @@ Whyfinder recommends Steam games and shows, in a form you can check, **why** it 
 Every reason is the model's actual reason, computed exactly, and CI proves every change keeps it that
 way.
 
-> **Status:** M0, foundation. Numbers below appear when the first gated release (v0.1) ships.
-> Roadmap: [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
+> **Live demo:** <https://robertgeraldsenasin.github.io/whyfinder/>: the glass-box engine runs in your
+> browser on the 500 most-played games; *Under the hood* replays every step on your own picks.
+>
+> **Status:** M0 foundation done (data pipeline, first full data run in [`data/stats.json`](data/stats.json));
+> the core runs on the demo slice; model numbers appear here when the first gated release (v0.1) ships.
+> Roadmap: [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md) · step-by-step build: [docs/guide/IMPLEMENTATION.md](docs/guide/IMPLEMENTATION.md).
 
 ## How it works
 
@@ -39,7 +43,8 @@ Decisions: [docs/decisions/](docs/decisions/README.md).
 ```bash
 uv sync --group dev        # Python 3.12+
 make verify                # lint, format, types, import boundaries, tests
-uv run whyfinder version
+uv run whyfinder --help    # data pipeline and exports
+cd web && npm ci && npm test && npm run dev   # browser engine vs Python goldens, then the demo
 ```
 
 `make reproduce` (from M1) rebuilds every number in this README from the raw data.

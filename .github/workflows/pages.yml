@@ -1,19 +1,70 @@
-# Enabled in M4: switch to `workflow_run` after release, and deploy web/dist.
+# Deploys the star-atlas demo to GitHub Pages after ci passes on main, then checks the live site.
 name: pages
 
 on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Build the star-atlas demo
-        run: echo "TODO(M4) cd web && npm ci && npm run build"
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build
+        working-directory: web
+        run: npm ci && npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  health:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: The page, the slice and the model load
+        env:
+          SITE: https://robertgeraldsenasin.github.io/whyfinder
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS "$SITE/" | grep -q "Whyfinder" \
+              && curl -fsS "$SITE/data/demo-slice.json" | python3 -c "import json,sys; d=json.load(sys.stdin); assert len(d['games']) == 500" \
+              && curl -fsS "$SITE/data/model.json" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['cB'] > 0 and d['cPi'] > 0"; then
+              echo "healthy"; exit 0
+            fi
+            echo "not yet (attempt $attempt)"; sleep 20
+          done
+          exit 1

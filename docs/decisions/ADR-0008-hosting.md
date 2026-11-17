@@ -1,6 +1,6 @@
 # ADR-0008: Hosting: static demo on GitHub Pages, optional live API
 
-- **Status:** Proposed (decide in M4)
+- **Status:** Accepted for the demo (2026-11-17); the optional API host is still decided in M4
 - **Date:** 2026-11-17
 - **Deciders:** Robert Gerald Senasin
 
@@ -19,6 +19,10 @@ The demo must stay up for free; a live API is nice but not required.
 ## Decision
 
 Ship the demo as static JSON on GitHub Pages (works with no server). Decide the optional API host in M4 after checking current free-tier terms; record the choice and its limits here.
+
+Since ADR-0015 the demo runs the glass-box engine itself in the browser, so GitHub Pages hosts the
+whole live demo, not only precomputed results. `pages.yml` deploys after `ci` passes on `main` and a
+health check loads the page, the slice and the model constants.
 
 ## Consequences
 
