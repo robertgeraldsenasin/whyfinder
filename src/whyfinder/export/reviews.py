@@ -24,7 +24,10 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
+import numpy.typing as npt
 import pandas as pd
+import scipy.sparse as sp
 
 MAX_WORDS = 25
 MIN_WORDS = 6
@@ -285,6 +288,21 @@ def title_words(titles: Iterable[str]) -> set[str]:
     return {t for title in titles for t in tokens(title)}
 
 
+def co_review_counts(owned: Iterable[set[int]], n: int) -> npt.NDArray[np.int64]:
+    """C[a, b] = how many players reviewed both slice games a and b (zero diagonal), as XᵀX."""
+    rows: list[int] = []
+    cols: list[int] = []
+    users = 0
+    for games in owned:
+        rows.extend([users] * len(games))
+        cols.extend(sorted(games))
+        users += 1
+    x = sp.csr_matrix((np.ones(len(rows), dtype=np.int64), (rows, cols)), shape=(users, n))
+    c = np.asarray((x.T @ x).toarray(), dtype=np.int64)
+    np.fill_diagonal(c, 0)
+    return c
+
+
 def cover(candidates: Sequence[Quote], weight: dict[int, float], k: int) -> list[Quote]:
     """Greedy: each step takes the quote with the best quality plus the weight of neighbour games
     it reaches that no chosen quote reaches yet. Distinct texts only; ties by review ID."""
@@ -351,18 +369,13 @@ def review_evidence(
 
     # Each game's neighbours: the other slice games its reviewers reviewed most often. Quotes are
     # chosen to cover them, so a quote is likely to come from someone who also played your game.
-    reviewers: dict[int, list[str]] = defaultdict(list)
-    for user, owned in also_by_user.items():
-        for k in owned:
-            reviewers[k].append(user)
+    co = co_review_counts(also_by_user.values(), len(games))
     out: dict[str, Any] = {}
     for game_meta in games:
         gid = int(game_meta["id"])
         own = index[gid]
-        co: Counter[int] = Counter()
-        for user in reviewers.get(own, []):
-            co.update(also_by_user[user] - {own})
-        ranked = sorted(co.items(), key=lambda kv: (-kv[1], kv[0]))[:neighbours]
+        order = np.lexsort((np.arange(len(games)), -co[own]))
+        ranked = [(int(k), int(co[own, k])) for k in order if co[own, k] > 0][:neighbours]
         weight = {k: c / ranked[0][1] for k, c in ranked} if ranked else {}
         top_terms = frozenset(t for t, _ in terms.get(gid, []))
         candidates: list[Quote] = []
