@@ -58,7 +58,8 @@ def test_best_sentence_picks_a_short_positive_sentence() -> None:
     assert found is not None
     sentence, score = found
     assert sentence == "This game is a masterpiece and the soundtrack is wonderful."
-    assert score == 3.0  # two positive words, one top term, well formed
+    # two positive words, one top term that is also its one content word, well formed
+    assert score == pytest.approx(2 + 0.8 + 0.25 + 0.5)
     assert best_sentence("It is bad and boring and I want a refund now.", frozenset()) is None
 
 
@@ -226,3 +227,12 @@ def test_cover_spreads_quotes_across_neighbour_games() -> None:
     assert [x.review_id for x in cover(pool, weight, 3)] == [1, 3, 2]
     assert [x.review_id for x in cover(pool, weight, 9)] == [1, 3, 2, 4]  # duplicate text dropped
     assert cover([], weight, 3) == []
+
+
+def test_generic_praise_is_not_quoted() -> None:
+    assert best_sentence("It is still great, great fun to play.", frozenset()) is None
+    assert best_sentence("This is the BEST game on Steam.", frozenset()) is None
+    specific = best_sentence(
+        "The puzzles twist portals in clever and satisfying ways.", frozenset()
+    )
+    assert specific is not None
