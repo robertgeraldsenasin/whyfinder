@@ -19,7 +19,7 @@ demo:                     # ADR-0015: the slice the browser engine runs on
   games: 500
   layout_neighbors: 10
   layout_iterations: 400
-  quotes_per_game: 8      # review evidence: sentences of at most 25 words (NFR-07)
+  quotes_per_game: 12     # review evidence: sentences of at most 25 words (NFR-07)
   terms_per_game: 30
   reviews_per_game: 4000  # read at most this many reviews per game (smallest IDs)
 graph:

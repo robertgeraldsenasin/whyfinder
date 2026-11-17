@@ -11,8 +11,10 @@ from typer.testing import CliRunner
 from whyfinder.cli import app
 from whyfinder.export.reviews import (
     MAX_WORDS,
+    Quote,
     best_sentence,
     clean_text,
+    cover,
     displayable,
     distinctive_terms,
     doc_frequencies,
@@ -207,3 +209,20 @@ def test_distinctive_terms_merge_plurals() -> None:
     sizes = {g: n for g, (_, n) in freq.items()}
     terms = distinctive_terms(counts, sizes, top=5, min_docs=5, prior=10.0, min_z=1.0)
     assert [t for t, _ in terms[1]] == ["quest"]
+
+
+def test_cover_spreads_quotes_across_neighbour_games() -> None:
+    def q(rid: int, score: float, also: list[int], text: str = "") -> Quote:
+        return Quote(text or f"Quote {rid}.", 10.0, 2016, also, score, rid)
+
+    weight = {1: 1.0, 2: 0.5, 3: 0.25}
+    pool = [
+        q(1, 5.0, [1]),
+        q(2, 4.9, [1]),
+        q(3, 4.0, [2, 3]),
+        q(4, 1.0, []),
+        q(5, 5.0, [1], "Quote 1."),
+    ]
+    assert [x.review_id for x in cover(pool, weight, 3)] == [1, 3, 2]
+    assert [x.review_id for x in cover(pool, weight, 9)] == [1, 3, 2, 4]  # duplicate text dropped
+    assert cover([], weight, 3) == []
