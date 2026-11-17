@@ -1,0 +1,68 @@
+# Runs the full data pipeline on GitHub's runners: the raw files are 1.3 GB and never committed.
+# Publishes the pinned CI subsample and the pipeline record as the release `data-ci-v1` (ADR-0003).
+# Manual only. The first run records checksums (record = true); later runs verify them.
+name: data
+
+on:
+  workflow_dispatch:
+    inputs:
+      record:
+        description: Record checksums for raw files that have none yet (first run only)
+        type: boolean
+        default: false
+      publish:
+        description: Upload the outputs to the data-ci-v1 release
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: data
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    name: full pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    permissions:
+      contents: write # create the data-ci-v1 release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - name: Install
+        run: uv sync --frozen --group pipeline
+      - name: Fetch raw files
+        run: uv run whyfinder data fetch ${{ inputs.record && '--record' || '' }}
+      - name: Run the pipeline
+        run: uv run dvc repro
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar -C data -czf dist/data-ci-v1.tar.gz ci
+          cp data/checksums.txt data/split.json data/stats.json dvc.lock dist/
+          if [ -d data/export ]; then cp data/export/* dist/; fi
+          (cd dist && sha256sum -- * > SHA256SUMS)
+          cat dist/SHA256SUMS
+          { echo '## Data run'; echo '```json'; cat data/stats.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the outputs as a workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-run
+          path: dist/
+          retention-days: 30
+      - name: Publish release data-ci-v1
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view data-ci-v1 >/dev/null 2>&1; then
+            gh release create data-ci-v1 --prerelease --title "data-ci-v1" \
+              --notes "Pinned CI subsample (5% of users, hash-chosen) and the record of the data run that made it. See data/stats.json and ADR-0003. Derived from the UCSD Steam datasets; cite the papers in CITATION.cff."
+          fi
+          gh release upload data-ci-v1 dist/* --clobber

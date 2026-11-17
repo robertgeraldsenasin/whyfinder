@@ -61,9 +61,11 @@ def test_parse_reviews_fails_above_tolerance(raw_dir: Path, tmp_path: Path) -> N
         )
 
 
-def test_parallel_parse_equals_serial(raw_dir: Path) -> None:
+def test_parallel_parse_equals_serial(raw_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = raw_dir / "steam_reviews.json.gz"
-    assert list(iter_records(path, workers=2)) == list(iter_records(path, workers=1))
+    serial = list(iter_records(path, workers=1))
+    monkeypatch.setattr("whyfinder.data.parse.BATCH_LINES", 7)  # many batches: exercise the window
+    assert list(iter_records(path, workers=2)) == serial
 
 
 def test_iter_records_rejects_zero_workers(raw_dir: Path) -> None:
