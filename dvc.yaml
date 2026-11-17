@@ -52,6 +52,12 @@ stages:
     params: [demo, graph.tags_per_game]
     outs:
       - data/export/demo-slice.json: {cache: false}
+  export_reviews:
+    cmd: uv run whyfinder export reviews
+    deps: [data/interim/reviews.parquet, data/interim/review_text.parquet, data/export/demo-slice.json, data/split.json, src/whyfinder/export/reviews.py]
+    params: [demo.quotes_per_game, demo.terms_per_game, demo.reviews_per_game, data.user_salt]
+    outs:
+      - data/export/reviews.json: {cache: false}
   # build:    (M1) uv run whyfinder build ease graph blend ials
   # index:    (M3) uv run whyfinder index reviews
   # eval:     (M1) uv run whyfinder eval --split valid   metrics: results/valid.json
