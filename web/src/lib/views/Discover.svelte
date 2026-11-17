@@ -1,5 +1,6 @@
 <script lang="ts">
   import GameSearch from '../components/GameSearch.svelte';
+  import Wordmark from '../components/Wordmark.svelte';
   import PickDetail from '../components/PickDetail.svelte';
   import SkyTray from '../components/SkyTray.svelte';
   import StarList from '../components/StarList.svelte';
@@ -81,10 +82,11 @@
 {#if !app.history.length}
   <div class="title">
     <div class="hero">
-      <h1>Name the games you love. Watch where your next one falls.</h1>
+      <h1 class="lockup"><Wordmark size="var(--lockup)" line="— 500 STARS —" /></h1>
       <p class="lead">
-        Every star is one of Steam's 500 most-played games, placed by the players they share. Add a few you love and ten
-        picks fall into your sky, each with the exact reasons and what players say.
+        <strong>Name the games you love. Watch where your next one falls.</strong> Every star is one of Steam's 500
+        most-played games, placed by the players they share. Ten picks fall into your sky, each with the exact reasons and
+        what players say.
       </p>
       <GameSearch size="hero" />
       <div class="presets">
@@ -160,12 +162,20 @@
       filter: none;
     }
   }
-  h1 {
-    font-size: clamp(40px, 4.8vw, 68px);
-    line-height: 1.02;
-    font-weight: 500;
-    text-wrap: balance;
+  .lockup {
+    --lockup: clamp(46px, 5.4vw, 86px);
+    align-self: flex-start;
+    max-width: 100%;
     text-shadow: 0 0 40px rgb(7 11 30 / 0.9);
+  }
+  .lead strong {
+    display: block;
+    margin-bottom: var(--space-2);
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: var(--text-xl);
+    line-height: 1.25;
+    color: var(--text);
   }
   .lead {
     margin: 0;
@@ -193,11 +203,11 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
     text-align: left;
-    padding: 10px 14px;
-    border-radius: 12px;
+    padding: 11px 14px 9px;
     border: 1px solid var(--line);
+    border-left: 2px solid var(--frame-line);
     background: color-mix(in srgb, var(--deep) 88%, transparent);
     cursor: pointer;
     transition:
@@ -205,7 +215,8 @@
       background var(--dur-fast) var(--ease-out);
   }
   .preset:hover:not([disabled]) {
-    border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+    border-color: color-mix(in srgb, var(--gold) 50%, transparent);
+    border-left-color: var(--gold);
     background: var(--raised);
   }
   .preset[disabled] {
@@ -213,7 +224,8 @@
     cursor: progress;
   }
   .pname {
-    font-weight: 600;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
   }
   .ptitles {
     font-size: var(--text-xs);
@@ -266,10 +278,9 @@
     margin: 0 0 var(--space-4);
     max-width: 44ch;
     text-align: center;
-    padding: 8px 16px;
-    border-radius: var(--radius-pill);
+    padding: 9px 18px 7px;
     background: var(--surface-solid);
-    border: var(--border);
+    border: 1px solid var(--frame-line);
     color: var(--muted);
     font-size: var(--text-sm);
     animation: rise var(--dur-mid) var(--ease-out);
@@ -295,6 +306,10 @@
     }
     .sky {
       grid-row: 1;
+    }
+    .lockup {
+      --lockup: clamp(34px, 10.6vw, 72px);
+      align-self: center;
     }
   }
   @media (max-width: 760px) {

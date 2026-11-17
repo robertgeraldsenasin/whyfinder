@@ -111,7 +111,7 @@
     background: var(--surface-solid);
     color: var(--text);
     padding: 8px 12px;
-    border-radius: 8px;
+    border-radius: 0;
   }
   .skip:focus {
     left: 8px;

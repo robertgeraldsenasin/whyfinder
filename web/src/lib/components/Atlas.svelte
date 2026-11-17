@@ -391,7 +391,7 @@
 
   function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string, opts: { force?: boolean; display?: boolean; size?: number; alpha?: number } = {}): void {
     const size = opts.size ?? 12.5;
-    ctx.font = opts.display ? `italic 600 ${size}px ${displayFont}` : `500 ${size}px ${bodyFont}`;
+    ctx.font = opts.display ? `400 ${size}px ${displayFont}` : `600 ${size}px ${bodyFont}`;
     const t = text.length > 38 ? `${text.slice(0, 36)}…` : text;
     const w = ctx.measureText(t).width;
     const box: Box = [x - w / 2 - 4, y - size, x + w / 2 + 4, y + 4];

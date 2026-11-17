@@ -120,9 +120,10 @@
     align-items: center;
     text-align: left;
     background: transparent;
-    border: 1px solid transparent;
-    border-radius: 12px;
-    padding: 7px 10px 7px 6px;
+    border: 0;
+    border-left: 2px solid transparent;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+    padding: 9px 10px 7px 6px;
     cursor: pointer;
     transition:
       background var(--dur-fast) var(--ease-out),
@@ -132,13 +133,12 @@
     background: color-mix(in srgb, var(--raised) 70%, transparent);
   }
   .row.selected {
-    background: var(--raised);
-    border-color: color-mix(in srgb, var(--gold) 55%, transparent);
-    box-shadow: 0 0 30px -12px rgb(242 193 78 / 0.55);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 16%, var(--raised)), var(--raised) 60%);
+    border-left-color: var(--gold);
   }
   .rank {
     grid-area: rank;
-    font-size: 24px;
+    font-size: 26px;
     line-height: 1;
     text-align: center;
     color: var(--gold);
@@ -161,7 +161,7 @@
   .dot {
     width: 7px;
     height: 7px;
-    border-radius: 50%;
+    transform: rotate(45deg);
     flex: none;
   }
   .variety {

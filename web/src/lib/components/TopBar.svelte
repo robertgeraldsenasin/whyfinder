@@ -4,6 +4,7 @@
   import * as sfx from '../sfx';
   import { app, type View } from '../state.svelte';
   import SettingsPanel from './SettingsPanel.svelte';
+  import Wordmark from './Wordmark.svelte';
 
   const tabs: [View, string][] = [
     ['discover', 'Discover'],
@@ -36,7 +37,7 @@
       <g fill="var(--starlight)"><circle cx="14" cy="16" r="3.6" /><circle cx="50" cy="12" r="3.6" /><circle cx="31" cy="30" r="3.2" /></g>
       <path fill="var(--gold)" d="M32 38 L34.4 45.6 L42 48 L34.4 50.4 L32 58 L29.6 50.4 L22 48 L29.6 45.6 Z" />
     </svg>
-    <span class="word display">Whyfinder</span>
+    {#if !(app.view === 'discover' && app.history.length === 0)}<Wordmark size={21} />{/if}
   </a>
   <nav aria-label="Views">
     {#each tabs as [view, label] (view)}
@@ -91,37 +92,44 @@
     color: var(--text);
     text-decoration: none;
   }
-  .word {
-    font-size: 26px;
-    font-weight: 700;
-  }
   nav {
     display: flex;
-    gap: 2px;
+    gap: var(--space-2);
     margin-left: auto;
-    padding: 4px;
-    border-radius: var(--radius-pill);
-    background: color-mix(in srgb, var(--deep) 80%, transparent);
-    border: var(--border);
   }
   nav a {
+    position: relative;
     color: var(--muted);
     text-decoration: none;
-    padding: 6px 16px;
-    border-radius: var(--radius-pill);
+    padding: 10px 14px 8px;
     font-size: var(--text-sm);
-    font-weight: 500;
-    transition:
-      color var(--dur-fast),
-      background var(--dur-fast);
+    font-weight: 600;
+    transition: color var(--dur-fast);
   }
   nav a:hover {
     color: var(--text);
   }
   nav a[aria-current='page'] {
-    background: var(--raised);
     color: var(--gold-bright);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 35%, transparent);
+  }
+  nav a[aria-current='page']::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+  nav a[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -3px;
+    width: 6px;
+    height: 6px;
+    background: var(--gold);
+    transform: translateX(-50%) rotate(45deg);
   }
   .tools {
     display: flex;
@@ -136,7 +144,6 @@
     height: 38px;
     display: grid;
     place-items: center;
-    border-radius: 50%;
     border: var(--border);
     background: color-mix(in srgb, var(--deep) 80%, transparent);
     color: var(--text);

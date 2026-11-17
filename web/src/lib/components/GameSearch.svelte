@@ -117,10 +117,11 @@
   input {
     width: 100%;
     border: 1px solid var(--line);
+    border-bottom-color: var(--frame-line);
     background: color-mix(in srgb, var(--midnight) 70%, var(--deep));
     color: var(--text);
-    border-radius: var(--radius-pill);
-    padding: 11px 16px 11px 42px;
+    border-radius: 0;
+    padding: 12px 16px 10px 42px;
     outline: none;
     transition:
       border-color var(--dur-fast) var(--ease-out),
@@ -131,19 +132,18 @@
   }
   input:focus {
     border-color: var(--gold);
-    box-shadow:
-      0 0 0 4px rgb(242 193 78 / 0.14),
-      0 0 40px -10px rgb(242 193 78 / 0.5);
+    box-shadow: 0 0 40px -12px rgb(242 193 78 / 0.55);
   }
   input:disabled {
     opacity: 0.6;
   }
   .hero input {
     font-size: var(--text-lg);
-    padding: 18px 24px 18px 54px;
-    background: color-mix(in srgb, var(--midnight) 55%, transparent);
-    border-color: color-mix(in srgb, var(--gold) 45%, var(--line));
-    box-shadow: 0 20px 60px -30px rgb(242 193 78 / 0.5);
+    padding: 19px 24px 16px 56px;
+    background: color-mix(in srgb, var(--midnight) 60%, transparent);
+    border-color: var(--frame-line);
+    border-bottom: 2px solid var(--gold);
+    box-shadow: 0 24px 60px -34px rgb(242 193 78 / 0.6);
   }
   .hero .icon {
     left: 22px;
@@ -160,8 +160,7 @@
     padding: 6px;
     list-style: none;
     background: var(--surface-solid);
-    border: var(--border);
-    border-radius: var(--radius);
+    border: 1px solid var(--frame-line);
     box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.9);
     animation: rise var(--dur-fast) var(--ease-out);
   }
@@ -169,8 +168,7 @@
     display: flex;
     justify-content: space-between;
     gap: var(--space-3);
-    padding: 9px 12px;
-    border-radius: 10px;
+    padding: 10px 12px 8px;
     cursor: pointer;
   }
   li.active {

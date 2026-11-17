@@ -82,17 +82,17 @@
     grid-template-columns: 14px minmax(0, 1fr) auto auto;
     align-items: center;
     gap: var(--space-2);
-    padding: 6px 4px 6px 6px;
-    border-radius: 10px;
+    padding: 7px 4px 5px 6px;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
     animation: rise var(--dur-mid) var(--ease-out);
   }
   .mine li:hover {
     background: color-mix(in srgb, var(--raised) 60%, transparent);
   }
   .star {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    width: 7px;
+    height: 7px;
+    transform: rotate(45deg);
     background: var(--starlight);
     box-shadow:
       0 0 6px 1px rgb(255 255 255 / 0.7),
@@ -114,7 +114,7 @@
     width: 58px;
     text-align: right;
     border: 1px solid transparent;
-    border-radius: var(--radius-sm);
+    border-radius: 0;
     background: color-mix(in srgb, var(--midnight) 60%, transparent);
     color: var(--text);
     padding: 3px 6px;
@@ -129,7 +129,6 @@
     display: grid;
     place-items: center;
     border: 0;
-    border-radius: 50%;
     background: transparent;
     color: var(--muted);
     cursor: pointer;
@@ -146,7 +145,7 @@
     background: var(--raised);
   }
   .find {
-    padding: 12px 18px;
+    padding: 14px 18px 12px;
     font-size: var(--text-md);
   }
   .note {
