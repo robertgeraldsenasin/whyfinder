@@ -12,8 +12,10 @@ from typing import Annotated
 import typer
 
 from whyfinder import __version__
+from whyfinder.data import pipeline
 from whyfinder.data.fetch import fetch as fetch_files
 from whyfinder.data.sources import REQUIRED, SOURCES
+from whyfinder.params import load_params, param
 
 app = typer.Typer(help="Whyfinder: find your next game. Know why.", no_args_is_help=True)
 data_app = typer.Typer(help="Data pipeline (docs/spec/03_DATA.md).", no_args_is_help=True)
@@ -54,3 +56,17 @@ def data_fetch(
         raise typer.BadParameter(f"unknown source(s): {', '.join(unknown)}", param_hint="--only")
     for result in fetch_files(out, checksums, names, record=record):
         typer.echo(f"{result.action:10s} {result.path.name}  {result.sha256}")
+
+
+@data_app.command("parse")
+def data_parse(
+    workers: Annotated[int, typer.Option(help="Parser processes.")] = 1,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Stream-parse the raw files into Parquet (FR-02)."""
+    p = load_params(params)
+    stats = pipeline.stage_parse(
+        RAW, INTERIM, workers=workers, tolerance=param(p, "data.parse_tolerance", float)
+    )
+    for name, s in stats.items():
+        typer.echo(f"{name}: {s['written']} rows, {s['malformed']} malformed of {s['lines']}")
