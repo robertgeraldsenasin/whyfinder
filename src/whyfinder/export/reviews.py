@@ -6,10 +6,11 @@ For each game in the demo slice, from Steam reviews written before T1 (the train
   all slice reviews, by the log-odds ratio with an informative Dirichlet prior (Monroe, Colaresi &
   Quinn, 2008), counted once per review. The demo intersects two games' lists to show what both
   communities talk about.
-- **Quotes** (`quotes`): up to `quotes_per_game` single sentences of at most 25 words (NFR-07), each
-  from a different player, chosen for positive wording, play time, and how many other slice games
-  the player also reviewed (`also`, slice indices), so the demo can show "players who also played
-  your game say…".
+- **Quotes** (`quotes`): up to `quotes_per_game` single sentences of at most 25 words (NFR-07),
+  chosen for positive wording and play time, and spread so that together they come from players of
+  as many of the game's neighbours as possible (the other slice games its reviewers reviewed most).
+  `also` lists the neighbours each quote's player reviewed, closest first, so the demo can show
+  "players who also played your game say…".
 
 No usernames or user IDs are exported. Selection is deterministic (ties by review ID).
 """
@@ -272,6 +273,30 @@ def title_words(titles: Iterable[str]) -> set[str]:
     return {t for title in titles for t in tokens(title)}
 
 
+def cover(candidates: Sequence[Quote], weight: dict[int, float], k: int) -> list[Quote]:
+    """Greedy: each step takes the quote with the best quality plus the weight of neighbour games
+    it reaches that no chosen quote reaches yet. Distinct texts only; ties by review ID."""
+    chosen: list[Quote] = []
+    covered: set[int] = set()
+    seen: set[str] = set()
+    pool = list(candidates)
+    while pool and len(chosen) < k:
+        best_i, best_v = -1, -math.inf
+        for i, q in enumerate(pool):
+            if q.text.lower() in seen:
+                continue
+            v = q.score + 2.0 * sum(weight.get(j, 0.0) for j in q.also if j not in covered)
+            if v > best_v or (v == best_v and q.review_id < pool[best_i].review_id):
+                best_i, best_v = i, v
+        if best_i < 0:
+            break
+        q = pool.pop(best_i)
+        seen.add(q.text.lower())
+        covered.update(q.also)
+        chosen.append(q)
+    return chosen
+
+
 def review_evidence(
     reviews: pd.DataFrame,
     games: Sequence[dict[str, Any]],
@@ -281,6 +306,7 @@ def review_evidence(
     max_reviews_per_game: int = 4000,
     min_docs: int = 5,
     prior: float = 500.0,
+    neighbours: int = 60,
 ) -> dict[str, Any]:
     """Build the evidence file.
 
@@ -311,10 +337,21 @@ def review_evidence(
         df_game, n_docs, top=terms_per_game, min_docs=min_docs, prior=prior, exclude=exclude
     )
 
+    # Each game's neighbours: the other slice games its reviewers reviewed most often. Quotes are
+    # chosen to cover them, so a quote is likely to come from someone who also played your game.
+    reviewers: dict[int, list[str]] = defaultdict(list)
+    for user, owned in also_by_user.items():
+        for k in owned:
+            reviewers[k].append(user)
     out: dict[str, Any] = {}
     for game_meta in games:
         gid = int(game_meta["id"])
         own = index[gid]
+        co: Counter[int] = Counter()
+        for user in reviewers.get(own, []):
+            co.update(also_by_user[user] - {own})
+        ranked = sorted(co.items(), key=lambda kv: (-kv[1], kv[0]))[:neighbours]
+        weight = {k: c / ranked[0][1] for k, c in ranked} if ranked else {}
         top_terms = frozenset(t for t, _ in terms.get(gid, [])[:12])
         candidates: list[Quote] = []
         for review_id, user, hours, year, text in rows_by_game.get(gid, []):
@@ -322,20 +359,14 @@ def review_evidence(
             if found is None:
                 continue
             sentence, score = found
-            also = sorted(also_by_user[user] - {own})
-            total = score + 0.6 * math.log1p(max(hours, 0.0)) + 0.4 * min(len(also), 5)
-            candidates.append(Quote(sentence, round(hours, 1), year, also[:80], total, review_id))
+            also = sorted(
+                (k for k in also_by_user[user] if k in weight), key=lambda k: (-weight[k], k)
+            )
+            total = score + 0.6 * math.log1p(max(hours, 0.0))
+            candidates.append(Quote(sentence, round(hours, 1), year, also, total, review_id))
         candidates.sort(key=lambda q: (-q.score, q.review_id))
-        chosen: list[Quote] = []
-        seen_text: set[str] = set()
-        for q in candidates:
-            key = q.text.lower()
-            if key in seen_text:
-                continue
-            seen_text.add(key)
-            chosen.append(q)
-            if len(chosen) == quotes_per_game:
-                break
+        candidates = candidates[: quotes_per_game * 40]
+        chosen = cover(candidates, weight, quotes_per_game)
         out[str(gid)] = {
             "terms": [[t, z] for t, z in terms.get(gid, [])],
             "quotes": [
