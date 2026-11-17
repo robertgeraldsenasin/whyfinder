@@ -64,7 +64,8 @@ GENERIC = _words(
     love loved enjoy enjoyed amazing awesome nice pretty first new make makes made want think
     know see say going go goes come back need lot people friend friends overall definitely
     actually still get sale early access update updates version developer developers dev devs
-    gameplay install installed uninstall download downloaded
+    gameplay install installed uninstall download downloaded award awards nominate nominated
+    nomination nominating deserves deserve deserved
     """
 )
 POSITIVE = _words(
