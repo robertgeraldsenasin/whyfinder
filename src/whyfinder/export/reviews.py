@@ -167,6 +167,9 @@ def displayable(sentence: str) -> bool:
     return sum(w in STOPWORDS for w in words) >= 2
 
 
+#: Words that carry no information about this particular game.
+PLAIN = STOPWORDS | GENERIC | POSITIVE | NEGATIONS
+
 #: Lead-ins that make a sentence read as a fragment when quoted alone.
 FRAGMENT_START = frozenset(
     {"and", "but", "or", "so", "because", "is", "was", "which", "then", "also"}
@@ -200,7 +203,16 @@ def best_sentence(text: str, terms: frozenset[str]) -> tuple[str, float] | None:
         pos, neg = polarity(toks)
         if pos == 0 or neg > 0:
             continue
-        score = pos + 0.5 * sum(t in terms for t in set(toks)) + 0.5 * well_formed
+        # Specific beats gushing: "the puzzles bend portals in clever ways" over "best game ever".
+        content = {t for t in toks if t not in PLAIN}
+        if not content:
+            continue
+        score = (
+            min(pos, 2)
+            + 0.8 * len(content & terms)
+            + 0.25 * min(len(content), 8)
+            + 0.5 * well_formed
+        )
         if not sentence.endswith((".", "!", "?")):
             sentence += "."
         if best is None or score > best[1]:
@@ -352,7 +364,7 @@ def review_evidence(
             co.update(also_by_user[user] - {own})
         ranked = sorted(co.items(), key=lambda kv: (-kv[1], kv[0]))[:neighbours]
         weight = {k: c / ranked[0][1] for k, c in ranked} if ranked else {}
-        top_terms = frozenset(t for t, _ in terms.get(gid, [])[:12])
+        top_terms = frozenset(t for t, _ in terms.get(gid, []))
         candidates: list[Quote] = []
         for review_id, user, hours, year, text in rows_by_game.get(gid, []):
             found = best_sentence(text, top_terms)
