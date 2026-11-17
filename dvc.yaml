@@ -46,6 +46,12 @@ stages:
     deps: [data/interim/parse_stats.json, data/processed/clean_stats.json, data/processed/kcore_stats.json, data/split.json, data/processed/features_stats.json, data/ci/manifest.json]
     outs:
       - data/stats.json: {cache: false}
+  export_demo:
+    cmd: uv run whyfinder export demo
+    deps: [data/processed/train.parquet, data/processed/games.parquet, data/split.json, src/whyfinder/export/demo.py]
+    params: [demo, graph.tags_per_game]
+    outs:
+      - data/export/demo-slice.json: {cache: false}
   # build:    (M1) uv run whyfinder build ease graph blend ials
   # index:    (M3) uv run whyfinder index reviews
   # eval:     (M1) uv run whyfinder eval --split valid   metrics: results/valid.json

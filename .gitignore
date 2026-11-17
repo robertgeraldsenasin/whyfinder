@@ -15,6 +15,7 @@ build/
 /data/interim/
 /data/processed/
 /data/ci/
+/data/export/
 /artifacts/
 /mlruns/
 .dvc/cache/

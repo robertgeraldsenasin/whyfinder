@@ -15,11 +15,14 @@ from whyfinder import __version__
 from whyfinder.data import pipeline
 from whyfinder.data.fetch import fetch as fetch_files
 from whyfinder.data.sources import REQUIRED, SOURCES
+from whyfinder.export.demo import demo_slice
 from whyfinder.params import load_params, param
 
 app = typer.Typer(help="Whyfinder: find your next game. Know why.", no_args_is_help=True)
 data_app = typer.Typer(help="Data pipeline (docs/spec/03_DATA.md).", no_args_is_help=True)
 app.add_typer(data_app, name="data")
+export_app = typer.Typer(help="Exports for the web demo (ADR-0015).", no_args_is_help=True)
+app.add_typer(export_app, name="export")
 
 RAW = Path("data/raw")
 INTERIM = Path("data/interim")
@@ -28,6 +31,7 @@ CI = Path("data/ci")
 CHECKSUMS = Path("data/checksums.txt")
 SPLIT_JSON = Path("data/split.json")
 STATS_JSON = Path("data/stats.json")
+DEMO_SLICE = Path("data/export/demo-slice.json")
 ParamsOption = Annotated[Path, typer.Option("--params", help="Parameter file.")]
 
 
@@ -134,3 +138,28 @@ def data_stats() -> None:
     """Merge every stage's counts into data/stats.json."""
     pipeline.stage_stats(INTERIM, PROCESSED, SPLIT_JSON, CI, STATS_JSON)
     typer.echo(f"wrote {STATS_JSON}")
+
+
+@export_app.command("demo")
+def export_demo(
+    out: Annotated[Path, typer.Option(help="Where to write the slice.")] = DEMO_SLICE,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Write the demo slice: top games, co-play Gram matrix, metadata and layout (ADR-0015)."""
+    import json
+
+    import pandas as pd
+
+    p = load_params(params)
+    payload = demo_slice(
+        pd.read_parquet(PROCESSED / "train.parquet", columns=["user", "game"]),
+        pd.read_parquet(PROCESSED / "games.parquet"),
+        n_games=param(p, "demo.games", int),
+        tags_per_game=param(p, "graph.tags_per_game", int),
+        neighbors=param(p, "demo.layout_neighbors", int),
+        iterations=param(p, "demo.layout_iterations", int),
+        split=pipeline.read_json(SPLIT_JSON),
+    )
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, separators=(",", ":"), sort_keys=True) + "\n")
+    typer.echo(f"wrote {out}: {len(payload['games'])} games from {payload['users']} users")
