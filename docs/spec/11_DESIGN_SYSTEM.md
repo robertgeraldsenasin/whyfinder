@@ -1,106 +1,126 @@
-# 11 · Design system: "Star Atlas"
+# 11 · Design system: "Starfall"
 
-Whyfinder looks like a navigator's star chart from a space game: cinematic on the map, quiet on the page. Your games are
-stars you've visited; picks are new stars; the **lines between them are the reasons**. The space
-setting is the frame; the content (picks, reasons, evidence) is always on solid, quiet panels.
+Whyfinder is a night sky. Every star is a game, placed by the players it shares with other games.
+Your games are white stars; when you ask for picks, ten new stars fall from the sky and strike
+where they sit, and the lines between your stars and a pick are the exact reasons. The sky carries
+the spectacle; the reading panels stay solid and calm. Decision record: [ADR-0017](../decisions/ADR-0017-starfall.md)
+(motion: ADR-0016).
 
 Tokens: [`docs/design/tokens.css`](../design/tokens.css). Logo: [`docs/design/logo.svg`](../design/logo.svg).
-Static mockup: [`docs/design/mockup.html`](../design/mockup.html) (open it in a browser).
 
 ## Principles
 
-1. **The metaphor carries meaning.** Constellation lines exist only where an attribution exists; line
-   weight = contribution share. Nothing decorative pretends to be data.
-2. **One accent per view.** Amber marks the pick and the primary action. Cyan marks reasoning lines.
-   Violet "nebula" appears only as a faint background wash (≤ 12% opacity).
-3. **The map is the stage; panels are the page.** The atlas fills the screen behind everything and
-   may carry depth and motion (ADR-0016). Reading panels sit in front on solid surfaces: no glow,
-   blur or animation behind text; no neon, no gradient text, no glassmorphism.
-4. **Data looks like instruments.** Mono micro-labels, thin rules and corner ticks on data panels only
-   (the "HUD" layer), never on body text.
-5. **Cinematic but purposeful motion** (ADR-0016). The camera glides between stars, light travels
-   along reasons, and Under the hood animates the real computation step by step. Every motion shows
-   something the model did; everything is static under `prefers-reduced-motion`.
+1. **The metaphor carries meaning.** Lines exist only where an attribution exists, and line weight is
+   the contribution share. Star colour is closeness to your taste. Nothing decorative pretends to be data.
+2. **One moment of spectacle.** The starfall is the memorable moment. Everything around it is quiet:
+   solid panels, sentence-case labels, no glow behind text.
+3. **Evidence from people, not only numbers.** Each pick shows the game itself (Steam art and store
+   link), what its players say and the words both communities use, next to the exact shares.
+4. **Human words.** Plain verbs, sentence case, no jargon on Discover. The technical story lives in
+   Under the hood and Architecture.
+5. **Respect the viewer.** Flashes are capped, effects and sound can be turned down or off, and reduced
+   motion turns every effect off.
 
-## Themes
+## Colour
 
-| Token | Deep Field (dark, default) | Atlas Paper (light) | Use |
-| --- | --- | --- | --- |
-| `--bg` | `#0A0F1F` | `#F5F1E6` | page |
-| `--surface` | `#111A2E` | `#FFFCF4` | panels, cards |
-| `--raised` | `#18233B` | `#EFE9DA` | hover, selected rows |
-| `--line` | `#2A3654` | `#D6CDB8` | borders, rules (non-text) |
-| `--text` | `#E8EDF7` | `#172038` | body text |
-| `--muted` | `#A3AEC7` | `#555F75` | secondary text, labels |
-| `--pick` | `#F4B860` | `#9A5A00` | pick stars, primary button, focus ring |
-| `--link` | `#7DD3E3` | `#17707F` | constellation lines, links |
-| `--nebula` | `#8B7CF0` | `#5B4BC4` | background wash only |
-| `--good` | `#6FD8A3` | `#1E7A4E` | verified evidence |
-| `--bad` | `#F28B8B` | `#B3261E` | negative contributions, errors |
+| Token | Hex | Use |
+| --- | --- | --- |
+| `--midnight` (`--bg`) | `#070B1E` | the sky, the page |
+| `--deep` (`--surface`) | `#0D1433` | panels (97% opaque) |
+| `--raised` | `#151D49` | hover, selected rows |
+| `--line` | `#273068` | borders, rules (non-text) |
+| `--starlight` (`--text`) | `#F5F2FF` | body text, your stars |
+| `--dust` (`--muted`) | `#A9AED3` | secondary text |
+| `--gold` (`--pick`) | `#F2C14E` | picks, primary action, focus ring, the co-play part of a reason |
+| `--violet` / `--violet-text` (`--link`) | `#8E6BF0` / `#B8A4FF` | the graph: tags, studios, PageRank glow; links |
+| `--good`, `--bad` | `#7FE0B0`, `#FF8F8F` | verified, negative contributions |
 
-Contrast (WCAG 2.1, computed): body text ≥ 13.3:1 and muted text ≥ 5.2:1 on every surface in both
-themes; amber and cyan text ≥ 4.5:1 on `--bg` and `--surface` in both themes. In Atlas Paper, don't
-put `--good` text on `--raised` (4.39:1); use it on `--surface`.
+Two accents with fixed jobs: gold is "the pick and what to do next", violet is "the graph". Contrast
+(WCAG 2.1, computed): Starlight ≥ 14.6:1, Dust ≥ 7.4:1, Gold ≥ 9.6:1, violet text ≥ 7.5:1 on every
+surface; text on the gold button is 11.1:1. Raw `--violet` is never used for text.
+
+### Closeness
+
+c = √(s / s_max), where s is a game's score and s_max the best score among games you do not own
+(`web/src/lib/sky.ts`). Tiers, closest first:
+
+| c | Tier | Plain words |
+| --- | --- | --- |
+| ≥ 0.9 | Twin star | about as close to your taste as a game gets here |
+| ≥ 0.7 | Close orbit | close to your taste |
+| ≥ 0.5 | Same constellation | shares a lot with your games |
+| ≥ 0.3 | Neighbouring sky | some overlap with your games |
+| < 0.3 | Distant light | little overlap with your games |
+
+Colour modes (Settings, remembered), interpolated in OKLab from distant to closest:
+
+| Mode | Stops |
+| --- | --- |
+| Gold and violet (default) | indigo, violet, lavender, warm white, gold |
+| Gold | bronze, deep gold, gold, pale gold |
+| Star temperature | red, orange, yellow, white, blue-white |
 
 ## Type
 
-| Role | Font (OFL, self-hosted) | Size / weight |
+| Role | Font (OFL, self-hosted) | Use |
 | --- | --- | --- |
-| Display (wordmark, h1, pick names) | Space Grotesk | 32 / 600, 24 / 600, 20 / 600 |
-| Body | Inter | 16 / 400, line-height 1.55 |
-| Data and micro-labels | JetBrains Mono | 12 / 500, uppercase, tracking 0.08em |
+| Display | Bodoni Moda italic 500/700 | wordmark, headings, game titles, quotes, rank numerals |
+| Body and UI | Hanken Grotesk 400–700 | everything else, sentence case, tabular figures |
+| Code | JetBrains Mono 500 | equations and source paths only |
 
-Fallback stack until fonts are self-hosted: `ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-sans-serif` and `ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace`.
+Scale (a perfect fourth): 12.5, 14, 15.5, 20, 27, 36 px; hero 40–68 px. No tracked capitals, no
+middle-dot meta strings, no arrows appended to buttons.
 
 ## Layout
 
-- 12-column grid, max width 1200 px, gutters 24 px; spacing scale 4 · 8 · 12 · 16 · 24 · 32 · 48.
-- Desktop: the star map is full-bleed behind the page; "Your games" floats left (3 cols), "Why this
-  pick" right (3 cols), the picks rail along the bottom, the map's focus in the centre.
-- Three views share the map: **Discover** (picks and reasons), **Under the hood** (the pipeline run
-  step by step on your history) and **Architecture** (the system as a live diagram).
-- Phone: query bar → your games (chips) → star map (aspect 4:3) → pick list → why panel (a bottom sheet in the real app).
-- Radius: 10 px panels, 999 px chips. Borders 1 px `--line`.
+- Title screen: the hero (headline, one paragraph, a large search, four starter skies) on the left;
+  the sky on the right. On phones the sky sits above the hero.
+- Discover with results: "Your sky" and "Where the stars fell" on the left (340 px), the sky in the
+  centre, the pick on the right (420 px). Below 1180 px the pick moves under the sky; on phones
+  everything stacks under a 46vh sky.
+- Radius: 14 px panels, 12 px rows, pills for buttons, chips and the search.
 
 ## Components
 
 | Component | Notes |
 | --- | --- |
-| Query bar | "Like Hades but co-op…"; parsed anchors become chips, unresolved words listed below |
-| Game chip | cover-less: title + small star glyph; removable; keyboard reachable |
-| Star map | SVG. History = white dots (r 4); picks = 4-point amber sparkles (r 7); lines = cyan, width 1–4 px by share, dashed for "related by" paths; labels on hover/focus; a list view alternative for screen readers |
-| Pick card | rank, title, price, tags (max 3), "kept for variety" badge, one-line top reason |
-| Why panel | attribution bars (exact %), counterfactual sentence with its guarantee, "related by" paths, verified claims each with an evidence chip (✓ verified) |
-| Evidence chip | `ATTR 588650` or `REVIEW c_8812_0`; opens the quote or the attribution row |
-| HUD frame | corner ticks + mono label; used on the star map and the why panel only |
-| Theme toggle | Deep Field ↔ Atlas Paper; remembers choice |
-| Stage rail | Under the hood: the pipeline stages in order, each with its live timing; step, play, pause, speed |
-| Stage panel | One stage's picture, its equation, the live numbers, its cost and the source file that implements it |
-| System diagram | Architecture: offline and online lanes; replay a request or the build; planned parts dashed with their milestone |
+| Search | Combobox; hero size on the title screen, compact in Your sky; adds a twinkle sound and a violet ring on the star |
+| Your sky | Your games with hours (the weight), remove, "Find my next game" |
+| Where the stars fell | Ranked list; rows appear as each star lands; rank numeral, title, closeness dot and tier, "picked for variety" |
+| Pick panel | Steam header art (fallback plate) with the tier, title, studio, year, price; View on Steam; closeness scale; Because you love (exact shares, gold co-play and violet graph parts); Players who also played X say; Other players say; Both communities talk about; What would change it; How it connects to your games |
+| Settings | Star colours, sound and volume, impact effects |
+| Inspect card | Click any star: title, studio, price, tags, Add to your sky |
 
-## Motion (ADR-0016)
+## Motion (ADR-0016, ADR-0017)
 
 | Element | Motion | Reduced motion |
 | --- | --- | --- |
-| Starfield | three parallax layers following the camera and, gently, the pointer | static |
-| Camera | spring-eased pan and zoom to frame a pick and its reasons, ≤ 900 ms | jumps |
-| Constellation lines | draw in (stroke-dashoffset, 600 ms, ease-out); then light particles travel from your game to the pick, density ∝ share | appear instantly; no particles |
-| Pick star | soft glow pulse on selection | none |
-| Under the hood | push pulses, Cholesky sweep, DPP steps, counterfactual removals replay the real computation | manual stepping only |
-| Panels and views | 150 ms fade/slide 4 px; cross-fade between views | none |
+| Sky | three parallax layers, twinkle, a milky band and nebula; the camera springs to frame what matters | static, jumps |
+| Starfall | per pick, #10 to #1: beam and reticle lock on, an accelerating streak, impact (shockwaves, embers, crater glow, shake); #1 hangs before it falls and lands hardest | picks appear in place |
+| Impact frame | top three only: one inverted frame with speed lines rushing in, one dark frame with gold lines, then a bloom; at most three a second | none |
+| Recolour | after #1 lands, every star takes its closeness colour, rippling out from your stars | instant |
+| Reasons | lines draw in, then light travels from your game to the pick | appear; no particles |
+| Panels | rows land with a flash of brightness; the pick panel rises in | none |
 
-The animation loop sleeps when nothing moves or the tab is hidden.
+The loop runs at full rate only while something moves and idles at about 20 fps for the twinkle;
+it stops when the tab is hidden.
+
+## Sound
+
+Synthesized in the browser (`web/src/lib/sfx.ts`): falling whoosh (noise through a falling band-pass),
+impact (sine thump, noise crack, a bell from a D major pentatonic, with #1 on the root an octave
+down), lock-on glissando, select chime, add twinkle. On by default; starts on the first click or key;
+mute and volume are remembered.
 
 ## Accessibility
 
-- Every star map has a list alternative ("Picks and their reasons") with the same content.
-- Focus ring 2 px `--pick` offset 2 px on every interactive element.
-- Colour never carries meaning alone: negative contributions also show a minus sign; dashed lines are
-  also labelled "related by".
-- Target: axe 0 violations in both themes (NFR-09).
+- Every star a pick lands on has a keyboard button; the ranked list is the full alternative to the sky.
+- Focus ring 2 px gold, offset 2 px.
+- Colour never carries meaning alone: tiers are named, negative contributions have a minus sign.
+- The starfall can be skipped with Esc, Space, Enter, a click or the Skip button.
+- Target: axe 0 violations on every view and the settings dialog (NFR-09).
 
 ## Logo
 
-A constellation of four stars forming a **Y** ("why"): three outer stars joined to a centre star, the
-lower one amber (the pick). Wordmark "whyfinder" in Space Grotesk 600, lowercase.
+A Y-shaped constellation ("why"): two violet-joined white stars and a centre star, with a gold
+four-point star below it (the pick). Wordmark "Whyfinder" in Bodoni Moda italic 700.

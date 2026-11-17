@@ -23,6 +23,8 @@ export interface PickExplanation {
 
 export interface Explained extends Omit<Recommendation, 'scores' | 'steps'> {
   history: HistoryEntry[];
+  /** Score of every catalogue game (owned games included), for colouring the whole sky. */
+  scores: number[];
   topScores: [number, number][];
   /** EASE^R and PageRank parts of the score for the 20 best candidates: [index, ease, ppr]. */
   parts: [number, number, number][];
@@ -165,6 +167,7 @@ export class Engine {
     });
     return {
       history,
+      scores: Array.from(rec.scores),
       parts: scoreParts,
       candidates: rec.candidates,
       relevanceTop: rec.relevanceTop,

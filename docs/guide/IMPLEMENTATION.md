@@ -10,7 +10,7 @@ flowchart LR
   B --> C[3 Demo slice]
   C --> D[4 Python core]
   D --> E[5 Browser engine + goldens]
-  E --> F[6 Star Atlas UI]
+  E --> F[6 Starfall UI]
   F --> G[7 Pages deploy]
   G --> H[8 Next: M1 to M4]
 ```
@@ -72,6 +72,25 @@ Results of the first full run are in `data/stats.json` and ADR-0002: 7.79 M revi
 G = XᵀX (train split only), metadata and a deterministic star-map layout. Aggregates only: no user
 rows, no review text. Copy it to `web/public/data/demo-slice.json` (the data run publishes it).
 
+`uv run whyfinder export reviews` (DVC stage `export_reviews`) writes `data/export/reviews.json`, the
+evidence behind each pick, from reviews written before T1 only:
+
+- **Community terms**: up to 30 words that set a game's reviews apart from the other 499. They are
+  scored by the log-odds ratio with an informative Dirichlet prior (Monroe et al., 2008), counted
+  once per review, with plurals merged.
+- **Quotes**: twelve single sentences of at most 25 words (NFR-07).
+  - A sentence must be positive, specific to the game, English prose, and free of profanity and
+    backhanded praise.
+  - Quotes are chosen greedily so that, together, they come from players of as many of the game's
+    neighbours as possible. Neighbours are the games its reviewers also reviewed, counted as XᵀX on
+    the player-by-game matrix.
+  - Each quote keeps those neighbours in `also`, which lets the demo say "players who also played
+    your game say".
+  - No usernames leave the pipeline.
+
+The data run publishes `reviews.json` with the slice; download it from the `data-ci-v1` release and
+commit it to `web/public/data/`.
+
 ## 4 · The glass-box core in Python ✅ (on the slice; full-data build in M1)
 
 | Algorithm | File | Oracle / property test |
@@ -97,17 +116,30 @@ histories: B rows, graph degrees, push rounds and estimates, Π rows, candidates
 flags, DPP gains, attributions, counterfactual sets and paths. **When you change an algorithm, change
 both sides, run `uv run whyfinder export model`, and commit the new goldens in the same PR.**
 
-## 6 · The Star Atlas UI ✅
+## 6 · The Starfall UI ✅
 
 | View | What it shows | Files |
 | --- | --- | --- |
-| Discover | your games as white stars, picks as amber sparkles, reasons as lines with light flowing at their exact share; why panel with the EASE^R/PageRank split, the counterfactual and paths | `web/src/lib/views/Discover.svelte`, `components/` |
+| Discover | a title screen with a big search and four starter skies; then your games as white stars. "Find my next game" makes ten picks fall into the sky (#10 first): beam, streak, impact, shockwaves, embers and, for the top three, an impact frame. The sky recolours by closeness, and the pick panel shows the Steam art and store link, exact shares, quotes from players who also played your games, the words both communities use, the counterfactual and how it connects | `web/src/lib/views/Discover.svelte`, `components/{Atlas,SkyTray,StarList,PickDetail,GameSearch}.svelte` |
 | Under the hood | the same run replayed stage by stage from the engine's traces: confidence weights, the Cholesky sweep over G, push rounds spreading mass, the β blend, the shortlist, each DPP step, the counterfactual trail | `views/UnderTheHood.svelte` |
 | Architecture | the system as a live diagram with real numbers; replay a request (your timings) or the build (the data run's counts) | `views/Architecture.svelte` |
 
+Supporting modules:
+
+| Module | Job |
+| --- | --- |
+| `lib/sky.ts` | closeness c = √(s / s_max), the five named tiers, and the three colour modes interpolated in OKLab |
+| `lib/evidence.ts` | picks bridge quotes and shared terms for a pick |
+| `lib/sfx.ts` | every sound, synthesized with Web Audio |
+| `lib/settings.svelte.ts` | star colours, sound and volume, impact effects; saved in this browser |
+
 The engine runs in a Web Worker (`engine/worker.ts`), so animations never wait for maths. Design:
-`docs/spec/11_DESIGN_SYSTEM.md` and ADR-0016 (cinematic map, solid reading panels, reduced motion
-respected). `npm run e2e` runs Playwright on desktop and phone, with axe in both themes.
+`docs/spec/11_DESIGN_SYSTEM.md`, ADR-0016 and ADR-0017. Impact frames are capped at three per second;
+reduced motion turns every effect off. `npm run e2e` runs Playwright on desktop and phone: search,
+starfall, skip, settings, every view, reduced motion and axe.
+
+To review the starfall frame by frame, slow the page's clock in a Playwright script (wrap
+`performance.now` and `requestAnimationFrame`) and take screenshots every few milliseconds.
 
 ## 7 · Deploy ✅
 

@@ -55,14 +55,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: The page, the slice and the model load
+      - name: The page, the slice, the model and the review evidence load
         env:
           SITE: https://robertgeraldsenasin.github.io/whyfinder
         run: |
           for attempt in 1 2 3 4 5 6; do
             if curl -fsS "$SITE/" | grep -q "Whyfinder" \
               && curl -fsS "$SITE/data/demo-slice.json" | python3 -c "import json,sys; d=json.load(sys.stdin); assert len(d['games']) == 500" \
-              && curl -fsS "$SITE/data/model.json" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['cB'] > 0 and d['cPi'] > 0"; then
+              && curl -fsS "$SITE/data/model.json" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['cB'] > 0 and d['cPi'] > 0" \
+              && curl -fsS "$SITE/data/reviews.json" | python3 -c "import json,sys; d=json.load(sys.stdin); assert len(d['games']) == 500"; then
               echo "healthy"; exit 0
             fi
             echo "not yet (attempt $attempt)"; sleep 20

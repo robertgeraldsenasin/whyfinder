@@ -16,4 +16,4 @@
 | Claim checker | Deterministic code that verifies every sentence the LLM writes against its evidence |
 | Non-inferiority | A gate that passes if the change is no worse than main by more than a margin δ |
 | Sealed test set | The final split, scored only when a release is tagged |
-| Star Atlas | The design language: stars = games, lines = reasons |
+| Starfall | The design language (ADR-0017): stars = games, picks fall into the sky, lines = reasons, colour = closeness |

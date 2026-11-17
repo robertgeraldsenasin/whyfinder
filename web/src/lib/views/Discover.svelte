@@ -1,15 +1,40 @@
 <script lang="ts">
-  import GamePicker from '../components/GamePicker.svelte';
-  import PickRail from '../components/PickRail.svelte';
-  import WhyPanel from '../components/WhyPanel.svelte';
-  import { ms } from '../format';
+  import GameSearch from '../components/GameSearch.svelte';
+  import PickDetail from '../components/PickDetail.svelte';
+  import SkyTray from '../components/SkyTray.svelte';
+  import StarList from '../components/StarList.svelte';
+  import * as sfx from '../sfx';
+  import { closeness as closenessOf } from '../sky';
   import { app, type SceneLine } from '../state.svelte';
 
-  // What the atlas draws in Discover: your stars, the picks, and the reasons for the selected pick.
+  const games = $derived(app.slice?.games ?? []);
+  const result = $derived(app.result && !app.stale ? app.result : null);
+  const closeness = $derived(result ? closenessOf(result.scores, result.history.map(([j]) => j)) : null);
+  const landedAll = $derived(!!result && app.landed >= result.picks.length);
+
+  const PRESETS: [string, string[], number[]][] = [
+    ['Puzzles and stories', ['Portal 2', 'Undertale', 'The Stanley Parable'], [40, 12, 3]],
+    ['Survival crews', ['Rust', 'DayZ', 'Arma 3'], [300, 120, 80]],
+    ['Roguelike runs', ['FTL: Faster Than Light', 'The Binding of Isaac', 'XCOM: Enemy Unknown'], [60, 90, 45]],
+    ['Grand strategy', ["Sid Meier's Civilization® V", 'Stellaris', 'Mount & Blade: Warband'], [400, 60, 90]],
+  ];
+  const presets = $derived(
+    PRESETS.map(([name, titles, hours]) => ({
+      name,
+      items: titles.map((t, k) => ({ index: games.findIndex((g) => g.title === t), hours: hours[k] })).filter((x) => x.index >= 0),
+    })).filter((p) => p.items.length >= 2),
+  );
+
+  function usePreset(items: { index: number; hours: number }[]): void {
+    sfx.unlock();
+    app.history = items.map((x) => ({ ...x }));
+    void app.find();
+  }
+
+  // What the sky draws in Discover: your stars, the picks, and the reasons for the selected pick.
   $effect(() => {
-    const result = app.result;
     const history = app.history.map((h) => h.index);
-    if (!result || app.stale) {
+    if (!result) {
       app.scene = {
         focus: history,
         history,
@@ -21,6 +46,8 @@
         hubGlow: null,
         dim: 0,
         key: `discover:${history.join(',')}`,
+        closeness: null,
+        fall: null,
       };
       return;
     }
@@ -35,7 +62,7 @@
     const related = e.paths.find((p) => p.via !== null);
     if (related) lines.push({ from: related.source, to: related.target, share: 0, kind: 'related', hub: related.via! });
     app.scene = {
-      focus: [...result.history.map(([j]) => j), e.pick],
+      focus: [...result.history.map(([j]) => j), ...result.picks],
       history: result.history.map(([j]) => j),
       picks: result.picks,
       selected: e.pick,
@@ -43,66 +70,173 @@
       glow: null,
       hubs: related ? [related.via!] : [],
       hubGlow: null,
-      dim: 0.25,
+      dim: 0.2,
       key: `discover:${app.resultFor}:${app.selected}`,
+      closeness,
+      fall: result.picks.join(','),
     };
   });
-
-  const timings = $derived(app.result?.timings);
 </script>
 
-<div class="discover">
-  <div class="left">
-    <GamePicker />
-    {#if app.ready}
-      <p class="engine micro" aria-live="polite">
-        Engine live in your browser · EASE^R {ms(app.ready.timings.ease)} · graph {app.ready.nodes.toLocaleString('en-US')} nodes
-        {#if timings}· picks + reasons {ms(timings.score + timings.explain + timings.pi)}{/if}
+{#if !app.history.length}
+  <div class="title">
+    <div class="hero">
+      <h1>Name the games you love. Watch where your next one falls.</h1>
+      <p class="lead">
+        Every star is one of Steam's 500 most-played games, placed by the players they share. Add a few you love and ten
+        picks fall into your sky, each with the exact reasons and what players say.
       </p>
-    {/if}
-  </div>
-
-  <div class="stage" data-stage>
-    {#if !app.history.length}
-      <div class="hero">
-        <h1>Find your next game. <span>Know why.</span></h1>
-        <p>
-          Every star is one of the 500 most-played Steam games. Add a few you love: a glass-box recommender runs right
-          here, and every line it draws is an exact reason.
-        </p>
+      <GameSearch size="hero" />
+      <div class="presets">
+        <p id="start-from">Or start from a sky someone else might have</p>
+        <ul aria-labelledby="start-from">
+          {#each presets as p (p.name)}
+            <li>
+              <button class="preset" disabled={!app.ready} onclick={() => usePreset(p.items)}>
+                <span class="pname">{p.name}</span>
+                <span class="ptitles">{p.items.map((x) => games[x.index].title).join(', ')}</span>
+              </button>
+            </li>
+          {/each}
+        </ul>
       </div>
-    {:else if !app.result}
-      <p class="hint micro">{app.history.length} {app.history.length === 1 ? 'star' : 'stars'} lit · press “Find my picks”</p>
+    </div>
+    <div class="sky" data-stage></div>
+  </div>
+{:else}
+  <div class="discover" class:has-detail={!!result}>
+    <div class="left">
+      <SkyTray />
+      <StarList {closeness} />
+    </div>
+    <div class="stage" data-stage>
+      {#if !result && !app.running}
+        <p class="hint">
+          {app.history.length === 1 ? 'One star in your sky. Add two or three more for sharper picks, or find your next game now.' : 'Your constellation is ready. Press Find my next game.'}
+        </p>
+      {/if}
+    </div>
+    {#if result}
+      <div class="right">
+        {#if landedAll}
+          <PickDetail {closeness} />
+        {/if}
+      </div>
     {/if}
   </div>
-
-  <div class="right">
-    <WhyPanel />
-  </div>
-
-  <div class="bottom">
-    <PickRail />
-  </div>
-</div>
+{/if}
 
 <style>
+  .title {
+    position: relative;
+    z-index: 2;
+    min-height: calc(100dvh - 72px);
+    display: grid;
+    grid-template-columns: minmax(0, 46%) minmax(0, 1fr);
+    align-items: center;
+    padding: 0 var(--space-5) var(--space-6) clamp(24px, 6vw, 96px);
+    pointer-events: none;
+  }
+  .sky {
+    align-self: stretch;
+  }
+  .hero {
+    pointer-events: auto;
+    max-width: 620px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    animation: dawn 1100ms var(--ease-out);
+  }
+  @keyframes dawn {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+      filter: blur(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+  }
+  h1 {
+    font-size: clamp(40px, 4.8vw, 68px);
+    line-height: 1.02;
+    font-weight: 500;
+    text-wrap: balance;
+    text-shadow: 0 0 40px rgb(7 11 30 / 0.9);
+  }
+  .lead {
+    margin: 0;
+    max-width: 52ch;
+    color: var(--muted);
+    font-size: var(--text-lg);
+    line-height: 1.5;
+    text-shadow: 0 0 20px rgb(7 11 30 / 1);
+  }
+  .presets p {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--muted);
+  }
+  .presets ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .preset {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--deep) 88%, transparent);
+    cursor: pointer;
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background var(--dur-fast) var(--ease-out);
+  }
+  .preset:hover:not([disabled]) {
+    border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+    background: var(--raised);
+  }
+  .preset[disabled] {
+    opacity: 0.6;
+    cursor: progress;
+  }
+  .pname {
+    font-weight: 600;
+  }
+  .ptitles {
+    font-size: var(--text-xs);
+    color: var(--muted);
+  }
+
   .discover {
     position: relative;
     z-index: 2;
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr) 360px;
-    grid-template-rows: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'left stage right'
-      'left bottom right';
-    gap: var(--space-4) var(--space-5);
-    height: calc(100dvh - 64px);
+    grid-template-columns: 340px minmax(0, 1fr);
+    grid-template-areas: 'left stage';
+    gap: var(--space-5);
+    height: calc(100dvh - 72px);
     padding: 0 var(--space-5) var(--space-5);
     pointer-events: none;
   }
+  .discover.has-detail {
+    grid-template-columns: 340px minmax(0, 1fr) 420px;
+    grid-template-areas: 'left stage right';
+  }
   .left,
-  .right,
-  .bottom {
+  .right {
     pointer-events: auto;
     min-height: 0;
   }
@@ -113,81 +247,70 @@
     gap: var(--space-3);
     overflow-y: auto;
     scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+    padding-bottom: var(--space-2);
   }
   .right {
     grid-area: right;
     display: flex;
     flex-direction: column;
-    min-height: 0;
   }
   .stage {
     grid-area: stage;
     position: relative;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
   }
-  .bottom {
-    grid-area: bottom;
-    min-width: 0;
-  }
-  .engine {
-    margin: 0;
-    padding: 0 var(--space-2);
-    font-size: 10px;
-    line-height: 1.6;
-  }
-  .hero {
-    max-width: 520px;
-    text-align: center;
-    padding: var(--space-5) var(--space-6);
-    background: color-mix(in srgb, var(--bg) 82%, transparent);
-    border-radius: 16px;
-    animation: rise 400ms var(--ease-out);
-  }
-  .hero h1 {
-    font-size: clamp(28px, 3.4vw, 44px);
-    letter-spacing: -0.02em;
-  }
-  .hero h1 span {
-    color: var(--pick);
-  }
-  .hero p {
-    color: var(--muted);
-    margin: var(--space-3) 0 0;
-  }
   .hint {
-    position: absolute;
-    bottom: var(--space-3);
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--surface);
-    border: var(--border);
+    margin: 0 0 var(--space-4);
+    max-width: 44ch;
+    text-align: center;
+    padding: 8px 16px;
     border-radius: var(--radius-pill);
-    padding: 4px 12px;
-    margin: 0;
+    background: var(--surface-solid);
+    border: var(--border);
+    color: var(--muted);
+    font-size: var(--text-sm);
+    animation: rise var(--dur-mid) var(--ease-out);
   }
-  @media (max-width: 1100px) {
-    .discover {
-      grid-template-columns: 280px minmax(0, 1fr);
+  @media (max-width: 1180px) {
+    .discover.has-detail {
+      grid-template-columns: 320px minmax(0, 1fr);
       grid-template-areas:
         'left stage'
-        'left bottom'
         'right right';
+      grid-template-rows: calc(100dvh - 96px) auto;
       height: auto;
-      min-height: calc(100dvh - 64px);
-      grid-template-rows: 60vh auto auto;
+    }
+    .right {
+      max-width: 720px;
+    }
+  }
+  @media (max-width: 900px) {
+    .title {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: 34vh auto;
+      padding: 0 var(--space-4) var(--space-6);
+    }
+    .sky {
+      grid-row: 1;
     }
   }
   @media (max-width: 760px) {
-    .discover {
+    .discover,
+    .discover.has-detail {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-areas: 'stage' 'left' 'bottom' 'right';
-      grid-template-rows: 48vh auto auto auto;
+      grid-template-areas: 'stage' 'left' 'right';
+      grid-template-rows: 46vh auto auto;
+      height: auto;
       padding: 0 var(--space-3) var(--space-4);
     }
-    .hero {
-      padding: var(--space-4);
+    .presets ul {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .lead {
+      font-size: var(--text-md);
     }
   }
 </style>

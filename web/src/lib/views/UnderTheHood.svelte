@@ -10,7 +10,7 @@
 
   type Stage = { id: string; title: string; short: string; planned?: boolean };
   const STAGES: Stage[] = [
-    { id: 'history', title: 'Your history becomes a vector', short: 'History → x' },
+    { id: 'history', title: 'Your history becomes a vector', short: 'History to weights' },
     { id: 'ease', title: 'EASE^R: a closed-form co-play model', short: 'EASE^R' },
     { id: 'push', title: 'PageRank by forward push', short: 'Graph + push' },
     { id: 'blend', title: 'One additive blend', short: 'Blend' },
@@ -182,7 +182,7 @@
     </ol>
     {#if result}
       <p class="micro run">
-        Last run: score {ms(result.timings.score)} · PageRank rows {ms(result.timings.pi)} · explain {ms(result.timings.explain)}
+        Last run took {ms(result.timings.score)} to score, {ms(result.timings.pi)} for PageRank rows and {ms(result.timings.explain)} to explain.
       </p>
     {/if}
   </nav>
@@ -192,7 +192,7 @@
       <div class="panel empty">
         <p>Under the hood replays the engine's real computation on <em>your</em> games.</p>
         <button class="btn primary" onclick={demo} disabled={!app.ready}>Run it on FTL, Isaac and XCOM</button>
-        <button class="btn ghost" onclick={() => app.go('discover')}>or pick your own games →</button>
+        <button class="btn ghost" onclick={() => app.go('discover')}>Or pick your own games</button>
       </div>
     {/if}
   </div>
@@ -214,26 +214,26 @@
                 {/each}
               </tbody>
             </table>
-            <p class="cost micro">Cost O(|H|) · <a href={source('src/whyfinder/core/blend.py')}>core/blend.py</a> · <a href={source('web/src/engine/blend.ts')}>engine/blend.ts</a></p>
+            <p class="cost micro">Cost O(|H|). Source: <a href={source('src/whyfinder/core/blend.py')}>core/blend.py</a>, <a href={source('web/src/engine/blend.ts')}>engine/blend.ts</a></p>
           {:else if stage.id === 'ease'}
             <p>Two games are similar when the same players review both. EASE^R turns those co-play counts into item-item weights in one closed-form solve, with no training loop.</p>
             <p class="eq mono">P = (G + λI)<sup>−1</sup>, &nbsp;B<sub>ij</sub> = −P<sub>ij</sub> / P<sub>jj</sub>, &nbsp;B<sub>jj</sub> = 0 &nbsp; (λ = {params.lambda})</p>
             <GramHeatmap sweep={sub / (subs - 1)} rows={history.map(([j]) => j)} />
             <p class="micro">
-              {sub < subs - 1 ? `Replaying the Cholesky sweep: column ${Math.round((sub / (subs - 1)) * games.length)} of ${games.length}` : `Solved on your device in ${ms(app.ready?.timings.ease ?? 0)} · ${int(app.slice?.users ?? 0)} players behind G`}
+              {sub < subs - 1 ? `Replaying the Cholesky sweep: column ${Math.round((sub / (subs - 1)) * games.length)} of ${games.length}` : `Solved on your device in ${ms(app.ready?.timings.ease ?? 0)}, from ${int(app.slice?.users ?? 0)} players behind G`}
             </p>
             {#if sub >= subs - 1}
               {#each neighbours as row (row.game)}
                 <p class="nb"><strong>{games[row.game].title}</strong> → {row.top.slice(0, 3).map(([i, w]) => `${games[i].title} (${num(w, 4)})`).join(', ')}</p>
               {/each}
             {/if}
-            <p class="cost micro">Cost O(n³) once (n = {games.length}) · matches Python to 1e-9 in CI · <a href={source('src/whyfinder/core/ease.py')}>core/ease.py</a> · <a href={source('web/src/engine/ease.ts')}>engine/ease.ts</a></p>
+            <p class="cost micro">Cost O(n³) once (n = {games.length}). Matches Python to 1e-9 in CI. Source: <a href={source('src/whyfinder/core/ease.py')}>core/ease.py</a>, <a href={source('web/src/engine/ease.ts')}>engine/ease.ts</a></p>
           {:else if stage.id === 'push'}
             <p>
               A second view of similarity: a graph of games, tags, developers and publishers ({int(app.ready?.nodes ?? 0)} nodes, {int(app.ready?.edges ?? 0)} edges).
               A random walk that restarts at your game settles on games nearby. Forward push computes it locally, round by round.
             </p>
-            <p class="eq mono">π<sub>g</sub> = α·e<sub>g</sub> + (1−α)·π<sub>g</sub>P &nbsp; · &nbsp;|π − p| ≤ ε·d(v), ε = {params.pushEps}</p>
+            <p class="eq mono">π<sub>g</sub> = α·e<sub>g</sub> + (1−α)·π<sub>g</sub>P <br />|π − p| ≤ ε·d(v), ε = {params.pushEps}</p>
             {#if traces.length > 1}
               <div class="seeds" role="group" aria-label="Seed game">
                 {#each traces as t, k (t.seed)}
@@ -243,18 +243,18 @@
             {/if}
             {#if trace}
               {@const r = trace.trace[Math.min(sub, trace.trace.length - 1)]}
-              <p class="micro">Round {Math.min(sub, trace.rounds - 1) + 1} of {trace.rounds} · {int(r.active)} nodes pushed · settled {pct(r.settled, 1)} · residual {pct(r.residual, 1)}</p>
+              <p class="micro">Round {Math.min(sub, trace.rounds - 1) + 1} of {trace.rounds}: {int(r.active)} nodes pushed, {pct(r.settled, 1)} settled, {pct(r.residual, 1)} residual</p>
               <div class="spark" aria-hidden="true">
                 {#each trace.trace as t, k (k)}
                   <span class:on={k <= sub} style:height={`${Math.max(4, t.settled * 100)}%`}></span>
                 {/each}
               </div>
-              <p class="micro">{int(trace.pushes)} pushes in total · nearest games from {games[trace.seed].title}:</p>
+              <p class="micro">{int(trace.pushes)} pushes in total. Nearest games from {games[trace.seed].title}:</p>
               <ol class="toplist">
                 {#each trace.top.slice(0, 5) as [i, v] (i)}<li>{games[i].title} <span class="mono">{num(v, 5)}</span></li>{/each}
               </ol>
             {/if}
-            <p class="cost micro">Cost O(1/(αε)) per seed, independent of graph size · <a href={source('src/whyfinder/graph/ppr.py')}>graph/ppr.py</a> · <a href={source('web/src/engine/ppr.ts')}>engine/ppr.ts</a></p>
+            <p class="cost micro">Cost O(1/(αε)) per seed, independent of graph size. Source: <a href={source('src/whyfinder/graph/ppr.py')}>graph/ppr.py</a>, <a href={source('web/src/engine/ppr.ts')}>engine/ppr.ts</a></p>
           {:else if stage.id === 'blend'}
             <p>Both models are linear in your history, so one blended matrix keeps every reason exact. Move β to trade co-play for graph.</p>
             <p class="eq mono">M = β·B/c<sub>B</sub> + (1−β)·Π/c<sub>Π</sub>, &nbsp; s = Σ<sub>j</sub> x<sub>j</sub>·M<sub>j·</sub></p>
@@ -273,13 +273,13 @@
               {/each}
             </ul>
             <p class="legend micro"><span class="key e"></span> EASE^R part <span class="key p"></span> PageRank part</p>
-            <p class="micro">c<sub>B</sub> = {num(app.model?.cB ?? 0, 5)} · c<sub>Π</sub> = {num(app.model?.cPi ?? 0, 5)} (99th percentile, from the Python build)</p>
+            <p class="micro">c<sub>B</sub> = {num(app.model?.cB ?? 0, 5)}, c<sub>Π</sub> = {num(app.model?.cPi ?? 0, 5)} (99th percentile, from the Python build)</p>
             {#if app.verified}
               <p class="micro ok">✓ Recomputed here from all {games.length} PageRank rows in {app.verified.seconds.toFixed(1)} s: c<sub>Π</sub> = {num(app.verified.cPi, 5)}, c<sub>B</sub> = {num(app.verified.cB, 5)}</p>
             {:else}
               <button class="btn" onclick={() => app.verify()} disabled={!!app.progress}>{app.progress?.phase === 'pi' ? `Computing ${app.progress.done}/${app.progress.total} rows…` : 'Verify the constants in your browser'}</button>
             {/if}
-            <p class="cost micro">Cost O(|H|·K) per request · <a href={source('src/whyfinder/core/blend.py')}>core/blend.py</a> · <a href={source('web/src/engine/blend.ts')}>engine/blend.ts</a></p>
+            <p class="cost micro">Cost O(|H|·K) per request. Source: <a href={source('src/whyfinder/core/blend.py')}>core/blend.py</a>, <a href={source('web/src/engine/blend.ts')}>engine/blend.ts</a></p>
           {:else if stage.id === 'shortlist'}
             <p>Games you already have are removed; the rest are ranked by score (ties by game ID) and the best {params.candidates} go on to re-ranking.</p>
             <div class="spark wide" aria-hidden="true">
@@ -287,18 +287,18 @@
                 <span class:on={k < 10} style:height={`${Math.max(3, (s / (result.topScores[0][1] || 1)) * 100)}%`}></span>
               {/each}
             </div>
-            <p class="micro">{result.topScores.length} candidates · amber = the top 10 by score alone</p>
-            <p class="cost micro">Filters by tag, price and year arrive with natural-language queries (M3, FR-23) · <a href={source('src/whyfinder/rerank/pipeline.py')}>rerank/pipeline.py</a></p>
+            <p class="micro">{result.topScores.length} candidates. Gold marks the top 10 by score alone.</p>
+            <p class="cost micro">Filters by tag, price and year arrive with natural-language queries (M3, FR-23). Source: <a href={source('src/whyfinder/rerank/pipeline.py')}>rerank/pipeline.py</a></p>
           {:else if stage.id === 'dpp'}
             <p>Ten copies of the same game is a bad list. A determinantal point process picks games that are relevant <em>and</em> different, one greedy step at a time.</p>
-            <p class="eq mono">L = Diag(q)·S·Diag(q), q<sub>i</sub> = e<sup>θŝ<sub>i</sub></sup> · pick argmax d<sub>i</sub>² = det L<sub>Y∪i</sub> / det L<sub>Y</sub></p>
+            <p class="eq mono">L = Diag(q)·S·Diag(q), q<sub>i</sub> = e<sup>θŝ<sub>i</sub></sup><br />pick argmax d<sub>i</sub>² = det L<sub>Y∪i</sub> / det L<sub>Y</sub></p>
             <label class="slider">
               <span class="micro">θ = {app.theta.toFixed(1)} (higher = relevance matters more)</span>
               <input type="range" min="0" max="6" step="0.5" bind:value={app.theta} aria-label="DPP relevance weight theta" />
             </label>
             {#if result.steps.length}
               {@const st = result.steps[Math.min(sub, result.steps.length - 1)]}
-              <p class="micro">Step {Math.min(sub, result.steps.length - 1) + 1} of {result.steps.length}: picked <strong class="pickname">{games[st.picked].title}</strong>{result.variety[Math.min(sub, result.steps.length - 1)] ? ' · kept for variety' : ''}</p>
+              <p class="micro">Step {Math.min(sub, result.steps.length - 1) + 1} of {result.steps.length}: picked <strong class="pickname">{games[st.picked].title}</strong>{result.variety[Math.min(sub, result.steps.length - 1)] ? ', picked for variety' : ''}</p>
               <ul class="stack">
                 {#each [...st.gains].sort((a, b) => b[1] - a[1]).slice(0, 8) as [i, g] (i)}
                   <li>
@@ -308,7 +308,7 @@
                 {/each}
               </ul>
             {/if}
-            <p class="cost micro">Cost O(N·k²) = {params.candidates}·{params.k}² · <a href={source('src/whyfinder/rerank/dpp.py')}>rerank/dpp.py</a> · <a href={source('web/src/engine/dpp.ts')}>engine/dpp.ts</a></p>
+            <p class="cost micro">Cost O(N·k²) = {params.candidates}·{params.k}². Source: <a href={source('src/whyfinder/rerank/dpp.py')}>rerank/dpp.py</a>, <a href={source('web/src/engine/dpp.ts')}>engine/dpp.ts</a></p>
           {:else if stage.id === 'explain' && pickE}
             <div class="seeds" role="group" aria-label="Pick">
               {#each result.picks as p, t (p)}
@@ -324,7 +324,7 @@
                 {/each}
               </tbody>
             </table>
-            <p class="micro ok">Σ = {num(pickE.attributions.reduce((s, a) => s + a.total, 0))} = score · |Δ| = {Math.abs(pickE.attributions.reduce((s, a) => s + a.total, 0) - pickE.score).toExponential(1)}</p>
+            <p class="micro ok">Σ = {num(pickE.attributions.reduce((s, a) => s + a.total, 0))} = score, |Δ| = {Math.abs(pickE.attributions.reduce((s, a) => s + a.total, 0) - pickE.score).toExponential(1)}</p>
             <p class="micro">Counterfactual search: remove games in order of contribution, re-run the whole pipeline, then prune.</p>
             <ol class="trail">
               {#each pickE.counterfactual.trail as [action, tried, shown], k (k)}
@@ -335,7 +335,7 @@
                 </li>
               {/each}
             </ol>
-            <p class="cost micro">{pickE.counterfactual.runs} pipeline runs · valid and irreducible (ADR-0012) · <a href={source('src/whyfinder/explain/counterfactual.py')}>explain/counterfactual.py</a> · <a href={source('web/src/engine/explain.ts')}>engine/explain.ts</a></p>
+            <p class="cost micro">{pickE.counterfactual.runs} pipeline runs. Valid and irreducible (ADR-0012). Source: <a href={source('src/whyfinder/explain/counterfactual.py')}>explain/counterfactual.py</a>, <a href={source('web/src/engine/explain.ts')}>engine/explain.ts</a></p>
           {:else if stage.id === 'words'}
             <p>In M3 a local LLM will put these exact reasons into sentences, quoting real reviews. It may only say what the model computed:</p>
             <ol class="plan">
@@ -343,7 +343,7 @@
               <li>The LLM writes claims as JSON; each cites an attribution or a quoted review span.</li>
               <li>A deterministic checker rejects absent attributions, wrong percentages and non-verbatim quotes; one retry, then a template.</li>
             </ol>
-            <p class="cost micro">Planned · M3 (Jan 2–13) · docs/spec/06_RAG.md</p>
+            <p class="cost micro">Planned for M3 (Jan 2 to 13). See docs/spec/06_RAG.md.</p>
           {/if}
         </div>
       {/key}
@@ -503,12 +503,9 @@
   }
   th {
     text-align: left;
-    font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: var(--text-xs);
     font-weight: 500;
     color: var(--muted);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
     border-bottom: var(--border);
     padding: 4px 6px 4px 0;
   }
@@ -669,8 +666,6 @@
   .verdict {
     font-family: var(--font-mono);
     font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
     margin-left: 6px;
     color: var(--muted);
   }

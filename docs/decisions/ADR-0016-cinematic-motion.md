@@ -1,6 +1,6 @@
 # ADR-0016: Cinematic motion for the Star Atlas
 
-- **Status:** Accepted (amends the motion and space-effect rules of ADR-0013)
+- **Status:** Accepted (amends the motion and space-effect rules of ADR-0013; extended by ADR-0017)
 - **Date:** 2026-11-17
 - **Deciders:** Robert Gerald Senasin
 

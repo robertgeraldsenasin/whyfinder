@@ -9,10 +9,10 @@
   import UnderTheHood from './lib/views/UnderTheHood.svelte';
 
   const phases: Record<string, string> = {
-    cholesky: 'Factoring G + λI (Cholesky)',
-    invert: 'Inverting for EASE^R',
-    weights: 'Item-item weights B',
-    pi: 'PageRank rows',
+    cholesky: 'Learning which games are played together',
+    invert: 'Learning which games are played together',
+    weights: 'Weighing every pair of games',
+    pi: 'Tracing links between games',
   };
 
   onMount(() => {
@@ -43,19 +43,18 @@
   <main id="main" tabindex="-1">
     {#if app.error}
       <div class="panel status" role="alert">
-        <p class="micro">Something went wrong</p>
+        <h1>The sky did not load</h1>
         <p>{app.error}</p>
+        <p class="micro">Reload the page to try again.</p>
       </div>
-    {:else if !app.ready}
-      <div class="panel status hud" role="status" aria-live="polite">
-        <p class="micro">Starting the engine in your browser</p>
-        <p>{app.progress ? phases[app.progress.phase] ?? app.progress.phase : 'Loading 500 games and their co-play matrix…'}</p>
-        {#if app.progress}
-          <div class="meter" aria-hidden="true"><span style:width={`${(app.progress.done / app.progress.total) * 100}%`}></span></div>
-        {/if}
-      </div>
-    {:else if app.view === 'discover'}
+    {:else if app.view === 'discover' && (app.ready || app.history.length === 0)}
       <Discover />
+    {:else if !app.ready}
+      <div class="status" role="status" aria-live="polite">
+        <h1>Charting the sky</h1>
+        <p>{app.progress ? (phases[app.progress.phase] ?? app.progress.phase) : 'Loading 500 games'}</p>
+        <div class="meter" aria-hidden="true"><span style:width={`${app.progress ? (app.progress.done / app.progress.total) * 100 : 4}%`}></span></div>
+      </div>
     {:else if app.view === 'hood'}
       <UnderTheHood />
     {:else}
@@ -79,30 +78,37 @@
   }
   .status {
     pointer-events: auto;
-    max-width: 420px;
-    margin: 18vh auto 0;
+    max-width: 440px;
+    margin: 22vh auto 0;
+    text-align: center;
+  }
+  .status h1 {
+    font-size: var(--text-2xl);
+    margin-bottom: var(--space-2);
   }
   .status p {
-    margin: 0 0 var(--space-2);
+    margin: 0 0 var(--space-3);
+    color: var(--muted);
   }
   .meter {
-    height: 3px;
-    background: var(--raised);
+    height: 2px;
+    background: var(--line);
     border-radius: 2px;
     overflow: hidden;
   }
   .meter span {
     display: block;
     height: 100%;
-    background: var(--link);
-    transition: width 120ms linear;
+    background: linear-gradient(90deg, var(--violet), var(--gold));
+    box-shadow: 0 0 12px var(--gold);
+    transition: width 160ms linear;
   }
   .skip {
     position: absolute;
     left: -999px;
     top: 8px;
     z-index: 100;
-    background: var(--surface);
+    background: var(--surface-solid);
     color: var(--text);
     padding: 8px 12px;
     border-radius: 8px;
