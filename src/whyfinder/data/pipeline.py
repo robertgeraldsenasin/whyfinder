@@ -17,6 +17,11 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
+from whyfinder.data import contracts
+from whyfinder.data.clean import clean_games, clean_interactions
+from whyfinder.data.kcore import kcore
 from whyfinder.data.parse import parse_games, parse_reviews
 from whyfinder.data.sources import SOURCES
 
@@ -48,3 +53,42 @@ def stage_parse(raw: Path, interim: Path, *, workers: int, tolerance: float) -> 
     }
     write_json(interim / "parse_stats.json", stats)
     return stats
+
+
+def stage_clean(
+    interim: Path, processed: Path, *, salt: str, clip_quantile: float
+) -> dict[str, Any]:
+    games = clean_games(pd.read_parquet(interim / "games.parquet"))
+    contracts.check_games(games)
+    reviews = pd.read_parquet(
+        interim / "reviews.parquet", columns=["review_id", "username", "game", "hours", "date"]
+    )
+    interactions, stats = clean_interactions(
+        reviews, set(games["game"].tolist()), salt=salt, clip_quantile=clip_quantile
+    )
+    contracts.check_interactions(interactions, games)
+    processed.mkdir(parents=True, exist_ok=True)
+    games.to_parquet(processed / "games.parquet", index=False)
+    interactions.to_parquet(processed / "interactions_clean.parquet", index=False)
+    payload = {**stats.to_dict(), "catalogue_games": len(games)}
+    write_json(processed / "clean_stats.json", payload)
+    return payload
+
+
+def stage_kcore(processed: Path, *, k: int) -> dict[str, Any]:
+    df = pd.read_parquet(processed / "interactions_clean.parquet")
+    core, passes = kcore(df, k)
+    core = core.reset_index(drop=True)
+    contracts.check_kcore(core, k)
+    core.to_parquet(processed / "interactions.parquet", index=False)
+    payload = {
+        "k": k,
+        "passes": passes,
+        "rows_in": len(df),
+        "rows_out": len(core),
+        "users": int(core["user"].nunique()),
+        "games": int(core["game"].nunique()),
+        "density": len(core) / (core["user"].nunique() * core["game"].nunique()),
+    }
+    write_json(processed / "kcore_stats.json", payload)
+    return payload

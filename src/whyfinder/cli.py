@@ -70,3 +70,24 @@ def data_parse(
     )
     for name, s in stats.items():
         typer.echo(f"{name}: {s['written']} rows, {s['malformed']} malformed of {s['lines']}")
+
+
+@data_app.command("clean")
+def data_clean(params: ParamsOption = Path("params.yaml")) -> None:
+    """Dedupe, pseudonymise, clip hours; build the catalogue (FR-02)."""
+    p = load_params(params)
+    s = pipeline.stage_clean(
+        INTERIM,
+        PROCESSED,
+        salt=param(p, "data.user_salt", str),
+        clip_quantile=param(p, "data.hours_clip_quantile", float),
+    )
+    typer.echo(f"{s['rows_out']} interactions, {s['users']} users, {s['games']} games")
+    typer.echo(f"date coverage {s['date_coverage']:.4f}, hours coverage {s['hours_coverage']:.4f}")
+
+
+@data_app.command("kcore")
+def data_kcore(params: ParamsOption = Path("params.yaml")) -> None:
+    """Keep the k-core of users and games (FR-02)."""
+    s = pipeline.stage_kcore(PROCESSED, k=param(load_params(params), "data.kcore", int))
+    typer.echo(f"{s['rows_out']} interactions after {s['passes']} passes (k={s['k']})")
