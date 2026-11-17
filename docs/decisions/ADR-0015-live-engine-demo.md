@@ -36,8 +36,9 @@ Option 3, built **alongside** the core rather than after it.
 - **Golden cross-check.** `whyfinder export demo` writes the slice *and* golden outputs computed by
   Python for fixed histories. Vitest requires the TypeScript engine to reproduce them: scores,
   attributions and Π rows within 1e-9, and identical ranked lists, picks, variety flags and
-  counterfactual sets. To make that possible both sides use the same push order (FIFO queue, ties by
-  node ID) and break every tie by game ID.
+  counterfactual sets. To make that possible both sides push in the same synchronous rounds (every node
+  above its threshold, in ascending node order, contributions summed into a fresh accumulator), fix the
+  order of every other sum, and break every tie by game ID.
 - **The slice.** The N_demo = 500 games with the most training interactions, with their co-play Gram
   matrix G = XᵀX (train split only), tags, developers, publishers, release year, price, a
   deterministic 2-D layout for the star map, and the model constants that need the whole slice

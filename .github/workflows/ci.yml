@@ -48,3 +48,24 @@ jobs:
           name: coverage-xml
           path: coverage.xml
           retention-days: 14
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Types and Svelte checks
+        run: npm run check
+      - name: Golden cross-check (the browser engine must equal the Python core)
+        run: npm test

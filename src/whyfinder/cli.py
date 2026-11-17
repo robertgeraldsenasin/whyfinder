@@ -32,6 +32,9 @@ CHECKSUMS = Path("data/checksums.txt")
 SPLIT_JSON = Path("data/split.json")
 STATS_JSON = Path("data/stats.json")
 DEMO_SLICE = Path("data/export/demo-slice.json")
+WEB_SLICE = Path("web/public/data/demo-slice.json")
+WEB_MODEL = Path("web/public/data/model.json")
+WEB_GOLDENS = Path("web/src/engine/__goldens__/goldens.json")
 ParamsOption = Annotated[Path, typer.Option("--params", help="Parameter file.")]
 
 
@@ -163,3 +166,26 @@ def export_demo(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(payload, separators=(",", ":"), sort_keys=True) + "\n")
     typer.echo(f"wrote {out}: {len(payload['games'])} games from {payload['users']} users")
+
+
+@export_app.command("model")
+def export_model(
+    slice_path: Annotated[
+        Path, typer.Option("--slice", help="Demo slice to build on.")
+    ] = WEB_SLICE,
+    model_out: Annotated[Path, typer.Option(help="Model constants for the demo.")] = WEB_MODEL,
+    goldens_out: Annotated[
+        Path, typer.Option(help="Goldens for the TypeScript engine.")
+    ] = WEB_GOLDENS,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Build the glass-box model on the slice in Python; write its constants and the goldens."""
+    import json
+
+    from whyfinder.export.model import build_model, goldens, model_file, model_params
+
+    model = build_model(json.loads(slice_path.read_text()), model_params(load_params(params)))
+    for path, payload in ((model_out, model_file(model)), (goldens_out, goldens(model))):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, separators=(",", ":"), sort_keys=True) + "\n")
+    typer.echo(f"c_B={model.c_B:.6g} c_Pi={model.c_Pi:.6g}; wrote {model_out} and {goldens_out}")

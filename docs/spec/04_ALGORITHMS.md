@@ -66,7 +66,10 @@ $$\pi_g = \alpha\, e_g + (1-\alpha)\, \pi_g P$$
 **Forward push** (Andersen, Chung, Lang, FOCS 2006). Keep an estimate p and a residual r, starting
 with r = e_g. While some node v has r(v) > ε·deg(v): add α·r(v) to p(v), spread (1−α)·r(v) to v's
 neighbours in proportion to edge weight, set r(v) = 0. Guarantee: |π_g(v) − p(v)| ≤ ε·deg(v).
-Work is O(1/(αε)) per seed, independent of graph size.
+Work is O(1/(αε)) per seed, independent of graph size. Whyfinder pushes in synchronous rounds (all
+nodes above threshold, ascending node order), which keeps the guarantee and lets the browser engine
+reproduce p exactly (ADR-0015); deg is the weighted degree, and a node with no edges keeps its
+residual.
 
 **Item-item matrix Π.** Row g keeps the top M_Π = 200 game entries of p (the seed itself excluded).
 Precomputed offline for all n games: embarrassingly parallel, deterministic order.
