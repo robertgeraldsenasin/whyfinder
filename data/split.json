@@ -1,0 +1,32 @@
+{
+  "cold_max_train_items": 4,
+  "dropped_missing_date": 0,
+  "method": "global_time",
+  "missing_date_share": 0.0,
+  "rows": {
+    "cold": 148614,
+    "test": 158074,
+    "train": 2787177,
+    "valid": 183974
+  },
+  "sha256": {
+    "cold": "8a69baf74d01089cb2ec4818bedcc226e03c994d4fa9763689906002f970e4fb",
+    "test": "7cdec679688be302e4a8dfaf17394c03068e9c1125b9c3f3d80d3b8b25a0c18b",
+    "train": "d64fae54c098410bfcdb0767f6fe5fd01202a520d0676c65886c58d8c59c05e1",
+    "valid": "fca8b8e61736d1c7cffc84771f716796dcbf2e33093ed82d155301445964c3e5"
+  },
+  "t1": "2017-05-31",
+  "t2": "2017-10-01",
+  "test_dropped_no_train_history": 34582,
+  "test_dropped_unseen_game": 87735,
+  "test_quantile": 0.9,
+  "users": {
+    "cold": 52831,
+    "test": 66095,
+    "train": 274035,
+    "valid": 70170
+  },
+  "valid_dropped_no_train_history": 24801,
+  "valid_dropped_unseen_game": 59737,
+  "valid_quantile": 0.8
+}
