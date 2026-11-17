@@ -35,7 +35,11 @@ LABELS = {
     "gate:override": ("b60205", "Gate overridden; reason required in the PR"),
 }
 MILESTONES = {
-    "M0": ("M0 Foundation", "2026-11-22", "Repo, CI, data pipeline, contracts, CI subsample, demo shell"),
+    "M0": (
+        "M0 Foundation",
+        "2026-11-22",
+        "Repo, CI, data pipeline, contracts, CI subsample, demo shell",
+    ),
     "M1": ("M1 Glass-box core + gate", "2026-12-12", "Baselines, EASE^R, PPR, blend, iALS, gate"),
     "M2": ("M2 Explanations + variety", "2026-12-30", "Attributions, counterfactuals, DPP, paths"),
     "M3": ("M3 Grounded RAG", "2027-01-13", "BM25, HNSW, RRF, checked generation"),
