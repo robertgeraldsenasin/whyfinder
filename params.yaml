@@ -5,6 +5,7 @@ data:
   item_cap: 8000          # ADR-0004
   ci_user_fraction: 0.05
   confidence: {alpha: 1.0, eps: 1.0}
+  parse_tolerance: 0.001  # malformed-line share that fails the parse
 ease:
   lambda: 500.0
 graph:
