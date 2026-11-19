@@ -21,3 +21,5 @@ Live: greedy removal by contribution, then pruning → a valid, irreducible set 
 ## Consequences
 
 Fast API, honest guarantees, a measurable gap.
+
+The iALS rival uses the same live search; its re-scoring uses Sherman–Morrison downdates instead of re-solving (2026-11-20, issue #25), so the guarantee carries over unchanged.

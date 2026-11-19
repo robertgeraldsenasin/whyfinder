@@ -30,6 +30,13 @@ Definition (after PRINCE, WSDM 2020): the smallest set of the user's own games w
 the recommendation. Methods and guarantees: 04_ALGORITHMS §A7. The UI states the guarantee it has
 ("smallest possible" offline, "no game can be removed from this set" live).
 
+For the iALS rival, each trial removal re-solves the user's factor. `explain/ials.py` does it with a
+Sherman–Morrison downdate of A⁻¹ (O(f²) per game instead of an O(f³) solve), checked against a fresh
+solve to 1e-8. With 64 factors and 50 liked games a downdate takes about 17 µs against 97 µs for a
+solve that reuses YᵀY, and 1.3 ms for `fold_in`, which rebuilds it. The search is the blend's greedy
+removal and pruning, ordered by the iALS attributions, so the guarantee is the same: valid and
+irreducible.
+
 ## E3 · Graph paths
 
 For a pick i and its top-attributed history game j, find paths of length ≤ 3 in the game graph between
