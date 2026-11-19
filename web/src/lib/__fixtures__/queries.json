@@ -1,0 +1,198 @@
+{
+  "about": "Query cases both parsers must agree on: web/src/lib/query.ts and src/whyfinder/serve/query.py.",
+  "cases": [
+    {
+      "text": "like Portal 2, co-op, under $20, after 2012, blorp",
+      "anchors": [
+        "Portal 2"
+      ],
+      "tags": [
+        "Co-op"
+      ],
+      "max_price": 20.0,
+      "year_min": 2013,
+      "year_max": null,
+      "unresolved": [
+        "blorp"
+      ]
+    },
+    {
+      "text": "since 2012",
+      "anchors": [],
+      "tags": [],
+      "max_price": null,
+      "year_min": 2012,
+      "year_max": null,
+      "unresolved": []
+    },
+    {
+      "text": "before 2010",
+      "anchors": [],
+      "tags": [],
+      "max_price": null,
+      "year_min": null,
+      "year_max": 2009,
+      "unresolved": []
+    },
+    {
+      "text": "until 2010",
+      "anchors": [],
+      "tags": [],
+      "max_price": null,
+      "year_min": null,
+      "year_max": 2010,
+      "unresolved": []
+    },
+    {
+      "text": "2014 to 2010",
+      "anchors": [],
+      "tags": [],
+      "max_price": null,
+      "year_min": 2010,
+      "year_max": 2014,
+      "unresolved": []
+    },
+    {
+      "text": "2000s",
+      "anchors": [],
+      "tags": [],
+      "max_price": null,
+      "year_min": 2000,
+      "year_max": 2009,
+      "unresolved": []
+    },
+    {
+      "text": "2015",
+      "anchors": [],
+      "tags": [],
+      "max_price": null,
+      "year_min": 2015,
+      "year_max": 2015,
+      "unresolved": []
+    },
+    {
+      "text": "free",
+      "anchors": [],
+      "tags": [],
+      "max_price": 0.0,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": []
+    },
+    {
+      "text": "under 9.99 dollars",
+      "anchors": [],
+      "tags": [],
+      "max_price": 9.99,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": []
+    },
+    {
+      "text": "horror and open world",
+      "anchors": [],
+      "tags": [
+        "Horror",
+        "Open World"
+      ],
+      "max_price": null,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": []
+    },
+    {
+      "text": "like Papers, Please, horror",
+      "anchors": [
+        "Papers, Please"
+      ],
+      "tags": [
+        "Horror"
+      ],
+      "max_price": null,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": []
+    },
+    {
+      "text": "Undertale",
+      "anchors": [
+        "Undertale"
+      ],
+      "tags": [],
+      "max_price": null,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": []
+    },
+    {
+      "text": "similar to Undertale with roguelike",
+      "anchors": [
+        "Undertale"
+      ],
+      "tags": [
+        "Rogue-like"
+      ],
+      "max_price": null,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": []
+    },
+    {
+      "text": "games like Rust; sci-fi; solo",
+      "anchors": [
+        "Rust"
+      ],
+      "tags": [
+        "Sci-fi",
+        "Singleplayer"
+      ],
+      "max_price": null,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": []
+    },
+    {
+      "text": "like Zzzyzzx Quest",
+      "anchors": [],
+      "tags": [],
+      "max_price": null,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": [
+        "like Zzzyzzx Quest"
+      ]
+    },
+    {
+      "text": "fps, cooperative, 1990s",
+      "anchors": [],
+      "tags": [
+        "FPS",
+        "Co-op"
+      ],
+      "max_price": null,
+      "year_min": 1990,
+      "year_max": 1999,
+      "unresolved": []
+    },
+    {
+      "text": "",
+      "anchors": [],
+      "tags": [],
+      "max_price": null,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": []
+    },
+    {
+      "text": "x",
+      "anchors": [],
+      "tags": [],
+      "max_price": null,
+      "year_min": null,
+      "year_max": null,
+      "unresolved": [
+        "x"
+      ]
+    }
+  ]
+}

@@ -28,7 +28,7 @@ jobs:
           python-version: ${{ matrix.python }}
           enable-cache: true
       - name: Install
-        run: uv sync --frozen --group dev
+        run: uv sync --frozen --group dev --group serve
       - name: Lint
         run: uv run ruff check --output-format=github .
       - name: Format
@@ -41,6 +41,8 @@ jobs:
         run: uv run pytest --cov --cov-report=term --cov-report=xml
       - name: README tables match results/
         run: uv run python scripts/gen_readme_tables.py --check
+      - name: OpenAPI document matches the code
+        run: uv run whyfinder serve openapi --check
       - name: Coverage report
         if: matrix.python == '3.12'
         uses: actions/upload-artifact@v4
@@ -101,3 +103,45 @@ jobs:
             web/playwright-report/
             web/test-results/
           retention-days: 7
+
+  api:
+    name: api image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/whyfinder-api
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker build -f docker/Dockerfile.api --build-arg GIT_SHA=${{ github.sha }} -t "$IMAGE:${{ github.sha }}" .
+      - name: Smoke test (health, version, a recommendation, an explanation, a problem)
+        run: |
+          docker run -d --name api -p 8000:8000 "$IMAGE:${{ github.sha }}"
+          for i in $(seq 1 40); do curl -fs localhost:8000/healthz && break; sleep 1; done
+          echo
+          curl -fs localhost:8000/version | tee /tmp/version.json
+          jq -e --arg sha "${{ github.sha }}" '.git_sha == $sha' /tmp/version.json
+          curl -fs -X POST localhost:8000/recommend -H 'content-type: application/json' \
+            -d '{"liked_game_ids": ["620", "49520", "500"], "k": 3}' | tee /tmp/rec.json
+          jq -e '.items | length == 3' /tmp/rec.json
+          pick=$(jq -r '.items[0].game_id' /tmp/rec.json)
+          curl -fs -X POST localhost:8000/explain -H 'content-type: application/json' \
+            -d "{\"liked_game_ids\": [\"620\", \"49520\", \"500\"], \"game_id\": \"$pick\"}" | tee /tmp/explain.json
+          jq -e '.checker.passed and (.attributions | length == 3)' /tmp/explain.json
+          code=$(curl -s -o /tmp/problem.json -w '%{http_code}' -X POST localhost:8000/recommend \
+            -H 'content-type: application/json' -d '{"liked_game_ids": ["1"]}')
+          test "$code" = 404
+          jq -e '.status == 404' /tmp/problem.json
+      - name: Server log
+        if: always()
+        run: docker logs api || true
+      - name: Publish to GHCR (main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag "$IMAGE:${{ github.sha }}" "$IMAGE:latest"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"

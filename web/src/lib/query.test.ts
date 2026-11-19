@@ -95,3 +95,23 @@ describe('filters', () => {
     expect(none.picks).toEqual([]);
   });
 });
+
+describe('the API twin (src/whyfinder/serve/query.py)', () => {
+  type Case = {
+    text: string;
+    anchors: string[];
+    tags: string[];
+    max_price: number | null;
+    year_min: number | null;
+    year_max: number | null;
+    unresolved: string[];
+  };
+  const { cases } = read<{ cases: Case[] }>('./__fixtures__/queries.json');
+
+  it.each(cases.map((c) => [c.text, c] as const))('reads %j as the Python parser does', (_, c) => {
+    const q = parseQuery(c.text, games);
+    expect(q.anchors.map((i) => games[i].title)).toEqual(c.anchors);
+    expect(q.filters).toEqual({ tags: c.tags, maxPrice: c.max_price, yearMin: c.year_min, yearMax: c.year_max });
+    expect(q.unresolved).toEqual(c.unresolved);
+  });
+});

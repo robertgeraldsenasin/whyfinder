@@ -11,7 +11,7 @@ Architecture decision records in the Hasik format (context, options, decision, c
 | [0005](ADR-0005-gate-statistics.md) | Quality gates: paired bootstrap non-inferiority, sealed test set | Accepted |
 | [0006](ADR-0006-targets-and-margins.md) | Success targets and gate margins | Proposed (fix after M1 baselines) |
 | [0007](ADR-0007-glass-box-blend.md) | Glass-box blend: EASE^R + Personalized PageRank, iALS as rival | Accepted |
-| [0008](ADR-0008-hosting.md) | Hosting: static demo on GitHub Pages, optional live API | Accepted for the demo; API host in M4 |
+| [0008](ADR-0008-hosting.md) | Hosting: static demo on GitHub Pages, optional live API | Accepted (API: see 0019) |
 | [0009](ADR-0009-llm-runtime.md) | LLM: local model through Ollama, cached in CI | Accepted |
 | [0010](ADR-0010-retrieval.md) | Retrieval: hybrid BM25 + dense on our own HNSW, merged by RRF | Proposed (embedding model chosen in M3) |
 | [0011](ADR-0011-dpp-reranking.md) | DPP re-ranking for variety | Accepted |
@@ -22,5 +22,6 @@ Architecture decision records in the Hasik format (context, options, decision, c
 | [0016](ADR-0016-cinematic-motion.md) | Cinematic motion for the Star Atlas | Accepted (extended by 0017) |
 | [0017](ADR-0017-starfall.md) | Starfall: a celestial redesign with impact, evidence and sound | Accepted (palette, type and frames superseded by 0018) |
 | [0018](ADR-0018-unmasked.md) | Unmasked: a theatrical redesign, with the picks dealt as cards | Accepted |
+| [0019](ADR-0019-api-on-the-demo-slice.md) | The API serves the demo-slice model and ships as an image | Accepted |
 
 New ADR: copy [ADR-template.md](ADR-template.md), take the next number, open a PR labelled `type:docs`.

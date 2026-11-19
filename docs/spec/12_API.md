@@ -1,36 +1,73 @@
 # 12 · API
 
 FastAPI; schemas are Pydantic models; the OpenAPI document is generated and committed at
-`docs/openapi.json` (CI fails if it drifts). Errors use `application/problem+json` (RFC 9457).
+`docs/openapi.json` (a test fails if it drifts; regenerate with `uv run whyfinder serve openapi`).
+Errors use `application/problem+json` (RFC 9457). The API serves the demo-slice model (ADR-0019), so
+its picks and reasons equal the live demo's for the same games.
 
 | Endpoint | Request | Response |
 | --- | --- | --- |
-| `POST /recommend` | `liked_game_ids` (3–50) **or** `query` (string); `k` (1–20, default 10); `filters` {`tags`, `max_price`, `year_min`, `year_max`}; `diversity` (bool, default true) | `items`: [{`game_id`, `title`, `score`, `rank`, `kept_for_variety`, `top_reason`}]; `unresolved_terms`; `model_version` |
-| `POST /explain` | `liked_game_ids` or `query`; `game_id` | `attributions`: [{`game_id`, `title`, `contribution`, `share`, `ease_part`, `ppr_part`}]; `counterfactual` {`removed_game_ids`, `guarantee`: `irreducible` \| `exact_min`}; `paths`; `kept_for_variety`; `claims` (verified); `checker` {`passed`, `fallback_used`, `reasons`} |
-| `GET /search?q=` | title prefix or words | up to 10 catalogue matches (for the query bar) |
-| `GET /healthz` | — | status of artifacts, index and LLM (LLM down ⇒ `degraded`, template explanations still served) |
-| `GET /version` | — | git SHA, model version, data version, artifact hashes |
+| `POST /recommend` | `liked_game_ids` (1–50 Steam app IDs as strings) and/or `query` (≤ 300 chars); `k` (1–20, default 10); `filters` {`tags`, `max_price`, `year_min`, `year_max`}; `diversity` (bool, default true; false gives the relevance-only top k) | `items`: [{`game_id`, `title`, `score`, `rank`, `kept_for_variety`, `top_reason`}]; `liked_game_ids` (the ones used); `unknown_game_ids`; `unresolved_terms`; `model_version` |
+| `POST /explain` | the same taste fields; `game_id` | `score`, `rank` (null if not picked); `attributions`: [{`game_id`, `title`, `contribution`, `share`, `ease_part`, `ppr_part`}]; `counterfactual` {`removed_game_ids`, `guarantee`: `irreducible` \| `exact_min` \| `not_in_picks`, `pipeline_runs`}; `paths` [{`via`, `label`, `from_game_id`, `weight`}]; `kept_for_variety`; `claims` (verified); `checker` {`passed`, `fallback_used`, `reasons`} |
+| `GET /search?q=` | 1–100 characters | up to 10 catalogue titles: those starting with `q`, then those containing it |
+| `GET /healthz` | — | `status`, `artifacts`, `index`, `llm` (LLM down ⇒ `degraded`; template explanations are still served) |
+| `GET /version` | — | git SHA, model version, data version, SHA-256 of the slice and params |
 
-**Limits:** 30 requests/min per IP on `/explain`, 120 on others; request body ≤ 16 KB.
+A `query` is read like the demo's description box (the two parsers share their test cases in
+`web/src/lib/__fixtures__/queries.json`): titles become liked games, tags, prices and years become
+filters, and anything else comes back in `unresolved_terms`.
 
-**Example**
+**Status codes:** 404 when no liked game (from IDs or the query) is in the catalogue, or the game to
+explain is not; 409 when the game to explain is one of the liked games; 413 for bodies over 16 KB;
+422 when the body does not match the schema (the problem lists each error); 429 over the rate limit.
+Inputs are strict: `"2010"` is not a year and `1` is not `true`, though `2010.0` is an integer, as
+in JSON Schema.
+
+**Limits:** 30 requests/min per client IP on `/explain`, 120 on the rest (fixed one-minute windows,
+per process); request body ≤ 16 KB.
+
+**Claims and the checker.** Until the grounded LLM of M3, the claims are template sentences built
+from the attributions (`fallback_used: true`). Each cites the attribution it states, and the checker
+confirms the cited game is in the history and the sentence states its title and exact share. LLM
+sentences will go through the same checker.
+
+**Example** (real output, numbers rounded)
 
 ```http
 POST /explain
-{"liked_game_ids": ["1145360", "588650", "504230"], "game_id": "367520"}
+{"liked_game_ids": ["620", "49520", "500"], "game_id": "440"}
 ```
 
 ```json
 {
+  "game_id": "440", "title": "Team Fortress 2", "score": 2.695, "rank": 1,
   "attributions": [
-    {"game_id": "588650", "title": "Dead Cells", "contribution": 0.214, "share": 0.42, "ease_part": 0.121, "ppr_part": 0.093}
+    {"game_id": "620", "title": "Portal 2", "contribution": 1.263, "share": 0.469, "ease_part": 1.021, "ppr_part": 0.242},
+    {"game_id": "49520", "title": "Borderlands 2", "contribution": 1.065, "share": 0.395, "ease_part": 0.866, "ppr_part": 0.199},
+    {"game_id": "500", "title": "Left 4 Dead", "contribution": 0.367, "share": 0.136, "ease_part": 0.084, "ppr_part": 0.283}
   ],
-  "counterfactual": {"removed_game_ids": ["588650"], "guarantee": "irreducible"},
-  "paths": [{"via": "tag", "label": "Metroidvania", "rarity": 0.81}],
+  "counterfactual": {"removed_game_ids": ["620", "49520"], "guarantee": "irreducible", "pipeline_runs": 4},
+  "paths": [{"via": "tag", "label": "Comedy", "from_game_id": "620", "weight": 1.835}],
   "kept_for_variety": false,
-  "claims": [{"text": "Dead Cells is the biggest driver of this pick (42%).", "evidence": [{"type": "attribution", "game_id": "588650", "share": 0.42}]}],
-  "checker": {"passed": true, "fallback_used": false, "reasons": []}
+  "claims": [
+    {"text": "Portal 2 is the biggest driver of this pick (47%).", "evidence": [{"type": "attribution", "game_id": "620", "share": 0.469}]},
+    {"text": "Borderlands 2 adds 40%.", "evidence": [{"type": "attribution", "game_id": "49520", "share": 0.395}]}
+  ],
+  "checker": {"passed": true, "fallback_used": true, "reasons": []},
+  "model_version": "blend-slice-1"
 }
 ```
 
-(Values are illustrative.)
+**Running it**
+
+```bash
+uv sync --group serve
+uv run whyfinder serve run                     # http://127.0.0.1:8000/docs
+docker build -f docker/Dockerfile.api -t whyfinder-api .
+docker run -p 8000:8000 whyfinder-api          # or ghcr.io/robertgeraldsenasin/whyfinder-api
+```
+
+**Tests:** `tests/unit/serve/` (every endpoint, failure paths, limits, the checker, exactness and the
+counterfactual against the pipeline) and `tests/contract/test_api_contract.py` (Schemathesis against
+the running app: status codes, content types, response schemas, valid data accepted, invalid data
+rejected).
