@@ -4,6 +4,7 @@ import type { Progress, ReadyInfo } from '../engine/protocol';
 import type { ModelFile, Slice } from '../engine/types';
 import { EngineClient } from './engine-client';
 import type { Evidence } from './evidence';
+import { allowedMask, type Filters, merge, NO_FILTERS, parseQuery } from './query';
 import { settings } from './settings.svelte';
 
 export type View = 'discover' | 'hood' | 'architecture';
@@ -82,11 +83,37 @@ class AppState {
   /** Ask the atlas to finish the starfall at once. */
   skipFall = $state(0);
   evidence = $state.raw<Evidence | null>(null);
+  /** Filters from a described query (FR-18, FR-23) and the words it could not place. */
+  filters = $state.raw<Filters>(NO_FILTERS);
+  unresolved = $state.raw<string[]>([]);
   verified = $state.raw<{ cB: number; cPi: number; seconds: number; cBModel: number; cPiModel: number } | null>(null);
   client: EngineClient | null = null;
 
   get historyKey(): string {
-    return this.history.map((h) => `${h.index}:${h.hours}`).join(',') + `|${this.beta}|${this.theta}`;
+    return this.history.map((h) => `${h.index}:${h.hours}`).join(',') + `|${this.beta}|${this.theta}|${JSON.stringify(this.filters)}`;
+  }
+
+  /** Read a description: anchors join your sky, filters are added, unknown words are kept to show. */
+  describe(text: string): { added: number; filters: number } {
+    const games = this.slice?.games ?? [];
+    const q = parseQuery(text, games);
+    let added = 0;
+    for (const i of q.anchors) {
+      if (!this.history.some((h) => h.index === i) && this.history.length < 12) {
+        this.add(i);
+        added++;
+      }
+    }
+    this.filters = merge(this.filters, q.filters);
+    this.unresolved = q.unresolved;
+    return { added, filters: q.filters.tags.length + (q.filters.maxPrice !== null ? 1 : 0) + (q.filters.yearMin !== null || q.filters.yearMax !== null ? 1 : 0) };
+  }
+
+  removeFilter(kind: 'tag' | 'price' | 'year', tag?: string): void {
+    const f = this.filters;
+    if (kind === 'tag') this.filters = { ...f, tags: f.tags.filter((t) => t !== tag) };
+    else if (kind === 'price') this.filters = { ...f, maxPrice: null };
+    else this.filters = { ...f, yearMin: null, yearMax: null };
   }
 
   get stale(): boolean {
@@ -130,7 +157,11 @@ class AppState {
 
   remove(index: number): void {
     this.history = this.history.filter((h) => h.index !== index);
-    if (this.history.length === 0) this.result = null;
+    if (this.history.length === 0) {
+      this.result = null;
+      this.filters = NO_FILTERS;
+      this.unresolved = [];
+    }
   }
 
   setHours(index: number, hours: number): void {
@@ -146,6 +177,7 @@ class AppState {
         this.history.map((h) => [h.index, h.hours]),
         this.beta,
         this.theta,
+        allowedMask(this.slice?.games ?? [], this.filters),
       );
       const sameGames = this.resultFor.split('|')[0] === key.split('|')[0];
       this.result = result;

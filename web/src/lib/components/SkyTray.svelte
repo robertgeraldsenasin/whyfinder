@@ -2,6 +2,7 @@
   import { PIPS } from '../cards';
   import * as sfx from '../sfx';
   import { app } from '../state.svelte';
+  import Describe from './Describe.svelte';
   import GameSearch from './GameSearch.svelte';
 
   const games = $derived(app.slice?.games ?? []);
@@ -21,6 +22,7 @@
     <span class="count">{app.history.length} of 12</span>
   </div>
   <GameSearch />
+  <Describe />
   {#if app.history.length}
     <ul class="mine" aria-label="Your games and hours played">
       {#each app.history as h (h.index)}

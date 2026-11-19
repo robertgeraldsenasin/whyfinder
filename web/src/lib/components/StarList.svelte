@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PIPS, rankLabel, rankName, SUITS, suitOf } from '../cards';
+  import { describe as filterWords, hasFilters } from '../query';
   import * as sfx from '../sfx';
   import { settings } from '../settings.svelte';
   import { colorAt, tier } from '../sky';
@@ -71,6 +72,15 @@
         {/each}
       </ol>
     </div>
+    {#if n < 10 && hasFilters(app.filters)}
+      <p class="few" role="status">
+        {#if n === 0}
+          No game among the 500 passes every filter ({filterWords(app.filters).join(', ')}). Remove one to widen the search.
+        {:else}
+          Only {n} {n === 1 ? 'game passes' : 'games pass'} every filter ({filterWords(app.filters).join(', ')}), so your hand is short.
+        {/if}
+      </p>
+    {/if}
     <p class="suits">
       <span class="h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={PIPS.hearts} /></svg>Hearts: {SUITS.hearts.plain}</span>
       <span class="c"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={PIPS.clubs} /></svg>Clubs: {SUITS.clubs.plain}</span>
@@ -211,6 +221,13 @@
   }
   .variety {
     color: var(--link);
+  }
+  .few {
+    margin: var(--space-2) 0 0;
+    padding: var(--space-2) var(--space-3);
+    border-left: 3px solid var(--quantum);
+    background: color-mix(in srgb, var(--quantum) 12%, transparent);
+    font-size: var(--text-sm);
   }
   .suits {
     margin: var(--space-2) 0 0;

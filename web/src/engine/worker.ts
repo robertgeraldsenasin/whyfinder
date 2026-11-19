@@ -72,7 +72,11 @@ self.onmessage = (event: MessageEvent<Request>) => {
     const e = engine;
     if (req.type === 'explain') {
       const history = req.history.map(([j, hours]) => [j, e.weight(hours)] as [number, number]);
-      post({ id: req.id, type: 'explained', result: e.explain(history, { beta: req.beta, theta: req.theta }) });
+      post({
+        id: req.id,
+        type: 'explained',
+        result: e.explain(history, { beta: req.beta, theta: req.theta, allowed: req.allowed ?? null }),
+      });
     } else if (req.type === 'trace') {
       const traces = req.seeds.map((seed) => {
         const r = e.pushTrace(seed);

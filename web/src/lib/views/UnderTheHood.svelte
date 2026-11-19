@@ -6,6 +6,7 @@
   import type { Trace } from '../../engine/protocol';
   import GramHeatmap from '../hood/GramHeatmap.svelte';
   import { int, ms, num, pct, rank, source } from '../format';
+  import { describe as filterWords, hasFilters } from '../query';
   import { app, type SceneLine } from '../state.svelte';
 
   type Stage = { id: string; title: string; short: string; planned?: boolean };
@@ -288,7 +289,10 @@
               {/each}
             </div>
             <p class="micro">{result.topScores.length} candidates. Crimson marks the top 10 by score alone.</p>
-            <p class="cost micro">Filters by tag, price and year arrive with natural-language queries (M3, FR-23). Source: <a href={source('src/whyfinder/rerank/pipeline.py')}>rerank/pipeline.py</a></p>
+            <p class="cost micro">
+              {hasFilters(app.filters) ? `Your filters (${filterWords(app.filters).join(', ')}) remove games here, before the shortlist, so no pick can break them.` : 'Filters you describe (tags, price, release year) remove games here, before the shortlist.'}
+              Source: <a href={source('src/whyfinder/rerank/pipeline.py')}>rerank/pipeline.py</a>, <a href={source('web/src/lib/query.ts')}>lib/query.ts</a>
+            </p>
           {:else if stage.id === 'dpp'}
             <p>Ten copies of the same game is a bad list. A determinantal point process picks games that are relevant <em>and</em> different, one greedy step at a time.</p>
             <p class="eq mono">L = Diag(q)·S·Diag(q), q<sub>i</sub> = e<sup>θŝ<sub>i</sub></sup><br />pick argmax d<sub>i</sub>² = det L<sub>Y∪i</sub> / det L<sub>Y</sub></p>

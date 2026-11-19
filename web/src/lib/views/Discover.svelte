@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PIPS } from '../cards';
+  import Describe from '../components/Describe.svelte';
   import GameSearch from '../components/GameSearch.svelte';
   import Wordmark from '../components/Wordmark.svelte';
   import PickDetail from '../components/PickDetail.svelte';
@@ -93,6 +94,7 @@
         one shows its hand: the exact reasons, and what players say.
       </p>
       <GameSearch size="hero" />
+      <Describe size="hero" deal />
       <div class="presets">
         <p id="start-from">Or start from someone else's hand</p>
         <ul class="fan" aria-labelledby="start-from">
