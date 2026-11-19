@@ -59,6 +59,10 @@ cd web && npm ci && npm test && npm run dev   # browser engine vs Python goldens
 _Generated from `results/` at each release. None yet._
 <!-- results:end -->
 
+<!-- targets:start -->
+_Generated from `results/` at each release. None yet._
+<!-- targets:end -->
+
 ## Data and citation
 
 Steam data from the UCSD McAuley Lab (<https://cseweb.ucsd.edu/~jmcauley/datasets.html>), downloaded by
