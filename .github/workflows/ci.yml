@@ -120,7 +120,7 @@ jobs:
       - name: Smoke test (health, version, a recommendation, an explanation, a problem)
         run: |
           docker run -d --name api -p 8000:8000 "$IMAGE:${{ github.sha }}"
-          for i in $(seq 1 40); do curl -fs localhost:8000/healthz && break; sleep 1; done
+          for i in $(seq 1 150); do curl -fs localhost:8000/healthz && break; sleep 1; done
           echo
           curl -fs localhost:8000/version | tee /tmp/version.json
           jq -e --arg sha "${{ github.sha }}" '.git_sha == $sha' /tmp/version.json
@@ -131,6 +131,9 @@ jobs:
           curl -fs -X POST localhost:8000/explain -H 'content-type: application/json' \
             -d "{\"liked_game_ids\": [\"620\", \"49520\", \"500\"], \"game_id\": \"$pick\"}" | tee /tmp/explain.json
           jq -e '.checker.passed and (.attributions | length == 3)' /tmp/explain.json
+          curl -fs 'localhost:8000/reviews?q=co-op%20with%20friends&k=3' | tee /tmp/reviews.json
+          jq -e '.items | length == 3' /tmp/reviews.json
+          curl -fs localhost:8000/healthz | jq -e '.index == "ok"'
           code=$(curl -s -o /tmp/problem.json -w '%{http_code}' -X POST localhost:8000/recommend \
             -H 'content-type: application/json' -d '{"liked_game_ids": ["1"]}')
           test "$code" = 404

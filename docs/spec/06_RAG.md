@@ -13,6 +13,26 @@ list of claims, each tied to evidence, and a deterministic checker rejects any c
 4. **Dense:** a small open sentence-embedding model (choice in ADR-0010), L2-normalised vectors in the
    hand-written **HNSW** index (§A9). Embedding runs once offline; vectors are versioned with DVC.
 
+## What runs today (M3, first part)
+
+`src/whyfinder/rag/` holds the retrieval stack, all hand-written: the tokenizer and chunker
+(`text.py`), BM25 with the Lucene IDF (`bm25.py`), LSA vectors from a randomized SVD (`lsa.py`,
+ADR-0010), the HNSW graph (`hnsw.py`), RRF (`fuse.py`) and the review index that ties them together
+(`reviews.py`). The API builds it at start-up over the demo's review export (6,000 quotes of at most
+25 words from the train period, `whyfinder export reviews`), so steps 2, 3 and 5 below run now:
+
+- aspects are the tags the pick shares with its top-attributed game, then the review words both
+  games' players use;
+- each aspect is searched within the pick's reviews; a quote counts only if BM25 matches it, so the
+  quote really mentions the aspect;
+- the claim cites the chunk and quotes it whole; the checker confirms the chunk belongs to the pick
+  and the quote is a verbatim span of at most 25 words, and that the sentence names no game outside
+  the pick and the history.
+
+Generation (step 4) is still the template fallback: the sentences are built from E1 and the
+retrieved quotes, so `fallback_used` stays true until the LLM lands. The full-corpus DVC `index`
+stage and the 150 labelled queries are still to come.
+
 ## One explanation, step by step
 
 1. **Inputs:** the pick, its top-5 attributions (E1), the counterfactual set (E2), up to 2 graph paths

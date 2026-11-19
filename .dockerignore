@@ -6,4 +6,5 @@
 !params.yaml
 !src/
 !web/public/data/demo-slice.json
+!web/public/data/reviews.json
 **/__pycache__

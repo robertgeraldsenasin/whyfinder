@@ -1,21 +1,26 @@
-"""One served model for every API test: the committed demo slice and params.yaml."""
+"""The served models for the API tests: the committed demo slice, reviews and params.yaml."""
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
+from tests import serving
+from tests.serving import PARAMS, REVIEWS, ROOT, SLICE
 from whyfinder.serve.model import ServedModel
 
-ROOT = Path(__file__).resolve().parents[3]
-SLICE = ROOT / "web" / "public" / "data" / "demo-slice.json"
-PARAMS = ROOT / "params.yaml"
+__all__ = ["PARAMS", "REVIEWS", "ROOT", "SLICE"]
 
 
 @pytest.fixture(scope="session")
 def served() -> ServedModel:
-    return ServedModel.load(SLICE, PARAMS)
+    """The model alone, without the review index."""
+    return serving.served(with_reviews=False)
+
+
+@pytest.fixture(scope="session")
+def full() -> ServedModel:
+    """The model with the review index, as `whyfinder serve run` and the image start it."""
+    return serving.served(with_reviews=True)
 
 
 @pytest.fixture(scope="session")

@@ -22,6 +22,8 @@ from whyfinder.explain.paths import Path as GraphPath
 from whyfinder.explain.paths import related_by
 from whyfinder.export.model import Model, build_model, model_params
 from whyfinder.params import load_params
+from whyfinder.rag.reviews import ReviewIndex
+from whyfinder.rag.reviews import build as build_reviews
 from whyfinder.rerank.pipeline import Recommendation, recommend
 
 MODEL_VERSION = "blend-slice-1"
@@ -69,8 +71,18 @@ class Explanation:
 class ServedModel:
     """The model plus the catalogue lookups the endpoints need."""
 
-    def __init__(self, model: Model, *, hashes: dict[str, str], data_version: str) -> None:
+    def __init__(
+        self,
+        model: Model,
+        *,
+        hashes: dict[str, str],
+        data_version: str,
+        reviews: ReviewIndex | None = None,
+        terms: dict[int, list[str]] | None = None,
+    ) -> None:
         self.model = model
+        self.reviews = reviews
+        self.terms = terms or {}
         self.p = model.params
         self.ids = model.game_ids
         self.index = {gid: i for i, gid in enumerate(self.ids)}
@@ -80,17 +92,42 @@ class ServedModel:
         self.weight = float(confidence(np.array([0.0]), conf["alpha"], conf["eps"])[0])
 
     @classmethod
-    def load(cls, slice_path: Path, params_path: Path) -> ServedModel:
+    def load(
+        cls, slice_path: Path, params_path: Path, reviews_path: Path | None = None
+    ) -> ServedModel:
+        """Build the model; with a review export, also the review index (about 20 s for 6,000)."""
         raw = slice_path.read_bytes()
         slice_ = json.loads(raw)
-        model = build_model(slice_, model_params(load_params(params_path)))
+        params = load_params(params_path)
+        model = build_model(slice_, model_params(params))
         hashes = {
             slice_path.name: hashlib.sha256(raw).hexdigest(),
             params_path.name: hashlib.sha256(params_path.read_bytes()).hexdigest(),
         }
         t1 = slice_.get("split", {}).get("t1", "?")
         data_version = f"demo-slice v{slice_.get('version', '?')}, train split to {t1}"
-        return cls(model, hashes=hashes, data_version=data_version)
+        if reviews_path is None:
+            return cls(model, hashes=hashes, data_version=data_version)
+        raw_reviews = reviews_path.read_bytes()
+        hashes[reviews_path.name] = hashlib.sha256(raw_reviews).hexdigest()
+        games = json.loads(raw_reviews)["games"]
+        index = build_reviews(games, model.game_ids, params["rag"], seed=int(params["seed"]))
+        where = {gid: i for i, gid in enumerate(model.game_ids)}
+        terms = {
+            where[int(k)]: [str(t) for t, _ in g.get("terms", [])]
+            for k, g in games.items()
+            if int(k) in where
+        }
+        return cls(model, hashes=hashes, data_version=data_version, reviews=index, terms=terms)
+
+    def aspects(self, pick: int, source: int, limit: int = 4) -> list[str]:
+        """What the pick shares with a liked game: common tags (the pick's order), then the words
+        both games' players use (06_RAG step 2)."""
+        theirs = set(self.games[source].get("tags") or [])
+        shared = [t for t in self.games[pick].get("tags") or [] if t in theirs]
+        words = set(self.terms.get(source, []))
+        shared += [w for w in self.terms.get(pick, []) if w in words and w not in shared]
+        return shared[:limit]
 
     @property
     def games(self) -> list[dict[str, Any]]:

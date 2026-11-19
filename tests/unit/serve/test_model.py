@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from tests.unit.serve.conftest import PARAMS, SLICE
+from tests.unit.serve.conftest import PARAMS, REVIEWS, SLICE
 from whyfinder.serve.model import Filters, ServedModel
 
 
@@ -73,8 +73,23 @@ def test_search_puts_prefix_matches_first_and_respects_the_limit(served: ServedM
     assert served.search("zzzyzzx") == []
 
 
-def test_load_records_hashes_and_the_data_version(served: ServedModel) -> None:
+def test_load_records_hashes_and_the_data_version(served: ServedModel, full: ServedModel) -> None:
     assert set(served.hashes) == {SLICE.name, PARAMS.name}
+    assert set(full.hashes) == {SLICE.name, PARAMS.name, REVIEWS.name}
+    assert served.reviews is None
+    assert full.reviews is not None
     assert all(len(h) == 64 for h in served.hashes.values())
     assert served.data_version.startswith("demo-slice v1")
     assert served.node_label(None) == ""
+
+
+def test_aspects_are_shared_tags_then_shared_review_words(
+    full: ServedModel, by_title: dict[str, int]
+) -> None:
+    tf2, portal2 = by_title["Team Fortress 2"], by_title["Portal 2"]
+    aspects = full.aspects(tf2, portal2, limit=10)
+    tags = set(full.games[tf2]["tags"]) & set(full.games[portal2]["tags"])
+    head = [a for a in aspects if a in tags]
+    assert aspects[: len(head)] == head
+    assert set(aspects[len(head) :]) <= set(full.terms[tf2]) & set(full.terms[portal2])
+    assert full.aspects(tf2, portal2, limit=2) == aspects[:2]

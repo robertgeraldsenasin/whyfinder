@@ -137,7 +137,9 @@ The minimality gap (greedy size − exact size) is a tracked metric.
 $$\text{idf}(t) = \ln\Big(1 + \frac{N - df_t + 0.5}{df_t + 0.5}\Big), \qquad \text{score}(q,d) = \sum_{t\in q} \text{idf}(t)\,\frac{tf_{t,d}(k_1+1)}{tf_{t,d} + k_1\,(1 - b + b\,|d|/\overline{|d|})}$$
 
 k₁ = 1.2, b = 0.75. Sparse matrices; tokeniser: lowercase, Unicode word split, English stop words.
-Oracle: `rank-bm25` on a fixture.
+Oracle: the formula written out term by term in the test, on a fixture with an empty document and
+several (k₁, b). `rank-bm25` uses the classic IDF, which can go negative, so it is not an exact oracle
+for the Lucene form.
 
 ## A9 · HNSW (Malkov & Yashunin)
 

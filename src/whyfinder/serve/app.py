@@ -12,6 +12,7 @@ pass through the same checker; until then `checker.fallback_used` is true.
 from __future__ import annotations
 
 import os
+import re
 import time
 from collections.abc import Callable, Mapping
 from typing import Annotated, Any, cast
@@ -25,6 +26,7 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from whyfinder import __version__
+from whyfinder.rag.reviews import Chunk, is_verbatim
 from whyfinder.serve import schemas as s
 from whyfinder.serve.model import MODEL_VERSION, Filters, ServedModel
 from whyfinder.serve.query import parse_query
@@ -137,19 +139,78 @@ def claims_for(attributions: list[s.Attribution]) -> list[s.Claim]:
             if n == 0
             else f"{a.title} adds {pct}."
         )
-        evidence = [s.Evidence(type="attribution", game_id=a.game_id, share=a.share)]
+        evidence: list[s.Evidence] = [
+            s.AttributionEvidence(type="attribution", game_id=a.game_id, share=a.share)
+        ]
         out.append(s.Claim(text=text, evidence=evidence))
     return out
 
 
-def check_claims(claims: list[s.Claim], attributions: list[s.Attribution]) -> s.Checker:
-    """Every claim cites an attribution that exists and states its title and share exactly."""
+def review_claims(model: ServedModel, pick: int, source: int, limit: int = 2) -> list[s.Claim]:
+    """For each aspect the pick shares with its top liked game, the best review of the pick that
+    names it (BM25 must match: a quote only counts if it mentions the aspect). Distinct quotes."""
+    if model.reviews is None:
+        return []
+    index = model.reviews
+    out: list[s.Claim] = []
+    used: set[int] = set()
+    for aspect in model.aspects(pick, source):
+        hit = next(
+            (
+                h
+                for h in index.search(aspect, 5, game=pick)
+                if h.bm25_rank is not None and h.chunk not in used
+            ),
+            None,
+        )
+        if hit is None:
+            continue
+        used.add(hit.chunk)
+        chunk = index.chunks[hit.chunk]
+        text = f'Players of {model.title(pick)} mention {aspect}: "{chunk.text}"'
+        evidence: list[s.Evidence] = [
+            s.ReviewEvidence(type="review", chunk_id=chunk.chunk_id, quote=chunk.text)
+        ]
+        out.append(s.Claim(text=text, evidence=evidence))
+        if len(out) == limit:
+            break
+    return out
+
+
+def check_claims(
+    claims: list[s.Claim],
+    attributions: list[s.Attribution],
+    *,
+    chunks: dict[str, Chunk] | None = None,
+    pick: int | None = None,
+    catalogue: list[str] | None = None,
+    allowed: set[str] | None = None,
+) -> s.Checker:
+    """FR-17. Attribution claims cite a liked game and state its title and share exactly; review
+    claims cite a chunk of the pick's reviews and quote it verbatim, 25 words at most; outside its
+    quotes, a claim names no game but the pick and the liked games."""
     by_id = {a.game_id: a for a in attributions}
+    known = chunks or {}
     reasons: list[str] = []
     for claim in claims:
         if not claim.evidence:
             reasons.append(f"no evidence for: {claim.text}")
+        if catalogue is not None:
+            quotes = [e.quote for e in claim.evidence if isinstance(e, s.ReviewEvidence)]
+            stray = unlisted_games(claim.text, quotes, catalogue, allowed or set())
+            reasons += [f"names a game outside the pick and the history: {g}" for g in stray]
         for e in claim.evidence:
+            if isinstance(e, s.ReviewEvidence):
+                c = known.get(e.chunk_id)
+                if c is None:
+                    reasons.append(f"cites a review chunk that does not exist: {e.chunk_id}")
+                elif pick is not None and c.game != pick:
+                    reasons.append(f"cites a review of another game: {e.chunk_id}")
+                elif not is_verbatim(e.quote, c.text):
+                    reasons.append(f"the quote is not a verbatim span of {e.chunk_id}")
+                elif e.quote not in claim.text:
+                    reasons.append(f"the sentence does not carry its quote from {e.chunk_id}")
+                continue
             a = by_id.get(e.game_id)
             if a is None:
                 reasons.append(f"cites a game outside the history: {e.game_id}")
@@ -158,6 +219,25 @@ def check_claims(claims: list[s.Claim], attributions: list[s.Attribution]) -> s.
             elif a.title not in claim.text or f"{round(a.share * 100)}%" not in claim.text:
                 reasons.append(f"the sentence does not state {a.title}'s share")
     return s.Checker(passed=not reasons, fallback_used=True, reasons=reasons)
+
+
+def unlisted_games(
+    text: str, quotes: list[str], catalogue: list[str], allowed: set[str]
+) -> list[str]:
+    """Catalogue titles a sentence names, outside its quotes, that are not allowed. Allowed titles
+    are blanked first, longest first, so "Portal 2" never reads as "Portal"."""
+    rest = text
+    for quote in quotes:
+        rest = rest.replace(quote, " ")
+    for title in sorted(allowed, key=len, reverse=True):
+        rest = re.sub(rf"(?<!\w){re.escape(title)}(?!\w)", " ", rest)
+    return [
+        title
+        for title in catalogue
+        if title not in allowed
+        and len(title) > 3
+        and re.search(rf"(?<!\w){re.escape(title)}(?!\w)", rest)
+    ]
 
 
 Responses = dict[int | str, dict[str, Any]]
@@ -174,10 +254,15 @@ EXPLAIN_ERRORS: Responses = {
 }
 SMALL_ERRORS: Responses = {k: v for k, v in ERRORS.items() if k in (413, 422, 429)}
 RATE_ERRORS: Responses = {k: v for k, v in ERRORS.items() if k == 429}
+REVIEW_ERRORS: Responses = {
+    **SMALL_ERRORS,
+    404: {"description": "The game is not in the catalogue"},
+    503: {"description": "This server was started without the review index"},
+}
 
 
 def problem_openapi(app: FastAPI) -> dict[str, Any]:
-    """FastAPI's document, with every 4xx response typed as a Problem in problem+json."""
+    """FastAPI's document, with every 4xx and 5xx response typed as a Problem in problem+json."""
     if app.openapi_schema:
         return app.openapi_schema
     doc = get_openapi(
@@ -187,7 +272,7 @@ def problem_openapi(app: FastAPI) -> dict[str, Any]:
     for operations in doc["paths"].values():
         for operation in operations.values():
             for code, response in operation["responses"].items():
-                if code.startswith("4"):
+                if code.startswith(("4", "5")):
                     response["content"] = {PROBLEM: {"schema": ref}}
     schemas = doc.setdefault("components", {}).setdefault("schemas", {})
     for name in ("HTTPValidationError", "ValidationError"):
@@ -210,10 +295,18 @@ def create_app(
     app.openapi = lambda: problem_openapi(app)  # type: ignore[method-assign]
     app.add_middleware(Guard, limiter=limiter or RateLimiter(LIMITS))
     sha = git_sha or os.environ.get("WHYFINDER_GIT_SHA", "unknown")
+    chunks = {c.chunk_id: c for c in model.reviews.chunks} if model.reviews is not None else {}
+    catalogue = [model.title(i) for i in range(len(model.ids))]
 
     @app.exception_handler(HTTPException)
     async def http_problem(_: Request, exc: HTTPException) -> JSONResponse:
-        titles = {400: "Bad request", 404: "Not found", 405: "Method not allowed", 409: "Conflict"}
+        titles = {
+            400: "Bad request",
+            404: "Not found",
+            405: "Method not allowed",
+            409: "Conflict",
+            503: "Unavailable",
+        }
         title = titles.get(exc.status_code, "Request failed")
         return problem(exc.status_code, title, str(exc.detail), headers=exc.headers)
 
@@ -300,7 +393,10 @@ def create_app(
             raise HTTPException(409, "the game to explain is one of the liked games")
         e = model.explain(history, pick, filters=filters)
         rows = attribution_rows(history, pick)
+        top = next((r for r in rows if r.contribution > 0), None)
         claims = claims_for(rows)
+        if top is not None:
+            claims += review_claims(model, pick, model.index[int(top.game_id)])
         return s.ExplainOut(
             game_id=str(model.ids[pick]),
             title=model.title(pick),
@@ -323,7 +419,14 @@ def create_app(
             ],
             kept_for_variety=e.kept_for_variety,
             claims=claims,
-            checker=check_claims(claims, rows),
+            checker=check_claims(
+                claims,
+                rows,
+                chunks=chunks,
+                pick=pick,
+                catalogue=catalogue,
+                allowed={model.title(pick), *(r.title for r in rows)},
+            ),
             model_version=MODEL_VERSION,
         )
 
@@ -338,10 +441,47 @@ def create_app(
         ]
         return s.SearchOut(items=hits)
 
+    @app.get("/reviews", response_model=s.ReviewsOut, responses=REVIEW_ERRORS)
+    def reviews(
+        q: Annotated[str, Query(min_length=1, max_length=200)],
+        game_id: Annotated[str | None, Query(pattern=r"^[0-9]{1,10}$")] = None,
+        k: Annotated[int, Query(ge=1, le=20)] = 5,
+    ) -> s.ReviewsOut:
+        """Review sentences for a query (BM25 and LSA vectors in HNSW, fused by RRF), optionally
+        from one game's reviews only."""
+        if model.reviews is None:
+            raise HTTPException(503, "the review index is not built on this server")
+        game = None
+        if game_id is not None:
+            game = model.index.get(int(game_id))
+            if game is None:
+                raise HTTPException(404, f"game {game_id} is not in the catalogue")
+        items = []
+        for h in model.reviews.search(q, k, game=game):
+            c = model.reviews.chunks[h.chunk]
+            items.append(
+                s.ReviewHit(
+                    chunk_id=c.chunk_id,
+                    game_id=str(model.ids[c.game]),
+                    title=model.title(c.game),
+                    text=c.text,
+                    hours=c.hours,
+                    year=c.year,
+                    score=h.score,
+                    bm25_rank=h.bm25_rank,
+                    dense_rank=h.dense_rank,
+                )
+            )
+        return s.ReviewsOut(items=items)
+
     @app.get("/healthz", response_model=s.Health, responses=RATE_ERRORS)
     def health() -> s.Health:
-        """The model is loaded; the retrieval index and the LLM arrive with M3."""
-        return s.Health(status="ok", artifacts="ok", index="not_built", llm="off")
+        """The model is loaded; the review index is built if the server was given reviews. The LLM
+        stays off: claims are template sentences checked by the claim checker."""
+        built = model.reviews is not None
+        return s.Health(
+            status="ok", artifacts="ok", index="ok" if built else "not_built", llm="off"
+        )
 
     @app.get("/version", response_model=s.Version, responses=RATE_ERRORS)
     def version() -> s.Version:
