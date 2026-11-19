@@ -18,6 +18,10 @@ way.
 > **Live demo:** <https://robertgeraldsenasin.github.io/whyfinder/>: the glass-box engine runs in your
 > browser on the 500 most-played games; *Under the hood* replays every step on your own picks.
 >
+<p align="center">
+  <img src="docs/design/screenshots/unmasked-hand.jpg" width="860" alt="The demo: your three games on the left, ten picks dealt as cards from Ace to 10, the sky with the reasons drawn as lines, and the pick card for Bastion with its exact shares">
+</p>
+
 > **Status:** M0 foundation done (data pipeline, first full data run in [`data/stats.json`](data/stats.json));
 > the core runs on the demo slice; model numbers appear here when the first gated release (v0.1) ships.
 > Roadmap: [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md) · step-by-step build: [docs/guide/IMPLEMENTATION.md](docs/guide/IMPLEMENTATION.md).
