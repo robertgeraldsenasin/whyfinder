@@ -220,10 +220,6 @@ select {
 .btn:active:not([disabled]) {
   transform: translateY(1px);
 }
-.btn[disabled] {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
 .btn.primary {
   color: var(--on-pick);
 }
@@ -237,8 +233,15 @@ select {
   box-shadow: 6px 6px 0 var(--bone);
   transform: skewX(var(--slant)) translate(-2px, -2px);
 }
-.btn.primary[disabled]::before {
-  box-shadow: 4px 4px 0 var(--ash);
+.btn[disabled] {
+  cursor: not-allowed;
+  color: var(--muted);
+}
+.btn.primary[disabled]::before,
+.btn[disabled]::before {
+  background: var(--velvet);
+  border: 1px dashed var(--line);
+  box-shadow: none;
 }
 .btn.ghost {
   color: var(--muted);
@@ -255,6 +258,14 @@ select {
 }
 .btn.ghost:hover:not([disabled]) {
   color: var(--text);
+}
+.btn.ghost[disabled]::before {
+  display: none;
+}
+/* Icon-only ghost buttons (arrows) get no underline. */
+.btn.ghost[aria-label] {
+  text-decoration: none;
+  color: var(--crimson-text);
 }
 
 .chip {

@@ -35,7 +35,7 @@ way.
 | **Live demo** | The same glass-box engine, ported to TypeScript and golden-matched to Python, runs in your browser on a 500-game slice: watch every step, from your history to the reasons | [ADR-0015](docs/decisions/ADR-0015-live-engine-demo.md) |
 
 Architecture (C4 diagrams): [docs/spec/08_ARCHITECTURE.md](docs/spec/08_ARCHITECTURE.md).
-Design language ("Starfall"): [docs/spec/11_DESIGN_SYSTEM.md](docs/spec/11_DESIGN_SYSTEM.md).
+Design language ("Unmasked"): [docs/spec/11_DESIGN_SYSTEM.md](docs/spec/11_DESIGN_SYSTEM.md).
 Decisions: [docs/decisions/](docs/decisions/README.md).
 
 ## Quick start

@@ -16,10 +16,11 @@ Architecture decision records in the Hasik format (context, options, decision, c
 | [0010](ADR-0010-retrieval.md) | Retrieval: hybrid BM25 + dense on our own HNSW, merged by RRF | Proposed (embedding model chosen in M3) |
 | [0011](ADR-0011-dpp-reranking.md) | DPP re-ranking for variety | Accepted |
 | [0012](ADR-0012-counterfactual-guarantees.md) | Counterfactual search modes and guarantees | Accepted |
-| [0013](ADR-0013-design-language.md) | Design language: Star Atlas | Superseded by 0017 (palette, type, themes) |
+| [0013](ADR-0013-design-language.md) | Design language: Star Atlas | Superseded by 0017 (palette, type, themes), then 0018 |
 | [0014](ADR-0014-name.md) | Name: Whyfinder | Accepted |
 | [0015](ADR-0015-live-engine-demo.md) | A live glass-box engine in the browser, built alongside the core | Accepted |
 | [0016](ADR-0016-cinematic-motion.md) | Cinematic motion for the Star Atlas | Accepted (extended by 0017) |
-| [0017](ADR-0017-starfall.md) | Starfall: a celestial redesign with impact, evidence and sound | Accepted |
+| [0017](ADR-0017-starfall.md) | Starfall: a celestial redesign with impact, evidence and sound | Accepted (palette, type and frames superseded by 0018) |
+| [0018](ADR-0018-unmasked.md) | Unmasked: a theatrical redesign, with the picks dealt as cards | Accepted |
 
 New ADR: copy [ADR-template.md](ADR-template.md), take the next number, open a PR labelled `type:docs`.

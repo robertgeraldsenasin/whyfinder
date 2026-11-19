@@ -7,6 +7,15 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Unmasked, the demo's new design language (ADR-0018, FR-22):
+  - a stage at night in crimson, bone and ink, with violet for the graph; Anton poster type, Prata for names, Comic Relief for what players wrote;
+  - the ten picks are dealt as a hand of cards, Ace to 10, and each card's suit says which part of the model carried it (hearts: players in common; clubs: tags and studios), computed from the exact attributions;
+  - the pick is a card face with the Steam art, the closeness tier stamped on it and a line saying how much of the score its suit carried;
+  - the deal: a spotlight lock-on, cards that turn over as they fall and burst into their stars, comic impact frames with halftone, a burst and confetti for the Ace;
+  - a centred title screen with an admission-ticket search and four starter hands fanned like cards;
+  - sounds for dealing a card and a short brass flourish for the Ace;
+  - screenshots of every view, desktop and phone, kept by CI (`npm run screens`).
+
 - Review evidence (`whyfinder export reviews`, DVC stage `export_reviews`):
   - community terms per game, by log-odds with an informative Dirichlet prior;
   - twelve specific, positive quotes of at most 25 words, chosen to cover the game's neighbour games so the demo can quote players who also played yours.
@@ -21,6 +30,7 @@ and [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - The light theme is retired; ADR-0013's palette and type are superseded by ADR-0017.
+- Starfall's palette, type, frames and fall visuals are superseded by Unmasked (ADR-0018); saved colour settings carry over. Cutive Mono is no longer used.
 
 ## [0.0.1] - 2026-11-17
 
