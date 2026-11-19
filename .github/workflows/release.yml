@@ -46,11 +46,12 @@ jobs:
           uv run whyfinder results --report dist/eval-test.json --out results
           uv run python scripts/gen_readme_tables.py
           cp results/*.json dist/
+          cp results/targets/test.json dist/targets-test.json
           {
             echo "## Sealed test set"
-            sed -n '/<!-- results:start -->/,/<!-- results:end -->/p' README.md
+            sed -n '/<!-- results:start -->/,/<!-- targets:end -->/p' README.md
           } >> "$GITHUB_STEP_SUMMARY"
-          for f in results/*.json; do echo "== $f"; cat "$f"; done
+          for f in results/*.json results/targets/test.json; do echo "== $f"; cat "$f"; done
       - name: Attach to the GitHub release
         run: |
           tag="${GITHUB_REF_NAME}"

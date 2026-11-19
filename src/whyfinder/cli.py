@@ -370,24 +370,28 @@ def results_command(
     out: Annotated[Path, typer.Option(help="Directory for one JSON per model.")] = Path("results"),
     params: ParamsOption = Path("params.yaml"),
 ) -> None:
-    """Write results/<model>.json (means with 95% intervals) for the README table."""
+    """Write results/<model>.json (means with 95% intervals) and results/targets/<split>.json
+    (each ADR-0006 target, met or not) for the README tables."""
     import json
 
-    from whyfinder.eval.results import summarize
+    from whyfinder.eval.results import summarize, targets
 
     p = load_params(params)
     data = json.loads(report.read_text())
-    rows = summarize(
-        data,
-        str(data.get("split", "test")),
-        resamples=param(p, "eval.bootstrap_resamples", int),
-        seed=param(p, "seed", int),
-    )
+    split = str(data.get("split", "test"))
+    resamples, seed = param(p, "eval.bootstrap_resamples", int), param(p, "seed", int)
+    rows = summarize(data, split, resamples=resamples, seed=seed)
     out.mkdir(parents=True, exist_ok=True)
     for row in rows:
         path = out / f"{row['model']}.json"
         path.write_text(json.dumps(row, indent=2, sort_keys=True) + "\n")
         typer.echo(f"wrote {path}")
+    goals = targets(data, resamples=resamples, seed=seed)
+    path = out / "targets" / f"{split}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(goals, indent=2, ensure_ascii=False) + "\n")
+    met = sum(1 for g in goals["targets"] if g["met"])
+    typer.echo(f"wrote {path}: {met} of {len(goals['targets'])} targets met")
 
 
 @app.command("tune")
