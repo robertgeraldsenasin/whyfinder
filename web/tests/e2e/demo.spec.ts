@@ -42,7 +42,7 @@ test('search, add three games and watch ten explained picks fall', async ({ page
   await expect(picks(page).nth(1)).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('the starfall can be skipped', async ({ page }) => {
+test('the deal can be skipped', async ({ page }) => {
   await ready(page);
   await page.getByRole('button', { name: /Survival crews/ }).click();
   await page.getByRole('button', { name: 'Skip' }).click();
