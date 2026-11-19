@@ -21,6 +21,7 @@ Models:
 from __future__ import annotations
 
 import time
+import tracemalloc
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
@@ -146,6 +147,23 @@ class Served:
         ).picks
 
 
+def peak_memory(build: Callable[[], np.ndarray]) -> tuple[np.ndarray, int]:
+    """Run `build`; return its result and the peak bytes allocated meanwhile (ADR-0004's item cap
+    bounds this for EASE). Measured with tracemalloc, to which NumPy reports its buffers."""
+    already = tracemalloc.is_tracing()
+    if not already:
+        tracemalloc.start()
+    tracemalloc.reset_peak()
+    base, _ = tracemalloc.get_traced_memory()
+    try:
+        out = build()
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        if not already:
+            tracemalloc.stop()
+    return out, max(peak - base, 0)
+
+
 @dataclass
 class Built:
     """A ranker plus how long the model took to build."""
@@ -210,10 +228,10 @@ def build_models(
     served_model: Served | None = None
     if need_b:
         t = time.perf_counter()
-        B = ease(G, float(p["ease"]["lambda"]))
+        B, peak = peak_memory(lambda: ease(G, float(p["ease"]["lambda"])))
         built_b = t_gram + time.perf_counter() - t
         if "ease" in only:
-            built["ease"] = Built(item_item(B), built_b)
+            built["ease"] = Built(item_item(B), built_b, {"peak_mb": round(peak / 2**20, 1)})
     if need_pi:
         t = time.perf_counter()
         g = p["graph"]

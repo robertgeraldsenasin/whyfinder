@@ -227,15 +227,17 @@ def _explain_summary(report: dict[str, Any]) -> list[str]:
 
 def _summary_table(models: dict[str, Any]) -> list[str]:
     out = [
-        "| Model | NDCG@10 | Recall@20 | MRR | ILD@10 | Coverage@10 | Build (s) |",
-        "| --- | --- | --- | --- | --- | --- | --- |",
+        "| Model | NDCG@10 | Recall@20 | MRR | ILD@10 | Coverage@10 | Build (s) | Peak (MB) |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for name, block in models.items():
         m = block["means"]
+        peak = block.get("info", {}).get("peak_mb")
         out.append(
             f"| {name} | {m['ndcg_at_10']:.4f} | {m['recall_at_20']:.4f} | {m['mrr']:.4f} "
             f"| {m['ild_at_10']:.4f} "
-            f"| {block['coverage_at_10']:.4f} | {block['build_seconds']:.1f} |"
+            f"| {block['coverage_at_10']:.4f} | {block['build_seconds']:.1f} "
+            f"| {'' if peak is None else f'{peak:.0f}'} |"
         )
     return out
 
