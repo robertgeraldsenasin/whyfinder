@@ -118,7 +118,11 @@ def test_eval_then_gate_then_results(
         app, ["results", "--report", str(test_out), "--out", str(results), "--params", str(params)]
     )
     assert written.exit_code == 0
-    assert sorted(p.name for p in results.iterdir()) == ["ease.json", "popularity.json"]
+    assert sorted(p.name for p in results.iterdir()) == ["ease.json", "popularity.json", "targets"]
+    goals = json.loads((results / "targets" / "test.json").read_text())
+    assert goals["split"] == "test"
+    assert {g["id"] for g in goals["targets"]} >= {"ranking-ials", "diversity", "deletion"}
+    assert "targets met" in written.output
 
 
 def test_the_test_split_is_sealed_outside_release(
