@@ -435,3 +435,60 @@ def tune_command(
     typer.echo(
         f"{report['users']} users, {report['games']} games, {report['seconds']}s; wrote {out}"
     )
+
+
+serve_app = typer.Typer(help="The REST API (docs/spec/12_API.md).", no_args_is_help=True)
+app.add_typer(serve_app, name="serve")
+OPENAPI = Path("docs/openapi.json")
+SliceOption = Annotated[Path, typer.Option("--slice", help="The demo slice the API serves.")]
+
+
+@serve_app.command("run")
+def serve_run(
+    host: Annotated[str, typer.Option(help="Interface to bind.")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="Port to listen on.")] = 8000,
+    slice_path: SliceOption = WEB_SLICE,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Serve /recommend, /explain, /search, /healthz and /version (needs the `serve` group)."""
+    import uvicorn
+
+    from whyfinder.serve.app import create_app
+    from whyfinder.serve.model import ServedModel
+
+    api = create_app(ServedModel.load(slice_path, params))
+    uvicorn.run(api, host=host, port=port, proxy_headers=True)
+
+
+@serve_app.command("openapi")
+def serve_openapi(
+    out: Annotated[Path, typer.Option(help="Where the OpenAPI document goes.")] = OPENAPI,
+    check: Annotated[
+        bool, typer.Option(help="Fail with a diff if the committed document is out of date.")
+    ] = False,
+    slice_path: SliceOption = WEB_SLICE,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Write the OpenAPI document (FR-21), or check the committed one against the code."""
+    import difflib
+    import json
+
+    from whyfinder.serve.app import create_app
+    from whyfinder.serve.model import ServedModel
+
+    api = create_app(ServedModel.load(slice_path, params), git_sha="openapi")
+    text = json.dumps(api.openapi(), indent=2, sort_keys=True) + "\n"
+    if check:
+        old = out.read_text() if out.exists() else ""
+        if old != text:
+            diff = difflib.unified_diff(
+                old.splitlines(keepends=True), text.splitlines(keepends=True), str(out), "code"
+            )
+            typer.echo("".join(diff))
+            typer.echo(f"{out} is out of date: run `whyfinder serve openapi`", err=True)
+            raise typer.Exit(1)
+        typer.echo(f"{out} matches the code")
+        return
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text)
+    typer.echo(f"wrote {out}")

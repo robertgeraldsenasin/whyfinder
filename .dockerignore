@@ -1,0 +1,9 @@
+# Only what the API image needs (docker/Dockerfile.api).
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!params.yaml
+!src/
+!web/public/data/demo-slice.json
+**/__pycache__

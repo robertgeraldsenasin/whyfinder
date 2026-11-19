@@ -7,6 +7,13 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The REST API (FR-21, ADR-0019): `POST /recommend`, `POST /explain`, `GET /search`, `GET /healthz` and `GET /version`, serving the same model as the live demo, so the picks and their reasons agree.
+  - a taste is liked Steam app IDs, a description in the demo's words, or both; the API's parser is the demo's twin and both are tested on the same cases;
+  - `/explain` returns the exact attributions (EASE and graph parts), the irreducible counterfactual, the graph paths and template claims checked against the attributions;
+  - errors are `application/problem+json`; bodies are capped at 16 KB; 30 requests a minute per client on `/explain` and 120 on the rest; inputs are strict, so the server rejects exactly what the schema rejects;
+  - `docs/openapi.json` is committed and a test fails if it drifts (`whyfinder serve openapi`); Schemathesis checks the running app against it;
+  - `whyfinder serve run`, and a Docker image (`docker/Dockerfile.api`) that CI builds and smoke-tests on every PR and pushes to GHCR from `main`.
+
 - Describe what you want (FR-18, FR-23): "like Portal 2, co-op, under $20, after 2012" adds the named games to your sky and sets tag, price and release-year filters, shown as removable chips; anything not understood is said back. Filters remove games before the shortlist, so no pick can break one; a short or empty hand says which filters are responsible. The parser is deterministic (`web/src/lib/query.ts`) and keeps titles with commas whole.
 
 - Evaluation and the quality gate (M1: FR-04, FR-09, FR-19, FR-20):

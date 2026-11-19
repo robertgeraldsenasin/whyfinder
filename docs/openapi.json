@@ -1,0 +1,1004 @@
+{
+  "components": {
+    "schemas": {
+      "Attribution": {
+        "properties": {
+          "contribution": {
+            "title": "Contribution",
+            "type": "number"
+          },
+          "ease_part": {
+            "title": "Ease Part",
+            "type": "number"
+          },
+          "game_id": {
+            "title": "Game Id",
+            "type": "string"
+          },
+          "ppr_part": {
+            "title": "Ppr Part",
+            "type": "number"
+          },
+          "share": {
+            "title": "Share",
+            "type": "number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game_id",
+          "title",
+          "contribution",
+          "share",
+          "ease_part",
+          "ppr_part"
+        ],
+        "title": "Attribution",
+        "type": "object"
+      },
+      "Checker": {
+        "properties": {
+          "fallback_used": {
+            "title": "Fallback Used",
+            "type": "boolean"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "passed",
+          "fallback_used",
+          "reasons"
+        ],
+        "title": "Checker",
+        "type": "object"
+      },
+      "Claim": {
+        "properties": {
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/Evidence"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "evidence"
+        ],
+        "title": "Claim",
+        "type": "object"
+      },
+      "CounterfactualOut": {
+        "properties": {
+          "guarantee": {
+            "enum": [
+              "irreducible",
+              "exact_min",
+              "not_in_picks"
+            ],
+            "title": "Guarantee",
+            "type": "string"
+          },
+          "pipeline_runs": {
+            "title": "Pipeline Runs",
+            "type": "integer"
+          },
+          "removed_game_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed Game Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "removed_game_ids",
+          "guarantee",
+          "pipeline_runs"
+        ],
+        "title": "CounterfactualOut",
+        "type": "object"
+      },
+      "Evidence": {
+        "properties": {
+          "game_id": {
+            "title": "Game Id",
+            "type": "string"
+          },
+          "share": {
+            "title": "Share",
+            "type": "number"
+          },
+          "type": {
+            "const": "attribution",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "game_id",
+          "share"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "ExplainIn": {
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "properties": {
+              "liked_game_ids": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "liked_game_ids"
+            ]
+          },
+          {
+            "required": [
+              "query"
+            ]
+          }
+        ],
+        "properties": {
+          "filters": {
+            "$ref": "#/components/schemas/FiltersIn"
+          },
+          "game_id": {
+            "examples": [
+              "367520"
+            ],
+            "pattern": "^[0-9]{1,10}$",
+            "title": "Game Id",
+            "type": "string"
+          },
+          "liked_game_ids": {
+            "items": {
+              "examples": [
+                "367520"
+              ],
+              "pattern": "^[0-9]{1,10}$",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Liked Game Ids",
+            "type": "array"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query"
+          }
+        },
+        "required": [
+          "game_id"
+        ],
+        "title": "ExplainIn",
+        "type": "object"
+      },
+      "ExplainOut": {
+        "properties": {
+          "attributions": {
+            "items": {
+              "$ref": "#/components/schemas/Attribution"
+            },
+            "title": "Attributions",
+            "type": "array"
+          },
+          "checker": {
+            "$ref": "#/components/schemas/Checker"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/Claim"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "counterfactual": {
+            "$ref": "#/components/schemas/CounterfactualOut"
+          },
+          "game_id": {
+            "title": "Game Id",
+            "type": "string"
+          },
+          "kept_for_variety": {
+            "title": "Kept For Variety",
+            "type": "boolean"
+          },
+          "model_version": {
+            "title": "Model Version",
+            "type": "string"
+          },
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/PathOut"
+            },
+            "title": "Paths",
+            "type": "array"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game_id",
+          "title",
+          "score",
+          "rank",
+          "attributions",
+          "counterfactual",
+          "paths",
+          "kept_for_variety",
+          "claims",
+          "checker",
+          "model_version"
+        ],
+        "title": "ExplainOut",
+        "type": "object"
+      },
+      "FiltersIn": {
+        "additionalProperties": false,
+        "properties": {
+          "max_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Price"
+          },
+          "tags": {
+            "items": {
+              "maxLength": 50,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Tags",
+            "type": "array"
+          },
+          "year_max": {
+            "anyOf": [
+              {
+                "ge": 1970,
+                "le": 2100,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year Max"
+          },
+          "year_min": {
+            "anyOf": [
+              {
+                "ge": 1970,
+                "le": 2100,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year Min"
+          }
+        },
+        "title": "FiltersIn",
+        "type": "object"
+      },
+      "Health": {
+        "properties": {
+          "artifacts": {
+            "const": "ok",
+            "title": "Artifacts",
+            "type": "string"
+          },
+          "index": {
+            "const": "not_built",
+            "title": "Index",
+            "type": "string"
+          },
+          "llm": {
+            "const": "off",
+            "title": "Llm",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "artifacts",
+          "index",
+          "llm"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Item": {
+        "properties": {
+          "game_id": {
+            "title": "Game Id",
+            "type": "string"
+          },
+          "kept_for_variety": {
+            "title": "Kept For Variety",
+            "type": "boolean"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "score": {
+            "title": "Score",
+            "type": "number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "top_reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Reason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "game_id",
+          "title",
+          "score",
+          "rank",
+          "kept_for_variety",
+          "top_reason"
+        ],
+        "title": "Item",
+        "type": "object"
+      },
+      "PathOut": {
+        "properties": {
+          "from_game_id": {
+            "title": "From Game Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "via": {
+            "enum": [
+              "co-play",
+              "tag",
+              "developer",
+              "publisher"
+            ],
+            "title": "Via",
+            "type": "string"
+          },
+          "weight": {
+            "title": "Weight",
+            "type": "number"
+          }
+        },
+        "required": [
+          "via",
+          "label",
+          "from_game_id",
+          "weight"
+        ],
+        "title": "PathOut",
+        "type": "object"
+      },
+      "Problem": {
+        "description": "RFC 9457 problem details; `errors` lists what failed validation.",
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "errors": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ProblemError"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Errors"
+          },
+          "status": {
+            "title": "Status",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "detail"
+        ],
+        "title": "Problem",
+        "type": "object"
+      },
+      "ProblemError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Loc",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Msg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg"
+        ],
+        "title": "ProblemError",
+        "type": "object"
+      },
+      "Reason": {
+        "properties": {
+          "game_id": {
+            "title": "Game Id",
+            "type": "string"
+          },
+          "share": {
+            "title": "Share",
+            "type": "number"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "game_id",
+          "title",
+          "share"
+        ],
+        "title": "Reason",
+        "type": "object"
+      },
+      "RecommendIn": {
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "properties": {
+              "liked_game_ids": {
+                "minItems": 1
+              }
+            },
+            "required": [
+              "liked_game_ids"
+            ]
+          },
+          {
+            "required": [
+              "query"
+            ]
+          }
+        ],
+        "properties": {
+          "diversity": {
+            "default": true,
+            "title": "Diversity",
+            "type": "boolean"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/FiltersIn"
+          },
+          "k": {
+            "default": 10,
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "K",
+            "type": "integer"
+          },
+          "liked_game_ids": {
+            "items": {
+              "examples": [
+                "367520"
+              ],
+              "pattern": "^[0-9]{1,10}$",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Liked Game Ids",
+            "type": "array"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query"
+          }
+        },
+        "title": "RecommendIn",
+        "type": "object"
+      },
+      "RecommendOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Item"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "liked_game_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Liked Game Ids",
+            "type": "array"
+          },
+          "model_version": {
+            "title": "Model Version",
+            "type": "string"
+          },
+          "unknown_game_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unknown Game Ids",
+            "type": "array"
+          },
+          "unresolved_terms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unresolved Terms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "liked_game_ids",
+          "unknown_game_ids",
+          "unresolved_terms",
+          "model_version"
+        ],
+        "title": "RecommendOut",
+        "type": "object"
+      },
+      "SearchHit": {
+        "properties": {
+          "game_id": {
+            "title": "Game Id",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year"
+          }
+        },
+        "required": [
+          "game_id",
+          "title",
+          "year"
+        ],
+        "title": "SearchHit",
+        "type": "object"
+      },
+      "SearchOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SearchHit"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SearchOut",
+        "type": "object"
+      },
+      "Version": {
+        "properties": {
+          "artifacts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Artifacts",
+            "type": "object"
+          },
+          "data_version": {
+            "title": "Data Version",
+            "type": "string"
+          },
+          "git_sha": {
+            "title": "Git Sha",
+            "type": "string"
+          },
+          "model_version": {
+            "title": "Model Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "git_sha",
+          "model_version",
+          "data_version",
+          "artifacts"
+        ],
+        "title": "Version",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Explainable Steam game recommendations: every pick with its exact reasons.",
+    "title": "Whyfinder API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/explain": {
+      "post": {
+        "description": "Why a game is (or is not) picked: exact attributions, a counterfactual and paths.",
+        "operationId": "explain_explain_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExplainIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExplainOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "None of the liked games, or the game asked about, is in the catalogue"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The game to explain is one of the liked games"
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The body is over 16 KB"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request does not match the schema"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too many requests from this client in the current minute"
+          }
+        },
+        "summary": "Explain"
+      }
+    },
+    "/healthz": {
+      "get": {
+        "description": "The model is loaded; the retrieval index and the LLM arrive with M3.",
+        "operationId": "health_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too many requests from this client in the current minute"
+          }
+        },
+        "summary": "Health"
+      }
+    },
+    "/recommend": {
+      "post": {
+        "description": "Up to k picks for a taste, each with its largest reason.",
+        "operationId": "recommend_recommend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "None of the liked games, or the game asked about, is in the catalogue"
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The body is over 16 KB"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request does not match the schema"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too many requests from this client in the current minute"
+          }
+        },
+        "summary": "Recommend"
+      }
+    },
+    "/search": {
+      "get": {
+        "description": "Up to ten catalogue titles: those starting with q, then those containing it.",
+        "operationId": "search_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "413": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The body is over 16 KB"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "The request does not match the schema"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too many requests from this client in the current minute"
+          }
+        },
+        "summary": "Search"
+      }
+    },
+    "/version": {
+      "get": {
+        "description": "What is serving: the commit, the model, the data and the hashes of its files.",
+        "operationId": "version_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Version"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "429": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Too many requests from this client in the current minute"
+          }
+        },
+        "summary": "Version"
+      }
+    }
+  }
+}
