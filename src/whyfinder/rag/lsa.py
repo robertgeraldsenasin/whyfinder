@@ -17,7 +17,7 @@ import scipy.sparse as sp
 
 
 def randomized_svd(
-    A: sp.spmatrix | np.ndarray, k: int, *, oversample: int = 10, power: int = 2, seed: int = 0
+    A: sp.csr_matrix | np.ndarray, k: int, *, oversample: int = 10, power: int = 2, seed: int = 0
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """U (m×k), s (k), Vt (k×n) of a rank-k approximation, singular values descending."""
     m, n = A.shape
@@ -25,11 +25,16 @@ def randomized_svd(
         raise ValueError("need 1 <= k <= min(rows, columns)")
     width = min(k + oversample, min(m, n))
     omega = np.random.default_rng(seed).standard_normal((n, width))
-    Q, _ = np.linalg.qr(A @ omega)
+    At = A.T
+
+    def times(M: sp.csr_matrix | sp.csc_matrix | np.ndarray, right: np.ndarray) -> np.ndarray:
+        return np.asarray(M @ right, dtype=np.float64)
+
+    Q, _ = np.linalg.qr(times(A, omega))
     for _ in range(power):  # power iterations sharpen a slowly decaying spectrum
-        Z, _ = np.linalg.qr(A.T @ Q)
-        Q, _ = np.linalg.qr(A @ Z)
-    B = np.asarray((A.T @ Q).T)
+        Z, _ = np.linalg.qr(times(At, Q))
+        Q, _ = np.linalg.qr(times(A, Z))
+    B = times(At, Q).T
     Ub, s, Vt = np.linalg.svd(B, full_matrices=False)
     U = Q @ Ub
     # Sign convention: the largest-magnitude entry of each right vector is positive (determinism).

@@ -72,7 +72,9 @@ def build(documents: list[list[str]], *, k1: float = 1.2, b: float = 0.75) -> Bm
             cols.append(d)
             vals.append(float(count))
     n = len(documents)
-    tf = sp.csr_matrix((vals, (rows, cols)), shape=(len(vocabulary), n), dtype=np.float64)
+    tf: sp.csr_matrix = sp.csr_matrix(
+        (vals, (rows, cols)), shape=(len(vocabulary), n), dtype=np.float64
+    )
     df = np.diff(tf.indptr).astype(np.float64)
     idf = np.log1p((n - df + 0.5) / (df + 0.5))
     lengths = np.array([len(doc) for doc in documents], dtype=np.float64)
