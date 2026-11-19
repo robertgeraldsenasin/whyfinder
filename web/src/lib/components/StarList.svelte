@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PIPS, rankLabel, rankName, SUITS, suitOf } from '../cards';
   import * as sfx from '../sfx';
   import { settings } from '../settings.svelte';
   import { colorAt, tier } from '../sky';
@@ -10,6 +11,7 @@
   const games = $derived(app.slice?.games ?? []);
   const n = $derived(result?.picks.length ?? 0);
   const firstVisible = $derived(n - app.landed);
+  const suits = $derived(result ? result.explanations.map((e) => suitOf(e.attributions)) : []);
 
   function choose(t: number): void {
     app.selected = t;
@@ -28,17 +30,20 @@
 </script>
 
 {#if result}
-  <section class="panel list" aria-labelledby="fell-title">
+  <section class="panel list" aria-labelledby="hand-title">
     <div class="head">
-      <h2 id="fell-title">Where the stars fell</h2>
+      <h2 id="hand-title">Your hand</h2>
       {#if app.falling}
         <button class="btn ghost skip" onclick={() => app.skipFall++}>Skip</button>
+      {:else}
+        <span class="count">{n} cards</span>
       {/if}
     </div>
     <div role="region" aria-label="Your picks">
       <ol>
         {#each result.picks as p, t (p)}
           {@const c = closeness?.[p] ?? 0}
+          {@const suit = suits[t] ?? 'hearts'}
           {#if t >= firstVisible}
             <li class:landing={app.falling}>
               <button
@@ -50,10 +55,14 @@
                 onclick={() => choose(t)}
                 onkeydown={onKey}
               >
-                <span class="rank display">{t + 1}</span>
+                <span class="mini {suit}" aria-hidden="true">
+                  <span class="idx">{rankLabel(t)}</span>
+                  <svg viewBox="0 0 24 24"><path d={PIPS[suit]} /></svg>
+                </span>
+                <span class="sr-only">{rankName(t)} of {SUITS[suit].name.toLowerCase()}:</span>
                 <span class="name">{games[p].title}</span>
                 <span class="tier">
-                  <span class="dot" style:background={colorAt(settings.palette, c)} style:box-shadow={`0 0 10px ${colorAt(settings.palette, c)}`}></span>
+                  <svg class="dot" viewBox="0 0 24 24" aria-hidden="true"><path d={PIPS.star} fill={colorAt(settings.palette, c)} /></svg>
                   <span>{tier(c).name}{#if result.variety[t]}<span class="variety">, picked for variety</span>{/if}</span>
                 </span>
               </button>
@@ -62,6 +71,10 @@
         {/each}
       </ol>
     </div>
+    <p class="suits">
+      <span class="h"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={PIPS.hearts} /></svg>Hearts: {SUITS.hearts.plain}</span>
+      <span class="c"><svg viewBox="0 0 24 24" aria-hidden="true"><path d={PIPS.clubs} /></svg>Clubs: {SUITS.clubs.plain}</span>
+    </p>
   </section>
 {/if}
 
@@ -78,10 +91,15 @@
     justify-content: space-between;
   }
   h2 {
-    font-size: var(--text-xl);
+    font-size: 22px;
+    line-height: 1;
+  }
+  .count {
+    font-size: var(--text-xs);
+    color: var(--muted);
   }
   .skip {
-    padding: 4px 12px;
+    padding: 4px 10px;
   }
   ol {
     list-style: none;
@@ -89,20 +107,19 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
   }
   li.landing {
-    animation: land 520ms var(--ease-out);
+    animation: dealt 560ms var(--ease-pop);
   }
-  @keyframes land {
+  @keyframes dealt {
     0% {
       opacity: 0;
-      transform: translateY(-10px) scale(0.98);
-      filter: brightness(2.2);
+      transform: translate(26px, -14px) rotate(6deg);
+      filter: brightness(2);
     }
-    40% {
+    45% {
       opacity: 1;
-      filter: brightness(1.6);
+      filter: brightness(1.5);
     }
     100% {
       transform: none;
@@ -112,39 +129,68 @@
   .row {
     width: 100%;
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr);
+    grid-template-columns: 38px minmax(0, 1fr);
     grid-template-areas:
-      'rank name'
-      'rank tier';
-    column-gap: var(--space-2);
+      'card name'
+      'card tier';
+    column-gap: var(--space-3);
     align-items: center;
     text-align: left;
     background: transparent;
     border: 0;
-    border-left: 2px solid transparent;
-    border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-    padding: 9px 10px 7px 6px;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+    padding: 7px 8px 6px 4px;
     cursor: pointer;
-    transition:
-      background var(--dur-fast) var(--ease-out),
-      border-color var(--dur-fast) var(--ease-out);
+    transition: background var(--dur-fast) var(--ease-out);
   }
   .row:hover {
     background: color-mix(in srgb, var(--raised) 70%, transparent);
   }
   .row.selected {
-    background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 16%, var(--raised)), var(--raised) 60%);
-    border-left-color: var(--gold);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--crimson) 22%, var(--raised)), var(--raised) 70%);
+    box-shadow: inset 3px 0 0 var(--crimson);
   }
-  .rank {
-    grid-area: rank;
-    font-size: 26px;
+  /* A miniature card: the rank and the suit pip, printed on bone. */
+  .mini {
+    grid-area: card;
+    width: 30px;
+    height: 42px;
+    border-radius: 4px;
+    background: var(--bone);
+    color: var(--crimson);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 5px;
+    box-shadow: 0 2px 0 rgb(0 0 0 / 0.45);
+    transition:
+      transform 220ms var(--ease-pop),
+      box-shadow 220ms var(--ease-out);
+  }
+  .mini.clubs {
+    color: var(--club);
+  }
+  .idx {
+    font-family: var(--font-poster);
+    font-size: 15px;
     line-height: 1;
-    text-align: center;
-    color: var(--gold);
+  }
+  .mini svg {
+    width: 11px;
+    height: 11px;
+    margin-top: 3px;
+    fill: currentColor;
+  }
+  .row:hover .mini {
+    transform: translateY(-2px);
+  }
+  .row.selected .mini {
+    transform: translate(-2px, -4px) rotate(-7deg);
+    box-shadow: 3px 3px 0 var(--crimson);
   }
   .name {
     grid-area: name;
+    padding-top: 2px;
     font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -159,12 +205,34 @@
     color: var(--muted);
   }
   .dot {
-    width: 7px;
-    height: 7px;
-    transform: rotate(45deg);
+    width: 10px;
+    height: 10px;
     flex: none;
   }
   .variety {
     color: var(--link);
+  }
+  .suits {
+    margin: var(--space-2) 0 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px var(--space-4);
+    font-size: var(--text-xs);
+  }
+  .suits span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .suits svg {
+    width: 12px;
+    height: 12px;
+    fill: currentColor;
+  }
+  .suits .h {
+    color: var(--crimson-text);
+  }
+  .suits .c {
+    color: var(--quantum-text);
   }
 </style>

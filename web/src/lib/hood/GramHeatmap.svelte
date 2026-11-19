@@ -60,7 +60,7 @@
 <figure>
   <canvas bind:this={canvas} aria-hidden="true"></canvas>
   <span class="sr-only">Heat map of the co-play matrix G for 500 games; your games' rows are marked in amber.</span>
-  <figcaption class="micro">G = XᵀX. Brighter means more shared players; gold marks your games.</figcaption>
+  <figcaption class="micro">G = XᵀX. Brighter means more shared players; crimson marks your games.</figcaption>
 </figure>
 
 <style>

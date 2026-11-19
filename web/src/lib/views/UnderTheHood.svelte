@@ -287,7 +287,7 @@
                 <span class:on={k < 10} style:height={`${Math.max(3, (s / (result.topScores[0][1] || 1)) * 100)}%`}></span>
               {/each}
             </div>
-            <p class="micro">{result.topScores.length} candidates. Gold marks the top 10 by score alone.</p>
+            <p class="micro">{result.topScores.length} candidates. Crimson marks the top 10 by score alone.</p>
             <p class="cost micro">Filters by tag, price and year arrive with natural-language queries (M3, FR-23). Source: <a href={source('src/whyfinder/rerank/pipeline.py')}>rerank/pipeline.py</a></p>
           {:else if stage.id === 'dpp'}
             <p>Ten copies of the same game is a bad list. A determinantal point process picks games that are relevant <em>and</em> different, one greedy step at a time.</p>
@@ -303,7 +303,7 @@
                 {#each [...st.gains].sort((a, b) => b[1] - a[1]).slice(0, 8) as [i, g] (i)}
                   <li>
                     <span class="who" class:chosen={i === st.picked}>{games[i].title}</span>
-                    <span class="bars"><span class="e" class:pick={i === st.picked} style:width={`${(g / (st.gains.reduce((m, x) => Math.max(m, x[1]), 1e-12))) * 100}%`}></span></span>
+                    <span class="bars"><span class="g" class:pick={i === st.picked} style:width={`${(g / (st.gains.reduce((m, x) => Math.max(m, x[1]), 1e-12))) * 100}%`}></span></span>
                   </li>
                 {/each}
               </ul>
@@ -430,17 +430,22 @@
     border-color: var(--line);
   }
   .num {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 27px;
     display: grid;
     place-items: center;
-    border-radius: 50%;
+    border-radius: 3px;
     border: var(--border);
-    font-size: 11px;
+    font-family: var(--font-poster);
+    font-size: 13px;
+    transition: transform var(--dur-fast) var(--ease-pop);
   }
   .active .num {
-    border-color: var(--pick);
-    color: var(--pick);
+    border-color: var(--bone);
+    background: var(--bone);
+    color: var(--crimson);
+    transform: rotate(-6deg);
+    box-shadow: 2px 2px 0 var(--crimson);
   }
   .run {
     margin: 0;
@@ -598,25 +603,29 @@
   }
   .who.chosen,
   .pickname {
-    color: var(--pick);
+    color: var(--pick-text);
   }
   .bars {
     display: flex;
-    height: 7px;
-    background: var(--raised);
-    border-radius: 3px;
+    height: 8px;
+    background: var(--ink);
     overflow: hidden;
+    transform: skewX(-20deg);
   }
   .bars .e {
-    background: var(--link);
+    background: var(--crimson);
     transition: width 300ms var(--ease-out);
-  }
-  .bars .e.pick {
-    background: var(--pick);
   }
   .bars .p {
-    background: color-mix(in srgb, var(--link) 45%, transparent);
+    background: var(--quantum);
     transition: width 300ms var(--ease-out);
+  }
+  .bars .g {
+    background: var(--quantum);
+    transition: width 300ms var(--ease-out);
+  }
+  .bars .g.pick {
+    background: var(--crimson);
   }
   .legend {
     display: flex;
@@ -625,17 +634,17 @@
   }
   .key {
     display: inline-block;
-    width: 10px;
-    height: 6px;
-    border-radius: 2px;
+    width: 14px;
+    height: 8px;
+    transform: skewX(-20deg);
     margin-left: 8px;
   }
   .key.e {
-    background: var(--link);
+    background: var(--crimson);
     margin-left: 0;
   }
   .key.p {
-    background: color-mix(in srgb, var(--link) 45%, transparent);
+    background: var(--quantum);
   }
   .ok {
     color: var(--good);
@@ -670,7 +679,7 @@
     color: var(--muted);
   }
   .verdict.gone {
-    color: var(--pick);
+    color: var(--pick-text);
   }
   .player {
     grid-area: player;

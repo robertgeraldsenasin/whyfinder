@@ -57,9 +57,9 @@
 </script>
 
 <div class="search {size}">
-  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M12 2.5 L13.9 10.1 L21.5 12 L13.9 13.9 L12 21.5 L10.1 13.9 L2.5 12 L10.1 10.1 Z" />
-  </svg>
+  <span class="stub" aria-hidden="true">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M12 1l2.3 8.7L23 12l-8.7 2.3L12 23l-2.3-8.7L1 12l8.7-2.3z" /></svg>
+  </span>
   <input
     bind:this={input}
     type="text"
@@ -79,6 +79,7 @@
     onkeydown={onKey}
     onblur={() => setTimeout(() => (open = false), 120)}
   />
+  {#if size === 'hero'}<span class="admit" aria-hidden="true">Admit one</span>{/if}
   {#if open && matches.length}
     <ul id={listId} role="listbox" aria-label="Matching games">
       {#each matches as i, k (i)}
@@ -101,67 +102,98 @@
 </div>
 
 <style>
+  /* Inputs that matter are printed on bone. The hero search is an admission ticket: a stub with a
+     perforation, the field, and "Admit one" along the edge, with a crimson offset. */
   .search {
     position: relative;
+    display: flex;
+    align-items: stretch;
+    background: var(--bone);
+    color: var(--on-bone);
+    box-shadow: 4px 4px 0 var(--crimson);
+    transition: box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .search:focus-within {
+    box-shadow:
+      4px 4px 0 var(--crimson),
+      0 0 0 2px var(--crimson);
+  }
+  .stub {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
   }
   .icon {
-    position: absolute;
-    left: 16px;
-    top: 50%;
-    width: 16px;
-    height: 16px;
-    transform: translateY(-50%);
-    fill: var(--gold);
-    pointer-events: none;
+    width: 15px;
+    height: 15px;
+    fill: var(--crimson);
   }
   input {
-    width: 100%;
-    border: 1px solid var(--line);
-    border-bottom-color: var(--frame-line);
-    background: color-mix(in srgb, var(--midnight) 70%, var(--deep));
-    color: var(--text);
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--on-bone);
     border-radius: 0;
-    padding: 12px 16px 10px 42px;
+    padding: 11px 12px 9px 0;
     outline: none;
-    transition:
-      border-color var(--dur-fast) var(--ease-out),
-      box-shadow var(--dur-fast) var(--ease-out);
   }
   input::placeholder {
-    color: var(--muted);
-  }
-  input:focus {
-    border-color: var(--gold);
-    box-shadow: 0 0 40px -12px rgb(242 193 78 / 0.55);
+    color: var(--on-bone-muted);
   }
   input:disabled {
-    opacity: 0.6;
+    opacity: 0.7;
   }
-  .hero input {
-    font-size: var(--text-lg);
-    padding: 19px 24px 16px 56px;
-    background: color-mix(in srgb, var(--midnight) 60%, transparent);
-    border-color: var(--frame-line);
-    border-bottom: 2px solid var(--gold);
-    box-shadow: 0 24px 60px -34px rgb(242 193 78 / 0.6);
+  .hero {
+    box-shadow: 7px 7px 0 var(--crimson);
+    text-align: left;
+  }
+  .hero:focus-within {
+    box-shadow:
+      7px 7px 0 var(--crimson),
+      0 0 0 3px var(--crimson);
+  }
+  .hero .stub {
+    width: 74px;
+    border-right: 2px dashed rgb(26 14 24 / 0.35);
   }
   .hero .icon {
-    left: 22px;
-    width: 20px;
-    height: 20px;
+    width: 26px;
+    height: 26px;
+  }
+  .hero input {
+    font-size: 21px;
+    padding: 21px 22px 17px;
+  }
+  .admit {
+    flex: none;
+    align-self: center;
+    margin-right: 16px;
+    font-family: var(--font-poster);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--crimson);
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
   }
   ul {
     position: absolute;
     z-index: 20;
     left: 0;
     right: 0;
-    top: calc(100% + 6px);
+    top: calc(100% + 10px);
     margin: 0;
     padding: 6px;
     list-style: none;
     background: var(--surface-solid);
-    border: 1px solid var(--frame-line);
-    box-shadow: 0 24px 60px -20px rgb(0 0 0 / 0.9);
+    border: var(--border);
+    box-shadow:
+      5px 5px 0 var(--crimson),
+      0 24px 60px -20px rgb(0 0 0 / 0.9);
+    color: var(--text);
+    text-align: left;
     animation: rise var(--dur-fast) var(--ease-out);
   }
   li {
@@ -173,7 +205,7 @@
   }
   li.active {
     background: var(--raised);
-    box-shadow: inset 2px 0 0 var(--gold);
+    box-shadow: inset 3px 0 0 var(--crimson);
   }
   .hero li {
     padding: 11px 16px;
@@ -182,5 +214,14 @@
   .y {
     color: var(--muted);
     font-size: var(--text-sm);
+  }
+  @media (max-width: 520px) {
+    .hero .stub {
+      width: 52px;
+    }
+    .hero input {
+      font-size: 17px;
+      padding: 16px 12px 13px;
+    }
   }
 </style>

@@ -1,5 +1,5 @@
 /** Viewer settings, kept in this browser only. */
-import type { Palette } from './sky';
+import { migratePalette, type Palette } from './sky';
 
 export type Flashes = 'full' | 'reduced' | 'off';
 
@@ -12,16 +12,14 @@ interface Saved {
   flashes: Flashes;
 }
 
-const DEFAULTS: Saved = { palette: 'gold-violet', sound: true, volume: 0.6, flashes: 'full' };
+const DEFAULTS: Saved = { palette: 'crimson-violet', sound: true, volume: 0.6, flashes: 'full' };
 
 function read(): Saved {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null') as Partial<Saved> | null;
     if (!raw) return { ...DEFAULTS };
     return {
-      palette: (['gold-violet', 'gold', 'spectrum'] as const).includes(raw.palette as Palette)
-        ? (raw.palette as Palette)
-        : DEFAULTS.palette,
+      palette: migratePalette(raw.palette) ?? DEFAULTS.palette,
       sound: typeof raw.sound === 'boolean' ? raw.sound : DEFAULTS.sound,
       volume: typeof raw.volume === 'number' && raw.volume >= 0 && raw.volume <= 1 ? raw.volume : DEFAULTS.volume,
       flashes: (['full', 'reduced', 'off'] as const).includes(raw.flashes as Flashes) ? (raw.flashes as Flashes) : DEFAULTS.flashes,

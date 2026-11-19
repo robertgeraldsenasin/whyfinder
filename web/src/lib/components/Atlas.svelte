@@ -1,17 +1,19 @@
 <script lang="ts">
   /**
-   * The sky behind every view (ADR-0016, ADR-0017). Each star is a game at its layout position.
-   * When results arrive the picks fall from the sky, #10 first and #1 last: a lock-on beam, a
-   * streak, an impact (with a brief impact frame for the top three), shockwaves, embers and a
-   * shake. Then the whole sky recolours by closeness, rippling out from your games, and lines show
-   * the exact reasons for the selected pick.
+   * The sky behind every view: the stage (ADR-0016, ADR-0017, ADR-0018). Each star is a game at its
+   * layout position. When results arrive the ten picks are dealt as cards, the 10 first and the Ace
+   * last: a spotlight finds where each will land, the card falls turning over, and bursts into its
+   * star (shockwaves, a halftone ring, shards, a short shake). The top three get an impact frame;
+   * the Ace gets a comic burst and confetti. Then the whole sky recolours by closeness, rippling out
+   * from your games, and lines show the exact reasons for the selected pick.
    *
-   * Reduced motion: no fall, no shake, no flashes, no twinkle; everything appears in place.
-   * Impact frames are capped at three per second whatever the settings.
+   * Reduced motion: no fall, no shake, no flashes, no confetti, no twinkle; everything appears in
+   * place. Impact frames are capped at three per second whatever the settings.
    */
   import { onMount } from 'svelte';
   import * as sfx from '../sfx';
   import { settings } from '../settings.svelte';
+  import { PIPS, rankLabel, suitOf } from '../cards';
   import { colorAt } from '../sky';
   import { app, type Scene } from '../state.svelte';
 
@@ -22,16 +24,22 @@
   let tooltip = $state<{ x: number; y: number } | null>(null);
 
   const C = {
-    midnight: '#070b1e',
-    starlight: '#f5f2ff',
-    gold: '#f2c14e',
-    goldBright: '#ffe39a',
-    violet: '#8e6bf0',
-    violetText: '#b8a4ff',
-    ember: '#ff9a4d',
-    bad: '#ff8f8f',
-    dust: '#a9aed3',
+    ink: '#0b0710',
+    bone: '#f7efe6',
+    crimson: '#d1173a',
+    hot: '#ff2e4f',
+    crimsonText: '#ff5c72',
+    deep: '#7d0b22',
+    rose: '#ff8fb1',
+    quantum: '#7b4dff',
+    quantumText: '#b9a2ff',
+    club: '#4a2bb8',
+    cold: '#74d4e6',
+    ash: '#bcaab9',
+    spark: '#ffe3ea',
   };
+  const CONFETTI = [C.crimson, C.hot, C.bone, C.rose, C.quantum, C.quantumText];
+  const pipPaths = { hearts: new Path2D(PIPS.hearts), clubs: new Path2D(PIPS.clubs), star: new Path2D(PIPS.star) };
 
   // Camera in map units; a critically damped spring chases the target.
   const cam = { x: 0.5, y: 0.5, zoom: 1, vx: 0, vy: 0, vz: 0 };
@@ -114,8 +122,8 @@
     }
     return paletteColors[Math.round(Math.min(1, Math.max(0, c)) * LEVELS)];
   }
-  // Star temperatures for the resting sky: blue-white, white, warm white, pale gold.
-  const NEUTRAL = ['#c9d6ff', '#eeeaff', '#fff0d6', '#ffe2a3'];
+  // Star tints for the resting sky: lavender, bone, blush, rose.
+  const NEUTRAL = ['#e2dcff', '#f7efe6', '#ffe1ea', '#ffc9d6'];
 
   // ---------- background ----------
   let nebula: HTMLCanvasElement | null = null;
@@ -137,18 +145,35 @@
       g.fillRect(x - r, y - r, r * 2, r * 2);
     };
     const d = Math.max(w, h);
-    blob(w * 0.18, h * 0.22, d * 0.55, '#1b2a7a', 0.55);
-    blob(w * 0.85, h * 0.8, d * 0.5, '#2a1c6e', 0.55);
-    blob(w * 0.25, h * 0.35, d * 0.32, C.violet, 0.14);
-    blob(w * 0.75, h * 0.62, d * 0.28, C.violet, 0.1);
-    blob(w * 0.55, h * 0.48, d * 0.22, '#3d5bd9', 0.08);
-    // A faint milky band across the diagonal, made of many soft puffs.
+    blob(w * 0.16, h * 0.82, d * 0.5, '#2a0f3a', 0.7);
+    blob(w * 0.88, h * 0.76, d * 0.5, '#4a0c1e', 0.65);
+    blob(w * 0.5, -h * 0.05, d * 0.42, C.hot, 0.07);
+    blob(w * 0.22, h * 0.4, d * 0.3, C.quantum, 0.12);
+    blob(w * 0.78, h * 0.3, d * 0.26, C.crimson, 0.08);
+    // A faint band across the diagonal, made of many soft puffs.
     for (let k = 0; k < 70; k++) {
       const t = rand();
       const x = w * (-0.05 + 1.1 * t);
       const y = h * (0.95 - 0.9 * t) + (rand() - 0.5) * h * 0.22;
-      blob(x, y, d * (0.04 + rand() * 0.09), k % 5 === 0 ? '#ffe9b8' : '#c9c3ff', 0.035 + rand() * 0.03);
+      blob(x, y, d * (0.04 + rand() * 0.09), k % 4 === 0 ? '#ffd0dc' : '#d6c8ff', 0.03 + rand() * 0.03);
     }
+    // Comic print: halftone dots fading out of two corners.
+    const halftone = (cx: number, cy: number, reach: number, color: string, alpha: number) => {
+      g.fillStyle = color;
+      g.globalAlpha = alpha;
+      const step = 11;
+      for (let y = 0; y < h; y += step) {
+        for (let x = (y / step) % 2 ? step / 2 : 0; x < w; x += step) {
+          const f = 1 - Math.hypot(x - cx, y - cy) / reach;
+          if (f <= 0) continue;
+          g.beginPath();
+          g.arc(x, y, 3.6 * f * f, 0, Math.PI * 2);
+          g.fill();
+        }
+      }
+    };
+    halftone(0, h, Math.min(w, h) * 0.62, C.crimson, 0.22);
+    halftone(w, 0, Math.min(w, h) * 0.45, C.quantum, 0.18);
     g.globalAlpha = 1;
   }
 
@@ -225,15 +250,18 @@
     return moving;
   }
 
-  // ---------- starfall ----------
+  // ---------- the deal ----------
   interface Fall {
     rank: number;
     game: number;
+    suit: 'hearts' | 'clubs';
     spawn: number;
     impact: number;
     landed: boolean;
     locked: boolean;
     strength: number;
+    /** Whole turns the card makes on the way down, so it always lands face up. */
+    turns: number;
   }
   interface Ring {
     x: number;
@@ -243,6 +271,7 @@
     r: number;
     color: string;
     w: number;
+    dots?: boolean;
   }
   interface Ember {
     x: number;
@@ -253,6 +282,21 @@
     life: number;
     size: number;
     color: string;
+    spin: number;
+    shard: boolean;
+  }
+  interface Confetto {
+    x: number;
+    y: number;
+    vy: number;
+    sway: number;
+    phase: number;
+    spin: number;
+    t0: number;
+    life: number;
+    size: number;
+    color: string;
+    shape: 0 | 1;
   }
   interface Flash {
     x: number;
@@ -262,12 +306,21 @@
     strength: number;
     wedges: [number, number, number][];
   }
+  interface Burst {
+    x: number;
+    y: number;
+    t0: number;
+    scale: number;
+    spikes: number[];
+  }
 
   let falls: Fall[] = [];
   let fallKey: string | null = null;
   let rings: Ring[] = [];
   let embers: Ember[] = [];
+  let confetti: Confetto[] = [];
   let flashes: Flash[] = [];
+  let bursts: Burst[] = [];
   let flashTimes: number[] = [];
   const craters = new Map<number, number>();
   let shakeStart = 0;
@@ -276,24 +329,41 @@
   let prevHistory = new Set<number>();
   let fallSeed = 1;
 
-  const FALL_MS = 560;
+  const FALL_MS = 600;
+  const ACE_HANG = 520;
 
   function rand(): number {
     fallSeed = (fallSeed * 16807) % 2147483647;
     return (fallSeed - 1) / 2147483646;
   }
 
+  function suitFor(rank: number, game: number): 'hearts' | 'clubs' {
+    const e = app.result?.explanations[rank];
+    return e && e.pick === game ? suitOf(e.attributions) : 'hearts';
+  }
+
   function startFall(scene: Scene, now: number): void {
     const n = scene.picks.length;
     falls = [];
     let t = now + 420;
-    // #10 lands first; the top three are spaced so impact frames stay under three a second.
+    // The 10 lands first; the top three are spaced so impact frames stay under three a second.
     for (let rank = n - 1; rank >= 0; rank--) {
       const top = rank < 3;
-      const dur = rank === 0 ? FALL_MS + 160 : top ? FALL_MS + 60 : FALL_MS;
-      const hang = rank === 0 ? 420 : 0;
-      falls.push({ rank, game: scene.picks[rank], spawn: t, impact: t + hang + dur, landed: false, locked: false, strength: rank === 0 ? 1 : top ? 0.68 : 0.36 });
-      t += rank <= 3 ? 430 : 150;
+      const dur = rank === 0 ? FALL_MS + 180 : top ? FALL_MS + 60 : FALL_MS;
+      const hang = rank === 0 ? ACE_HANG : 0;
+      const game = scene.picks[rank];
+      falls.push({
+        rank,
+        game,
+        suit: suitFor(rank, game),
+        spawn: t,
+        impact: t + hang + dur,
+        landed: false,
+        locked: false,
+        strength: rank === 0 ? 1 : top ? 0.68 : 0.36,
+        turns: rank === 0 ? 3 : 1 + (rank % 2),
+      });
+      t += rank <= 3 ? 440 : 160;
     }
     app.landed = 0;
     app.falling = true;
@@ -304,6 +374,8 @@
     for (const f of falls) if (!f.landed) f.landed = true;
     falls = [];
     flashes = [];
+    bursts = [];
+    confetti = [];
     app.landed = app.scene.picks.length;
     app.falling = false;
     drawStart = now;
@@ -329,20 +401,53 @@
     return flashTimes.length < 3;
   }
 
+  /** Confetti from the top of the stage when the Ace lands. */
+  function throwConfetti(now: number): void {
+    const count = Math.round(Math.min(140, 50 + stage.w / 9));
+    for (let k = 0; k < count; k++) {
+      confetti.push({
+        x: stage.x + rand() * stage.w,
+        y: -20 - rand() * height * 0.35,
+        vy: 120 + rand() * 160,
+        sway: 18 + rand() * 40,
+        phase: rand() * Math.PI * 2,
+        spin: (rand() - 0.5) * 14,
+        t0: now + rand() * 240,
+        life: 2400 + rand() * 1400,
+        size: 5 + rand() * 5,
+        color: CONFETTI[Math.floor(rand() * CONFETTI.length)],
+        shape: rand() < 0.75 ? 0 : 1,
+      });
+    }
+  }
+
   function land(f: Fall, now: number): void {
     const g = app.slice!.games[f.game];
     f.landed = true;
     craters.set(f.game, now);
     const s = f.strength;
-    rings.push({ x: g.x, y: g.y, t0: now, dur: 700, r: 50 + 150 * s, color: C.goldBright, w: 1.5 + 3 * s });
-    rings.push({ x: g.x, y: g.y, t0: now + 60, dur: 1150, r: 80 + 260 * s, color: C.violet, w: 1 + 2 * s });
-    if (f.rank === 0) rings.push({ x: g.x, y: g.y, t0: now + 140, dur: 1600, r: 520, color: C.starlight, w: 1 });
+    rings.push({ x: g.x, y: g.y, t0: now, dur: 650, r: 46 + 140 * s, color: C.bone, w: 2 + 3 * s });
+    rings.push({ x: g.x, y: g.y, t0: now + 50, dur: 900, r: 60 + 200 * s, color: C.hot, w: 1.5 + 2.5 * s, dots: true });
+    rings.push({ x: g.x, y: g.y, t0: now + 110, dur: 1200, r: 80 + 280 * s, color: C.quantum, w: 1 + 2 * s });
+    if (f.rank === 0) rings.push({ x: g.x, y: g.y, t0: now + 160, dur: 1700, r: 560, color: C.rose, w: 1.2 });
     const [sx, sy] = toScreen(g.x, g.y);
-    const count = Math.round(16 + 64 * s);
+    const count = Math.round(18 + 70 * s);
     for (let k = 0; k < count; k++) {
-      const a = -Math.PI / 2 + (rand() - 0.5) * Math.PI * 1.7;
-      const v = 90 + rand() * 380 * (0.6 + s);
-      embers.push({ x: sx, y: sy, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t0: now, life: 500 + rand() * 900 * (0.5 + s), size: 0.8 + rand() * 2.2 * (0.5 + s), color: rand() < 0.6 ? C.gold : rand() < 0.5 ? C.ember : C.starlight });
+      const a = -Math.PI / 2 + (rand() - 0.5) * Math.PI * 1.8;
+      const v = 90 + rand() * 400 * (0.6 + s);
+      const shard = rand() < 0.55;
+      embers.push({
+        x: sx,
+        y: sy,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v,
+        t0: now,
+        life: 500 + rand() * 900 * (0.5 + s),
+        size: shard ? 2.5 + rand() * 3.5 * (0.5 + s) : 0.8 + rand() * 2 * (0.5 + s),
+        color: shard ? CONFETTI[Math.floor(rand() * 4)] : rand() < 0.6 ? C.hot : C.spark,
+        spin: (rand() - 0.5) * 20,
+        shard,
+      });
     }
     const effects = settings.flashes;
     if (f.rank < 3 && effects !== 'off' && canFlash(now)) {
@@ -361,6 +466,11 @@
     sfx.impact(f.rank, (sx / width) * 2 - 1, s);
     app.landed = Math.max(app.landed, app.scene.picks.length - f.rank);
     if (f.rank === 0) {
+      const scale = effects === 'full' ? 1 : 0.72;
+      const spikes = Array.from({ length: 14 }, () => 0.78 + rand() * 0.4);
+      bursts.push({ x: sx, y: sy, t0: now + 70, scale, spikes });
+      if (effects !== 'off') throwConfetti(now + 120);
+      sfx.tada((sx / width) * 2 - 1);
       app.falling = false;
       drawStart = now + 250;
       startRipple(now);
@@ -374,8 +484,9 @@
         const g = app.slice!.games[f.game];
         const [sx] = toScreen(g.x, g.y);
         const pan = (sx / width) * 2 - 1;
+        sfx.deal(pan, f.strength);
         if (f.rank === 0) sfx.lock(pan);
-        const hang = f.rank === 0 ? 420 : 0;
+        const hang = f.rank === 0 ? ACE_HANG : 0;
         sfx.whoosh((f.impact - f.spawn - hang) / 1000, pan, f.strength, hang / 1000);
       }
       if (!f.landed && now >= f.impact) land(f, now);
@@ -388,10 +499,18 @@
   let placed: Box[] = [];
   let bodyFont = 'sans-serif';
   let displayFont = 'serif';
+  let posterFont = 'Impact, sans-serif';
 
-  function label(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string, opts: { force?: boolean; display?: boolean; size?: number; alpha?: number } = {}): void {
+  function label(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    color: string,
+    opts: { force?: boolean; display?: boolean; poster?: boolean; size?: number; alpha?: number } = {},
+  ): void {
     const size = opts.size ?? 12.5;
-    ctx.font = opts.display ? `400 ${size}px ${displayFont}` : `600 ${size}px ${bodyFont}`;
+    ctx.font = opts.poster ? `400 ${size}px ${posterFont}` : opts.display ? `400 ${size}px ${displayFont}` : `600 ${size}px ${bodyFont}`;
     const t = text.length > 38 ? `${text.slice(0, 36)}…` : text;
     const w = ctx.measureText(t).width;
     const box: Box = [x - w / 2 - 4, y - size, x + w / 2 + 4, y + 4];
@@ -400,8 +519,8 @@
     ctx.globalAlpha = opts.alpha ?? 1;
     ctx.textAlign = 'center';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'rgba(7, 11, 30, 0.85)';
+    ctx.lineWidth = opts.poster ? 5 : 4;
+    ctx.strokeStyle = 'rgba(11, 7, 16, 0.9)';
     ctx.strokeText(t, x, y);
     ctx.fillStyle = color;
     ctx.fillText(t, x, y);
@@ -409,13 +528,31 @@
   }
 
   function drawBackground(ctx: CanvasRenderingContext2D, time: number, still: boolean): void {
-    ctx.fillStyle = C.midnight;
+    ctx.fillStyle = C.ink;
     ctx.fillRect(0, 0, width, height);
     if (nebula) {
       ctx.globalAlpha = 1;
       const ox = -(cam.x - 0.5) * 90 - width * 0.125 + (still ? 0 : (pointer.x - width / 2) * -0.006);
       const oy = -(cam.y - 0.5) * 90 - height * 0.125 + (still ? 0 : (pointer.y - height / 2) * -0.006);
       ctx.drawImage(nebula, ox + shake.x * 0.3, oy + shake.y * 0.3);
+    }
+    // The title screen is a stage: one soft spotlight from above, swaying a little.
+    if (app.view === 'discover' && app.scene.history.length === 0) {
+      const sway = still ? 0 : Math.sin(time / 4200) * 0.05;
+      const top = width / 2;
+      const spread = Math.max(width, height) * 0.36;
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, 'rgba(255, 214, 224, 0.10)');
+      grad.addColorStop(0.7, 'rgba(255, 46, 79, 0.035)');
+      grad.addColorStop(1, 'rgba(255, 46, 79, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(top - 30, -10);
+      ctx.lineTo(top + 30, -10);
+      ctx.lineTo(top + spread + sway * width, height);
+      ctx.lineTo(top - spread + sway * width, height);
+      ctx.closePath();
+      ctx.fill();
     }
     const drift = still ? 0 : time / 5000;
     layers.forEach((layer, depth) => {
@@ -429,7 +566,7 @@
         for (let tx = x; tx < width; tx += 2048) {
           for (let ty = y; ty < height; ty += 2048) {
             ctx.globalAlpha = s.a * tw * 0.8;
-            ctx.fillStyle = s.warm ? '#ffe9b8' : '#dcdcff';
+            ctx.fillStyle = s.warm ? '#ffc9d6' : '#efe6f2';
             ctx.beginPath();
             ctx.arc(tx, ty, s.r, 0, Math.PI * 2);
             ctx.fill();
@@ -438,6 +575,55 @@
       }
     });
     ctx.globalAlpha = 1;
+  }
+
+  /** A playing card at (x, y), `w` wide, turned `rot` radians, `flip` = cos of its turn (face when > 0). */
+  function drawCard(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, rot: number, flip: number, rank: number, suit: 'hearts' | 'clubs', alpha: number): void {
+    const h = w * 1.4;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.scale(Math.max(0.06, Math.abs(flip)), 1);
+    const r = w * 0.12;
+    ctx.beginPath();
+    ctx.roundRect(-w / 2, -h / 2, w, h, r);
+    if (flip > 0) {
+      ctx.fillStyle = C.bone;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(26, 14, 24, 0.35)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      const ink = suit === 'clubs' ? C.club : C.crimson;
+      ctx.fillStyle = ink;
+      ctx.font = `400 ${Math.round(w * 0.42)}px ${posterFont}`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(rankLabel(rank), -w / 2 + w * 0.12, -h / 2 + w * 0.1);
+      ctx.save();
+      const pip = w * 0.5;
+      ctx.translate(-pip / 2, -pip / 2 + h * 0.08);
+      ctx.scale(pip / 24, pip / 24);
+      ctx.fill(pipPaths[suit]);
+      ctx.restore();
+      ctx.textBaseline = 'alphabetic';
+    } else {
+      ctx.fillStyle = C.crimson;
+      ctx.fill();
+      ctx.strokeStyle = C.bone;
+      ctx.lineWidth = Math.max(1, w * 0.05);
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 + w * 0.12, -h / 2 + w * 0.12, w - w * 0.24, h - w * 0.24, r * 0.6);
+      ctx.stroke();
+      ctx.save();
+      const pip = w * 0.46;
+      ctx.translate(-pip / 2, -pip / 2);
+      ctx.scale(pip / 24, pip / 24);
+      ctx.fillStyle = C.bone;
+      ctx.fill(pipPaths.star);
+      ctx.restore();
+    }
+    ctx.restore();
   }
 
   function draw(time: number): void {
@@ -492,11 +678,11 @@
         continue;
       }
       if (glow > 0.01) {
-        drawGlow(ctx, C.violet, x, y, r * (1.6 + glow * 2.4), Math.min(0.9, glow));
+        drawGlow(ctx, C.quantum, x, y, r * (1.6 + glow * 2.4), Math.min(0.9, glow));
         r *= 1 + glow * 0.6;
         alpha = Math.max(alpha, 0.5 + glow * 0.5);
       }
-      drawGlow(ctx, glow > 0.01 ? C.violetText : neutral, x, y, r, alpha);
+      drawGlow(ctx, glow > 0.01 ? C.quantumText : neutral, x, y, r, alpha);
       if (pop > 0.5 && dim < 0.5) drawSpikes(ctx, neutral, x, y, r * 4.5 * tw, 0.35 * tw);
     }
 
@@ -509,7 +695,7 @@
       if (!h) continue;
       const [x, y] = toScreen(h.x, h.y);
       const glow = scene.hubGlow?.get(node) ?? 0;
-      ctx.strokeStyle = C.violetText;
+      ctx.strokeStyle = C.quantumText;
       ctx.globalAlpha = 0.5 + glow * 0.5;
       ctx.lineWidth = 1.2;
       ctx.beginPath();
@@ -521,15 +707,15 @@
       ctx.stroke();
       if (glow > 0.02) {
         ctx.globalAlpha = glow * 0.4;
-        ctx.fillStyle = C.violet;
+        ctx.fillStyle = C.quantum;
         ctx.fill();
       }
     }
     ctx.globalAlpha = 1;
 
-    // Your constellation: each of your games joined to the nearest one added before it.
+    // Your cast: each of your games joined to the nearest one added before it.
     if (scene.history.length > 1) {
-      ctx.strokeStyle = C.starlight;
+      ctx.strokeStyle = C.bone;
       ctx.lineWidth = 1;
       ctx.globalAlpha = 0.22;
       ctx.beginPath();
@@ -567,9 +753,9 @@
           const h = hubAt(line.hub);
           const [hx, hy] = toScreen(h.x, h.y);
           ctx.setLineDash([3, 5]);
-          ctx.strokeStyle = C.violetText;
-          ctx.globalAlpha = 0.7;
-          ctx.lineWidth = 1;
+          ctx.strokeStyle = C.quantumText;
+          ctx.globalAlpha = 0.75;
+          ctx.lineWidth = 1.2;
           ctx.beginPath();
           ctx.moveTo(x0, y0);
           ctx.lineTo(x0 + (hx - x0) * ease, y0 + (hy - y0) * ease);
@@ -582,19 +768,19 @@
         [x1, y1] = [x0 + (x1 - x0) * ease, y0 + (y1 - y0) * ease];
         if (line.kind === 'negative') {
           ctx.setLineDash([2, 6]);
-          ctx.strokeStyle = C.bad;
-          ctx.globalAlpha = 0.8;
-          ctx.lineWidth = 1.2;
+          ctx.strokeStyle = C.cold;
+          ctx.globalAlpha = 0.85;
+          ctx.lineWidth = 1.3;
         } else if (line.kind === 'neighbor') {
-          ctx.strokeStyle = C.violetText;
-          ctx.globalAlpha = 0.5;
+          ctx.strokeStyle = C.quantumText;
+          ctx.globalAlpha = 0.55;
           ctx.lineWidth = 1;
         } else {
           const grad = ctx.createLinearGradient(x0, y0, x1, y1);
-          grad.addColorStop(0, C.starlight);
-          grad.addColorStop(1, C.gold);
+          grad.addColorStop(0, C.bone);
+          grad.addColorStop(1, C.hot);
           ctx.strokeStyle = grad;
-          ctx.globalAlpha = 0.9;
+          ctx.globalAlpha = 0.92;
           ctx.lineWidth = 1 + 3.5 * line.share;
         }
         ctx.lineCap = 'round';
@@ -609,7 +795,7 @@
           const len = Math.hypot(x1 - x0, y1 - y0);
           for (let p = 0; p < count; p++) {
             const t = (time / (1000 + len * 4) + p / count) % 1;
-            drawGlow(ctx, C.gold, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, 1.4 + line.share * 2, Math.sin(Math.PI * t));
+            drawGlow(ctx, C.hot, x0 + (x1 - x0) * t, y0 + (y1 - y0) * t, 1.4 + line.share * 2, Math.sin(Math.PI * t));
           }
           ctx.globalCompositeOperation = 'source-over';
         }
@@ -617,7 +803,7 @@
     }
     ctx.globalAlpha = 1;
 
-    // Shockwaves.
+    // Shockwaves; the crimson one is a ring of halftone dots.
     ctx.globalCompositeOperation = 'lighter';
     rings = rings.filter((r) => time - r.t0 < r.dur);
     for (const r of rings) {
@@ -625,89 +811,131 @@
       if (t < 0) continue;
       const [x, y] = toScreen(r.x, r.y);
       const e = 1 - (1 - t) ** 3;
+      const fade = (1 - t) ** 1.6;
+      if (r.dots) {
+        ctx.fillStyle = r.color;
+        ctx.globalAlpha = fade;
+        const radius = r.r * e;
+        const n = Math.max(12, Math.round(radius / 7));
+        for (let k = 0; k < n; k++) {
+          const a = (k / n) * Math.PI * 2;
+          for (let band = 0; band < 3; band++) {
+            const rr = radius - band * 9;
+            if (rr <= 0) continue;
+            ctx.beginPath();
+            ctx.arc(x + Math.cos(a + band * 0.2) * rr, y + Math.sin(a + band * 0.2) * rr * 0.92, r.w * (1 - band * 0.3), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        continue;
+      }
       ctx.strokeStyle = r.color;
-      ctx.globalAlpha = (1 - t) ** 1.6 * 0.9;
+      ctx.globalAlpha = fade * 0.9;
       ctx.lineWidth = r.w * (1 - t * 0.7);
       ctx.beginPath();
       ctx.ellipse(x, y, r.r * e, r.r * e * 0.92, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // Your games: white stars with diffraction spikes.
+    // Your games: bone stars with diffraction spikes.
     for (const j of scene.history) {
       const [x, y] = toScreen(games[j].x, games[j].y);
       const tw = still ? 1 : 0.9 + 0.1 * Math.sin(time * 0.002 + phases[j]);
       drawGlow(ctx, '#ffffff', x, y, 4.2, 1);
-      drawGlow(ctx, C.goldBright, x, y, 7, 0.35 * tw);
-      drawSpikes(ctx, C.starlight, x, y, 22 * tw, 0.75);
+      drawGlow(ctx, C.rose, x, y, 7, 0.3 * tw);
+      drawSpikes(ctx, C.bone, x, y, 22 * tw, 0.75);
     }
 
-    // Picks: coloured by closeness, ringed in gold; the selected one pulses.
+    // Picks: coloured by closeness inside a crimson diamond; the selected one turns.
     scene.picks.forEach((i, rank) => {
       if (hidden.has(i)) return;
       const [x, y] = toScreen(games[i].x, games[i].y);
       const c = close ? close[i] : 1;
-      const color = close ? closenessColor(c) : C.gold;
+      const color = close ? closenessColor(c) : C.hot;
       const selected = scene.selected === i;
       const crater = craters.get(i);
       const cAge = crater !== undefined ? (time - crater) / 1000 : 9;
       const boom = cAge < 1.4 ? (1 - cAge / 1.4) ** 2 : 0;
       const size = (rank === 0 ? 6 : rank < 3 ? 5 : 4.2) * (selected ? 1.25 : 1);
-      if (boom > 0) drawGlow(ctx, C.goldBright, x, y, size * (2 + 6 * boom), boom);
+      if (boom > 0) drawGlow(ctx, C.spark, x, y, size * (2 + 6 * boom), boom);
       const pulse = selected && !still ? (Math.sin(time / 420) + 1) / 2 : 0;
       drawGlow(ctx, color, x, y, size * (1.6 + pulse * 0.5), selected ? 0.55 + pulse * 0.25 : 0.4);
       drawGlow(ctx, '#ffffff', x, y, size * 0.7, 1);
       drawSpikes(ctx, color, x, y, size * (rank === 0 ? 6 : 4.2), selected ? 0.9 : 0.55);
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = C.gold;
-      ctx.lineWidth = selected ? 1.6 : 1;
-      ctx.globalAlpha = selected ? 0.95 : 0.55;
-      const ringR = size * 2.4 + (selected ? 3 : 0);
-      if (selected && !still) {
-        const rot = time / 1600;
+      ctx.strokeStyle = selected ? C.crimsonText : C.hot;
+      ctx.lineWidth = selected ? 1.8 : 1.2;
+      ctx.globalAlpha = selected ? 0.95 : 0.6;
+      const d = size * 2.3 + (selected ? 3 : 0);
+      const rot = selected && !still ? time / 1400 : 0;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Math.PI / 4 + rot);
+      if (selected) {
+        // Four card corners closing on the pick.
+        const L = d * 0.55;
         for (let k = 0; k < 4; k++) {
+          ctx.rotate(Math.PI / 2);
           ctx.beginPath();
-          ctx.arc(x, y, ringR + 4, rot + (k * Math.PI) / 2, rot + (k * Math.PI) / 2 + 0.9);
+          ctx.moveTo(-d - 3, -d - 3 + L);
+          ctx.lineTo(-d - 3, -d - 3);
+          ctx.lineTo(-d - 3 + L, -d - 3);
           ctx.stroke();
         }
       } else {
-        ctx.beginPath();
-        ctx.arc(x, y, ringR, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.strokeRect(-d / 1.6, -d / 1.6, (d / 1.6) * 2, (d / 1.6) * 2);
       }
+      ctx.restore();
       ctx.globalCompositeOperation = 'lighter';
     });
 
-    // Falling stars: lock-on beam, reticle, streak.
+    // The deal: spotlight, then the card falling and turning over.
     for (const f of falls) {
       if (f.landed || time < f.spawn) continue;
       const g = games[f.game];
       const [tx, ty] = toScreen(g.x, g.y);
-      const hang = f.rank === 0 ? 420 : 0;
+      const hang = f.rank === 0 ? ACE_HANG : 0;
       const fallStart = f.spawn + hang;
       const lockT = Math.min(1, (time - f.spawn) / Math.max(1, f.impact - f.spawn));
-      // Beam from the top of the sky to the target.
-      const beamA = 0.2 + 0.35 * f.strength * Math.min(1, lockT * 2);
-      const bw = 2 + 8 * f.strength;
-      const grad = ctx.createLinearGradient(tx, 0, tx, ty);
-      grad.addColorStop(0, `${C.gold}00`);
-      grad.addColorStop(1, C.gold);
-      ctx.globalAlpha = beamA;
-      ctx.fillStyle = grad;
-      ctx.fillRect(tx - bw / 2, 0, bw, ty);
-      // Reticle closing in.
-      ctx.strokeStyle = C.goldBright;
+      // A spotlight cone from the top of the sky, narrowing on the target.
+      ctx.globalCompositeOperation = 'lighter';
+      const pool = 18 + 70 * (1 - lockT) * (0.6 + f.strength);
+      const coneA = (0.05 + 0.1 * f.strength) * Math.min(1, lockT * 3);
+      const cone = ctx.createLinearGradient(tx, 0, tx, ty);
+      cone.addColorStop(0, 'rgba(255, 214, 224, 0)');
+      cone.addColorStop(1, 'rgba(255, 214, 224, 1)');
+      ctx.globalAlpha = coneA;
+      ctx.fillStyle = cone;
+      ctx.beginPath();
+      ctx.moveTo(tx - 8, 0);
+      ctx.lineTo(tx + 8, 0);
+      ctx.lineTo(tx + pool, ty);
+      ctx.lineTo(tx - pool, ty);
+      ctx.closePath();
+      ctx.fill();
+      const pg = ctx.createRadialGradient(tx, ty, 0, tx, ty, pool);
+      pg.addColorStop(0, 'rgba(255, 46, 79, 0.9)');
+      pg.addColorStop(1, 'rgba(255, 46, 79, 0)');
+      ctx.globalAlpha = 0.35 + 0.3 * f.strength;
+      ctx.fillStyle = pg;
+      ctx.beginPath();
+      ctx.ellipse(tx, ty, pool, pool * 0.38, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // A four-pointed star reticle, turning and closing in.
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.save();
+      ctx.translate(tx, ty);
+      ctx.rotate(lockT * Math.PI);
+      const rr = 10 + 34 * (1 - lockT) * (0.6 + f.strength);
+      ctx.scale(rr / 12, rr / 12);
+      ctx.translate(-12, -12);
+      ctx.strokeStyle = C.crimsonText;
       ctx.globalAlpha = 0.9;
-      ctx.lineWidth = 1.4;
-      const rr = 10 + 38 * (1 - lockT) * (0.6 + f.strength);
-      const rot = lockT * Math.PI;
-      for (let k = 0; k < 4; k++) {
-        ctx.beginPath();
-        ctx.arc(tx, ty, rr, rot + (k * Math.PI) / 2 + 0.25, rot + (k * Math.PI) / 2 + 1.25);
-        ctx.stroke();
-      }
+      ctx.lineWidth = 1.4 / (rr / 12);
+      ctx.stroke(pipPaths.star);
+      ctx.restore();
       if (time < fallStart) continue;
-      // The streak: from the upper right, accelerating.
+      // The card: from the upper right, accelerating, a streak behind it.
       const L = ty + 160;
       const sx0 = tx + 0.42 * L;
       const sy0 = ty - L;
@@ -716,15 +944,16 @@
         const e = Math.max(0, u) ** 2.1;
         return [sx0 + (tx - sx0) * e, sy0 + (ty - sy0) * e];
       };
-      const u = (time - fallStart) / dur;
+      const u = Math.min(1, (time - fallStart) / dur);
       const steps = 16;
-      const headW = 2.5 + 6 * f.strength;
+      const headW = 2.5 + 5 * f.strength;
+      ctx.globalCompositeOperation = 'lighter';
       for (let k = steps; k >= 1; k--) {
-        const [ax, ay] = pos(u - (k * 0.24) / steps);
-        const [bx, by] = pos(u - ((k - 1) * 0.24) / steps);
+        const [ax, ay] = pos(u - (k * 0.26) / steps);
+        const [bx, by] = pos(u - ((k - 1) * 0.26) / steps);
         const fade = 1 - k / (steps + 1);
-        ctx.strokeStyle = k > steps * 0.55 ? C.violet : C.gold;
-        ctx.globalAlpha = fade ** 1.4 * 0.95;
+        ctx.strokeStyle = k > steps * 0.55 ? C.quantum : C.hot;
+        ctx.globalAlpha = fade ** 1.4 * 0.9;
         ctx.lineWidth = headW * fade;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -733,44 +962,81 @@
         ctx.stroke();
       }
       const [hx, hy] = pos(u);
-      drawGlow(ctx, C.goldBright, hx, hy, headW * 1.8, 1);
-      drawGlow(ctx, '#ffffff', hx, hy, headW * 0.8, 1);
-      drawSpikes(ctx, C.goldBright, hx, hy, headW * 6, 0.8);
+      drawGlow(ctx, C.hot, hx, hy, headW * 2.2, 0.9);
+      ctx.globalCompositeOperation = 'source-over';
+      const cardW = (16 + 14 * f.strength) * (0.75 + 0.25 * u);
+      const turn = u * Math.PI * 2 * f.turns;
+      drawCard(ctx, hx, hy, cardW, (1 - u) * 0.9 - 0.25, Math.cos(turn), f.rank, f.suit, 1);
     }
 
-    // Embers.
+    // Shards and sparks from each impact.
+    ctx.globalCompositeOperation = 'lighter';
     embers = embers.filter((e) => time - e.t0 < e.life);
     for (const e of embers) {
       const t = (time - e.t0) / 1000;
       const drag = Math.exp(-t * 1.8);
-      const x = e.x + e.vx * (1 - drag) / 1.8 + shake.x;
+      const x = e.x + (e.vx * (1 - drag)) / 1.8 + shake.x;
       const y = e.y + (e.vy * (1 - drag)) / 1.8 + 260 * t * t + shake.y;
       const a = 1 - (time - e.t0) / e.life;
-      drawGlow(ctx, e.color, x, y, e.size, a);
+      if (e.shard) {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(e.spin * t);
+        ctx.globalAlpha = Math.min(1, a * 1.4);
+        ctx.fillStyle = e.color;
+        ctx.fillRect(-e.size / 2, -e.size * 0.8, e.size, e.size * 1.6);
+        ctx.restore();
+        ctx.globalCompositeOperation = 'lighter';
+      } else drawGlow(ctx, e.color, x, y, e.size, a);
     }
+
+    // Confetti after the Ace.
     ctx.globalCompositeOperation = 'source-over';
+    confetti = confetti.filter((k) => time - k.t0 < k.life);
+    for (const k of confetti) {
+      if (time < k.t0) continue;
+      const t = (time - k.t0) / 1000;
+      const x = k.x + Math.sin(k.phase + t * 3.2) * k.sway;
+      const y = k.y + k.vy * t + 40 * t * t;
+      if (y > height + 20) continue;
+      const a = Math.min(1, (k.life - (time - k.t0)) / 500);
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(k.spin * t);
+      ctx.scale(Math.cos(k.phase + t * 6), 1);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = k.color;
+      if (k.shape === 0) ctx.fillRect(-k.size / 2, -k.size * 0.35, k.size, k.size * 0.7);
+      else {
+        ctx.scale(k.size / 20, k.size / 20);
+        ctx.translate(-12, -12);
+        ctx.fill(pipPaths.star);
+      }
+      ctx.restore();
+    }
     ctx.globalAlpha = 1;
 
-    // Labels by priority: the selected pick, your games, hubs, pick ranks, then bright stars.
+    // Labels by priority: the selected pick, your games, hubs, card ranks, then bright stars.
     placed = [];
     if (scene.selected !== null && !hidden.has(scene.selected)) {
       const [x, y] = toScreen(games[scene.selected].x, games[scene.selected].y);
-      label(ctx, games[scene.selected].title, x, y - 24, C.goldBright, { force: true, display: true, size: 17 });
+      label(ctx, games[scene.selected].title, x, y - 26, C.bone, { force: true, display: true, size: 18 });
     }
     for (const j of scene.history) {
       const [x, y] = toScreen(games[j].x, games[j].y);
-      label(ctx, games[j].title, x, y + 26, C.starlight, { force: true });
+      label(ctx, games[j].title, x, y + 26, C.bone, { force: true });
     }
     for (const node of falls.length ? [] : scene.hubs.slice(0, 8)) {
       const h = hubAt(node);
       if (!h) continue;
       const [x, y] = toScreen(h.x, h.y);
-      label(ctx, h.name, x, y - 11, C.violetText);
+      label(ctx, h.name, x, y - 11, C.quantumText);
     }
     scene.picks.forEach((i, rank) => {
       if (scene.selected === i || hidden.has(i)) return;
       const [x, y] = toScreen(games[i].x, games[i].y);
-      label(ctx, String(rank + 1), x + 16, y - 10, C.gold, { size: 13 });
+      label(ctx, rankLabel(rank), x + 16, y - 9, C.crimsonText, { size: 15, poster: true });
     });
     // Exploring: when you zoom in on Discover, the brightest stars in view say what they are.
     if (app.view === 'discover' && cam.zoom > 1.8 && !scene.picks.length) {
@@ -780,18 +1046,21 @@
         const [x, y] = toScreen(games[i].x, games[i].y);
         if (x < stage.x || y < stage.y || x > stage.x + stage.w || y > stage.y + stage.h) continue;
         const before = placed.length;
-        label(ctx, games[i].title, x, y + 16, C.dust, { size: 11.5, alpha: 0.85 });
+        label(ctx, games[i].title, x, y + 16, C.ash, { size: 11.5, alpha: 0.9 });
         if (placed.length > before) shown++;
       }
     }
     if (hovered !== null && !owned.has(hovered)) {
       const [x, y] = toScreen(games[hovered].x, games[hovered].y);
-      ctx.strokeStyle = C.goldBright;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(still ? 0 : time / 900);
+      ctx.translate(-12, -12);
+      ctx.strokeStyle = C.crimsonText;
       ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.9;
-      ctx.beginPath();
-      ctx.arc(x, y, 9, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.globalAlpha = 0.95;
+      ctx.stroke(pipPaths.star);
+      ctx.restore();
       ctx.globalAlpha = 1;
     }
 
@@ -811,13 +1080,17 @@
     }
   }
 
-  /** Impact frames: two frames of inverted light with speed lines converging on the impact. */
+  /**
+   * Impact frames, comic style: one inverted frame (bone, ink speed lines rushing in, a ring of
+   * halftone), one ink frame with crimson lines, then a crimson bloom. Plus the burst on the Ace.
+   */
   function drawFlashes(time: number): void {
     const ctx = overlay.getContext('2d');
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
     flashes = flashes.filter((f) => time - f.t0 < 280);
+    bursts = bursts.filter((b) => time - b.t0 < 1500);
     if (app.reducedMotion) return;
     const diag = Math.hypot(width, height);
     for (const f of flashes) {
@@ -836,37 +1109,97 @@
         }
         ctx.fill();
       };
+      const dots = (color: string, alpha: number, r0: number, r1: number) => {
+        ctx.fillStyle = color;
+        ctx.globalAlpha = alpha;
+        for (let r = r0; r < r1; r += 12) {
+          const n = Math.round((2 * Math.PI * r) / 12);
+          const size = 1 + 4 * (1 - (r - r0) / (r1 - r0));
+          for (let k = 0; k < n; k++) {
+            const a = (k / n) * Math.PI * 2 + r * 0.01;
+            ctx.beginPath();
+            ctx.arc(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r, size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      };
       if (f.full && age < 55) {
-        ctx.globalAlpha = 0.93;
-        ctx.fillStyle = C.starlight;
+        ctx.globalAlpha = 0.94;
+        ctx.fillStyle = C.bone;
         ctx.fillRect(0, 0, width, height);
-        wedgeColor(C.midnight, 1);
+        wedgeColor(C.ink, 1);
+        dots(C.crimson, 0.9, 30 + 30 * f.strength, 120 + 140 * f.strength);
         ctx.globalAlpha = 1;
-        ctx.fillStyle = C.midnight;
+        ctx.fillStyle = C.ink;
         ctx.beginPath();
         ctx.arc(f.x, f.y, 10 + 22 * f.strength, 0, Math.PI * 2);
         ctx.fill();
       } else if (f.full && age < 110) {
-        ctx.globalAlpha = 0.9;
-        ctx.fillStyle = C.midnight;
+        ctx.globalAlpha = 0.92;
+        ctx.fillStyle = C.ink;
         ctx.fillRect(0, 0, width, height);
-        wedgeColor(C.goldBright, 0.95);
+        wedgeColor(C.hot, 0.95);
         ctx.globalAlpha = 1;
-        ctx.fillStyle = C.starlight;
+        ctx.fillStyle = C.bone;
         ctx.beginPath();
         ctx.arc(f.x, f.y, 14 + 30 * f.strength, 0, Math.PI * 2);
         ctx.fill();
       } else {
         const t = f.full ? (age - 110) / 170 : age / 280;
-        wedgeColor(C.goldBright, (1 - t) * (f.full ? 0.35 : 0.3));
+        wedgeColor(C.hot, (1 - t) * (f.full ? 0.32 : 0.28));
         const r = 40 + 220 * f.strength * (0.6 + t);
         const grad = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r);
-        grad.addColorStop(0, C.goldBright);
-        grad.addColorStop(1, `${C.gold}00`);
-        ctx.globalAlpha = (1 - t) * 0.55;
+        grad.addColorStop(0, C.spark);
+        grad.addColorStop(0.35, 'rgba(255, 46, 79, 0.55)');
+        grad.addColorStop(1, 'rgba(255, 46, 79, 0)');
+        ctx.globalAlpha = (1 - t) * 0.6;
         ctx.fillStyle = grad;
         ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2);
       }
+    }
+    // The burst on the Ace: a jagged crimson balloon with AHA! in poster type, popping in.
+    for (const b of bursts) {
+      const age = time - b.t0;
+      if (age < 0) continue;
+      const pop = age < 260 ? 1 + 0.25 * Math.sin((age / 260) * Math.PI) - (1 - age / 260) ** 3 : 1;
+      const fade = age > 1100 ? Math.max(0, 1 - (age - 1100) / 400) : 1;
+      const R = 92 * b.scale * Math.max(0.01, pop);
+      const cx = Math.min(width - R * 1.4, Math.max(R * 1.4, b.x + R * 0.9));
+      const cy = Math.min(height - R * 1.2, Math.max(R * 1.2, b.y - R * 1.15));
+      ctx.save();
+      ctx.globalAlpha = fade;
+      ctx.translate(cx, cy);
+      ctx.rotate(-0.14);
+      ctx.beginPath();
+      b.spikes.forEach((k, i) => {
+        const a0 = (i / b.spikes.length) * Math.PI * 2;
+        const a1 = ((i + 0.5) / b.spikes.length) * Math.PI * 2;
+        const outer = R * k * 1.15;
+        const inner = R * 0.72;
+        if (i === 0) ctx.moveTo(Math.cos(a0) * outer * 1.25, Math.sin(a0) * outer * 0.8);
+        else ctx.lineTo(Math.cos(a0) * outer * 1.25, Math.sin(a0) * outer * 0.8);
+        ctx.lineTo(Math.cos(a1) * inner * 1.25, Math.sin(a1) * inner * 0.8);
+      });
+      ctx.closePath();
+      ctx.lineJoin = 'miter';
+      ctx.fillStyle = C.ink;
+      ctx.translate(6, 6);
+      ctx.fill();
+      ctx.translate(-6, -6);
+      ctx.fillStyle = C.crimson;
+      ctx.fill();
+      ctx.strokeStyle = C.bone;
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.font = `400 ${Math.round(R * 0.62)}px ${posterFont}`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = Math.max(4, R * 0.08);
+      ctx.strokeStyle = C.ink;
+      ctx.strokeText('AHA!', 0, R * 0.04);
+      ctx.fillStyle = C.bone;
+      ctx.fillText('AHA!', 0, R * 0.04);
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
   }
@@ -877,7 +1210,9 @@
       falls.length > 0 ||
       rings.length > 0 ||
       embers.length > 0 ||
+      confetti.length > 0 ||
       flashes.length > 0 ||
+      bursts.length > 0 ||
       time - shakeStart < 600 ||
       (ripple !== null && time - ripple.t0 < 4200) ||
       time - drawStart < 750
@@ -1000,7 +1335,7 @@
     if (games) {
       for (const j of scene.history) {
         if (!prevHistory.has(j) && scene.picks.length === 0) {
-          rings.push({ x: games[j].x, y: games[j].y, t0: now, dur: 900, r: 70, color: C.violetText, w: 1.5 });
+          rings.push({ x: games[j].x, y: games[j].y, t0: now, dur: 900, r: 70, color: C.rose, w: 1.5 });
         }
       }
       prevHistory = new Set(scene.history);
@@ -1063,6 +1398,7 @@
     const fonts = getComputedStyle(document.documentElement);
     bodyFont = fonts.getPropertyValue('--font-body') || bodyFont;
     displayFont = fonts.getPropertyValue('--font-display') || displayFont;
+    posterFont = fonts.getPropertyValue('--font-poster') || posterFont;
     resize();
     const ro = new ResizeObserver(() => {
       measureStage();
@@ -1175,12 +1511,11 @@
     position: fixed;
     z-index: 30;
     pointer-events: none;
-    background: var(--surface-solid);
-    color: var(--text);
-    border: var(--border);
-    border-radius: var(--radius-sm);
-    padding: 4px 10px;
+    background: var(--bone);
+    color: var(--on-bone);
+    padding: 5px 11px 3px;
     font-size: var(--text-sm);
-    font-weight: 500;
+    font-weight: 600;
+    box-shadow: 3px 3px 0 var(--crimson);
   }
 </style>

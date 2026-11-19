@@ -1,5 +1,28 @@
 @import '../../docs/design/tokens.css';
 
+/* Self-hosted OFL fonts (licences in src/assets/fonts/). */
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/anton-latin-400.woff') format('woff');
+}
+@font-face {
+  font-family: 'Comic Relief';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/comic-relief-latin-400.woff') format('woff');
+}
+@font-face {
+  font-family: 'Comic Relief';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/comic-relief-latin-700.woff') format('woff');
+}
+
 *,
 *::before,
 *::after {
@@ -30,36 +53,44 @@ h3 {
   line-height: 1.15;
 }
 
-.typed {
-  font-family: var(--font-note);
-}
-
-/* Display: Prata, for names of things (games, views, the wordmark). */
+/* Poster type: view and panel titles, in capitals. */
 h1,
 h2,
+.poster {
+  font-family: var(--font-poster);
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Names of things (games, starter hands): Prata. */
 .display {
   font-family: var(--font-display);
   font-weight: 400;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
+  text-transform: none;
 }
 
-/* Section headings inside panels: a gold diamond, then the words. */
+/* Section labels inside panels: a crimson four-pointed star, then the words. */
 h3 {
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--muted);
+  font-family: var(--font-poster);
+  font-weight: 400;
+  font-size: 15px;
+  letter-spacing: 0.07em;
+  line-height: 1.25;
+  text-transform: uppercase;
+  color: var(--text);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
 }
 h3::before {
   content: '';
   flex: none;
-  width: 6px;
-  height: 6px;
-  background: var(--gold);
-  transform: rotate(45deg);
+  width: 11px;
+  height: 11px;
+  background: var(--crimson-hot);
+  clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
 }
 
 a {
@@ -79,7 +110,7 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid var(--gold);
+  outline: 2px solid var(--crimson-text);
   outline-offset: 2px;
 }
 
@@ -88,7 +119,7 @@ select {
   font-size: 0.92em;
 }
 
-/* Small supporting text. Sentence case; never tracked capitals. */
+/* Small supporting text, in sentence case. */
 .micro {
   font-size: var(--text-xs);
   font-weight: 500;
@@ -107,31 +138,23 @@ select {
   border: 0;
 }
 
-/* Reading surfaces: deco frames with cut corners. The frame is drawn by two clipped layers behind
-   the content (a 1 px line, then the fill), so dropdowns and focus rings inside are never clipped. */
+/* Reading surfaces: square velvet panels with a seam and a short crimson rule on the top edge. */
 .panel {
   position: relative;
-  isolation: isolate;
-  background: none;
+  background: var(--surface);
+  border: var(--border);
   padding: var(--space-4) var(--space-5);
-  filter: drop-shadow(0 24px 30px rgb(0 0 0 / 0.45));
-}
-.panel::before,
-.panel::after {
-  content: '';
-  position: absolute;
-  pointer-events: none;
-  clip-path: var(--octagon);
+  box-shadow: 0 24px 40px -24px rgb(0 0 0 / 0.8);
 }
 .panel::before {
-  inset: 0;
-  z-index: -2;
-  background: var(--line);
-}
-.panel::after {
-  inset: 1px;
-  z-index: -1;
-  background: var(--surface-solid);
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  width: 56px;
+  height: 3px;
+  background: var(--crimson);
+  pointer-events: none;
 }
 
 /* A panel holding an open dropdown rises above its neighbours. */
@@ -139,12 +162,28 @@ select {
   z-index: 3;
 }
 
-/* Data panels: a gold frame. */
+/* Data panels: a longer rule and a corner of halftone. */
 .hud::before {
-  background: linear-gradient(160deg, var(--gold) 0%, var(--frame-line) 30%, var(--line) 70%, var(--frame-line) 100%);
+  width: 38%;
+}
+.hud::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 120px;
+  height: 90px;
+  color: var(--crimson);
+  opacity: 0.22;
+  background-image: var(--halftone);
+  background-size: 8px 8px;
+  -webkit-mask: radial-gradient(closest-side at 100% 0, #000, transparent);
+  mask: radial-gradient(closest-side at 100% 0, #000, transparent);
+  pointer-events: none;
 }
 
-/* Buttons: a slanted plate, like a game menu. The plate is a clipped layer so the focus ring stays. */
+/* Buttons: slanted plates. The plate is a layer behind the label, so the label stays upright and the
+   focus ring is never clipped. The primary plate is crimson with a bone offset, like a misprint. */
 .btn {
   position: relative;
   isolation: isolate;
@@ -155,69 +194,67 @@ select {
   border: 0;
   background: none;
   color: var(--text);
-  padding: 10px 22px 8px;
-  font-weight: 600;
+  padding: 11px 22px 9px;
+  font-weight: 700;
   cursor: pointer;
+  text-decoration: none;
   transition: transform var(--dur-fast) var(--ease-out);
 }
-.btn::before,
-.btn::after {
+.btn::before {
   content: '';
   position: absolute;
-  z-index: -1;
-  clip-path: var(--slant);
-  transition:
-    background var(--dur-fast) var(--ease-out),
-    filter var(--dur-fast) var(--ease-out);
-}
-.btn::before {
   inset: 0;
-  background: var(--line);
-}
-.btn::after {
-  inset: 1px 1.5px;
+  z-index: -1;
   background: var(--raised);
+  border: 1px solid var(--line);
+  transform: skewX(var(--slant));
+  transition:
+    box-shadow var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
-.btn:hover::before {
-  background: var(--dust);
+.btn:hover:not([disabled])::before {
+  background: color-mix(in srgb, var(--raised) 70%, var(--seam));
+  border-color: var(--ash);
 }
-.btn:active {
+.btn:active:not([disabled]) {
   transform: translateY(1px);
 }
 .btn[disabled] {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 .btn.primary {
   color: var(--on-pick);
 }
 .btn.primary::before {
-  background: var(--gold-deep);
+  background: var(--crimson);
+  border: 0;
+  box-shadow: 4px 4px 0 var(--bone);
 }
-.btn.primary::after {
-  background: linear-gradient(180deg, var(--gold-bright), var(--gold) 60%, #e0a836);
+.btn.primary:hover:not([disabled])::before {
+  background: var(--crimson);
+  box-shadow: 6px 6px 0 var(--bone);
+  transform: skewX(var(--slant)) translate(-2px, -2px);
 }
-.btn.primary:hover:not([disabled])::after {
-  filter: brightness(1.08);
-}
-.btn.primary:hover:not([disabled]) {
-  filter: drop-shadow(0 0 14px rgb(242 193 78 / 0.55));
+.btn.primary[disabled]::before {
+  box-shadow: 4px 4px 0 var(--ash);
 }
 .btn.ghost {
   color: var(--muted);
   font-weight: 600;
-  padding-left: 12px;
-  padding-right: 12px;
+  padding-left: 8px;
+  padding-right: 8px;
+  text-decoration: underline;
+  text-decoration-color: var(--crimson);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 5px;
 }
-.btn.ghost::before,
-.btn.ghost::after {
+.btn.ghost::before {
   display: none;
 }
-.btn.ghost:hover {
+.btn.ghost:hover:not([disabled]) {
   color: var(--text);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  text-decoration-color: var(--gold);
 }
 
 .chip {
@@ -236,11 +273,28 @@ select {
 }
 .chip.link {
   color: var(--link);
-  border-color: color-mix(in srgb, var(--violet) 55%, transparent);
+  border-color: color-mix(in srgb, var(--quantum) 70%, transparent);
+  background: color-mix(in srgb, var(--quantum) 14%, transparent);
+}
+
+/* Things printed on bone (cards, tickets, balloons) take crimson focus rings and ink text. */
+.on-bone {
+  background: var(--bone);
+  color: var(--on-bone);
+}
+.on-bone :focus-visible,
+.on-bone:focus-visible {
+  outline-color: var(--crimson);
+}
+.on-bone .btn.primary::before {
+  box-shadow: 4px 4px 0 var(--on-bone);
+}
+.on-bone .btn.primary:hover:not([disabled])::before {
+  box-shadow: 6px 6px 0 var(--on-bone);
 }
 
 input[type='range'] {
-  accent-color: var(--gold);
+  accent-color: var(--crimson);
 }
 
 .scroll {
@@ -255,6 +309,20 @@ input[type='range'] {
     transform: translateY(6px);
   }
   to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes deal {
+  0% {
+    opacity: 0;
+    transform: translate(18px, -16px) rotate(8deg) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
     opacity: 1;
     transform: none;
   }

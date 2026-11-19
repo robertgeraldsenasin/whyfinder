@@ -51,7 +51,7 @@
       <Discover />
     {:else if !app.ready}
       <div class="status" role="status" aria-live="polite">
-        <h1>Charting the sky</h1>
+        <h1>Setting the stage</h1>
         <p>{app.progress ? (phases[app.progress.phase] ?? app.progress.phase) : 'Loading 500 games'}</p>
         <div class="meter" aria-hidden="true"><span style:width={`${app.progress ? (app.progress.done / app.progress.total) * 100 : 4}%`}></span></div>
       </div>
@@ -83,24 +83,26 @@
     text-align: center;
   }
   .status h1 {
-    font-size: var(--text-2xl);
+    font-size: 40px;
     margin-bottom: var(--space-2);
+    transform: skewX(-8deg);
+    text-shadow: 3px 3px 0 var(--crimson-deep);
   }
   .status p {
     margin: 0 0 var(--space-3);
     color: var(--muted);
   }
   .meter {
-    height: 2px;
-    background: var(--line);
-    border-radius: 2px;
+    height: 8px;
+    background: var(--velvet);
+    border: var(--border);
+    transform: skewX(-20deg);
     overflow: hidden;
   }
   .meter span {
     display: block;
     height: 100%;
-    background: linear-gradient(90deg, var(--violet), var(--gold));
-    box-shadow: 0 0 12px var(--gold);
+    background: repeating-linear-gradient(90deg, var(--crimson) 0 10px, var(--crimson-hot) 10px 14px);
     transition: width 160ms linear;
   }
   .skip {

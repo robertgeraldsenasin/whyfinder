@@ -8,9 +8,9 @@
   let panel: HTMLDivElement;
 
   const EFFECTS: { id: Flashes; name: string; description: string }[] = [
-    { id: 'full', name: 'Full', description: 'Brief full-screen impact frames and shake, never more than three flashes a second.' },
-    { id: 'reduced', name: 'Reduced flashing', description: 'Light bursts stay around the star; gentler shake.' },
-    { id: 'off', name: 'Off', description: 'No flashes and no shake.' },
+    { id: 'full', name: 'Full', description: 'Brief full-screen impact frames, shake and confetti, never more than three flashes a second.' },
+    { id: 'reduced', name: 'Reduced flashing', description: 'Bursts stay around the card; gentler shake.' },
+    { id: 'off', name: 'Off', description: 'No flashes, no shake and no confetti.' },
   ];
 
   function save(): void {
@@ -35,7 +35,7 @@
   });
 </script>
 
-<div class="panel pop" id="settings-panel" role="dialog" aria-label="Settings" bind:this={panel}>
+<div class="panel hud pop" id="settings-panel" role="dialog" aria-label="Settings" bind:this={panel}>
   <fieldset>
     <legend>Star colours</legend>
     <p class="help">How close each game is to your taste, from distant to closest.</p>
@@ -93,7 +93,7 @@
         </span>
       </label>
     {/each}
-    <p class="help">If your device asks for reduced motion, stars appear in place with no effects at all.</p>
+    <p class="help">If your device asks for reduced motion, the cards appear in place with no effects at all.</p>
   </fieldset>
 </div>
 
@@ -108,6 +108,9 @@
     overflow-y: auto;
     padding: var(--space-4);
     background: var(--surface-solid);
+    box-shadow:
+      6px 6px 0 var(--crimson),
+      0 24px 60px -20px rgb(0 0 0 / 0.9);
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
@@ -122,8 +125,10 @@
     gap: 4px;
   }
   legend {
-    font-family: var(--font-display);
-    font-size: var(--text-lg);
+    font-family: var(--font-poster);
+    font-size: 17px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     margin-bottom: 4px;
     padding: 0;
   }
@@ -145,11 +150,11 @@
   }
   .option:has(input:checked) {
     background: var(--raised);
-    box-shadow: inset 2px 0 0 var(--gold);
+    box-shadow: inset 3px 0 0 var(--crimson);
   }
   input[type='radio'],
   input[type='checkbox'] {
-    accent-color: var(--gold);
+    accent-color: var(--crimson);
     margin: 3px 0 0;
   }
   .body {
@@ -161,7 +166,8 @@
     font-weight: 600;
   }
   .swatch {
-    height: 5px;
+    height: 6px;
+    transform: skewX(-20deg);
   }
   .desc {
     font-size: var(--text-xs);

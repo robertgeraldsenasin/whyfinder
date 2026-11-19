@@ -130,11 +130,83 @@ export function lock(pan = 0): void {
   o.stop(at + 0.5);
 }
 
-/** Choosing a pick. */
+/** A card dealt off the deck: a short bright flick with a click at the front. */
+export function deal(pan = 0, strength = 0.5): void {
+  const c = audio();
+  if (!c || !noise) return;
+  const at = c.currentTime;
+  const src = c.createBufferSource();
+  src.buffer = noise;
+  const hp = c.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.setValueAtTime(2400, at);
+  hp.frequency.exponentialRampToValueAtTime(5200, at + 0.07);
+  src.connect(hp).connect(env(c, at, 0.18 + 0.12 * strength, 0.002, 0.08)).connect(out(c, pan));
+  src.start(at);
+  src.stop(at + 0.15);
+  const click = c.createOscillator();
+  click.type = 'square';
+  click.frequency.setValueAtTime(1800, at);
+  click.frequency.exponentialRampToValueAtTime(600, at + 0.03);
+  click.connect(env(c, at, 0.04, 0.001, 0.03)).connect(out(c, pan));
+  click.start(at);
+  click.stop(at + 0.06);
+}
+
+/** The Ace lands: a short brass "ta-da", two chords a fourth apart, with a cymbal swell. */
+export function tada(pan = 0): void {
+  const c = audio();
+  if (!c || !noise) return;
+  const at = c.currentTime + 0.06;
+  const dest = out(c, pan * 0.5);
+  const chords: [number, number[], number][] = [
+    [0, [293.66, 369.99, 440], 0.16],
+    [0.16, [392, 493.88, 587.33, 783.99], 0.9],
+  ];
+  for (const [t, notes, len] of chords) {
+    for (const f of notes) {
+      const o = c.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f * 0.985, at + t);
+      o.frequency.exponentialRampToValueAtTime(f, at + t + 0.05);
+      const lp = c.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(900, at + t);
+      lp.frequency.exponentialRampToValueAtTime(2600, at + t + 0.06);
+      lp.frequency.exponentialRampToValueAtTime(1200, at + t + len);
+      o.connect(lp).connect(env(c, at + t, 0.045, 0.02, len)).connect(dest);
+      o.start(at + t);
+      o.stop(at + t + len + 0.2);
+    }
+  }
+  const cym = c.createBufferSource();
+  cym.buffer = noise;
+  cym.loop = true;
+  const hp = c.createBiquadFilter();
+  hp.type = 'highpass';
+  hp.frequency.value = 6500;
+  cym.connect(hp).connect(env(c, at + 0.16, 0.09, 0.05, 1.1)).connect(dest);
+  cym.start(at + 0.16);
+  cym.stop(at + 1.5);
+}
+
+/** Choosing a pick: a card slid across the table, then a light chime. */
 export function select(): void {
   const c = audio();
   if (!c) return;
   const at = c.currentTime;
+  if (noise) {
+    const src = c.createBufferSource();
+    src.buffer = noise;
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 0.8;
+    bp.frequency.setValueAtTime(1800, at);
+    bp.frequency.exponentialRampToValueAtTime(3600, at + 0.09);
+    src.connect(bp).connect(env(c, at, 0.06, 0.01, 0.09)).connect(out(c, 0));
+    src.start(at);
+    src.stop(at + 0.14);
+  }
   [880, 1318.5].forEach((f, k) => {
     const o = c.createOscillator();
     o.type = 'sine';
