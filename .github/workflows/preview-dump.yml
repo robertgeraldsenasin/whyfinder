@@ -1,0 +1,40 @@
+# Temporary, for this branch only: prints the built demo into the job log for local review.
+name: preview-dump
+
+on:
+  pull_request:
+    paths: ['web/**', 'docs/design/**', '.github/workflows/preview-dump.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Dump
+        run: |
+          tar czf /tmp/dist.tgz -C dist .
+          echo "DIST-BEGIN"
+          base64 -w 0 /tmp/dist.tgz | fold -w 3000
+          echo
+          echo "DIST-END"
+      - name: Checks (informational)
+        if: always()
+        run: npm run check
