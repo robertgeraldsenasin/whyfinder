@@ -74,3 +74,34 @@ def test_evaluate_runs_a_subset_and_rejects_unknown_models() -> None:
     assert list(report["models"]) == ["popularity", "ease"]
     with pytest.raises(ValueError, match="unknown model"):
         evaluate(es, games, params(), seed=1, only=("magic",))
+
+
+def test_peak_memory_counts_the_build_and_leaves_tracing_as_it_was() -> None:
+    import tracemalloc
+
+    from whyfinder.eval.harness import peak_memory
+
+    out, peak = peak_memory(lambda: np.ones((512, 512)))
+    assert out.shape == (512, 512)
+    assert peak >= 512 * 512 * 8
+    assert not tracemalloc.is_tracing()
+    tracemalloc.start()
+    try:
+        _, inner = peak_memory(lambda: np.zeros(1000))
+        assert inner >= 8000
+        assert tracemalloc.is_tracing()
+    finally:
+        tracemalloc.stop()
+
+
+def test_peak_memory_stops_tracing_when_the_build_fails() -> None:
+    import tracemalloc
+
+    from whyfinder.eval.harness import peak_memory
+
+    def boom() -> np.ndarray:
+        raise ValueError("no")
+
+    with pytest.raises(ValueError, match="no"):
+        peak_memory(boom)
+    assert not tracemalloc.is_tracing()
