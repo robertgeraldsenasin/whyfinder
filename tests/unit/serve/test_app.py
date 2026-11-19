@@ -280,3 +280,9 @@ def test_the_committed_openapi_document_matches_the_code(client: TestClient) -> 
     assert client.get("/openapi.json").json() == committed, (
         "docs/openapi.json is out of date: run `uv run whyfinder serve openapi`"
     )
+
+
+def test_a_body_that_is_not_json_is_a_bad_request(client: TestClient) -> None:
+    for path in ("/recommend", "/explain"):
+        r = client.post(path, content=b"\xff{", headers={"content-type": "application/json"})
+        assert is_problem(r, 400)["title"] == "Bad request"
