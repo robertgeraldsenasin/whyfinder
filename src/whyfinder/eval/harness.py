@@ -127,9 +127,7 @@ class Built:
     info: dict[str, Any] = field(default_factory=dict)
 
 
-def _game_infos(
-    games: pd.DataFrame, game_ids: np.ndarray
-) -> tuple[list[GameInfo], list[list[str]]]:
+def game_infos(games: pd.DataFrame, game_ids: np.ndarray) -> tuple[list[GameInfo], list[list[str]]]:
     meta = games.drop_duplicates("game").set_index("game").reindex(game_ids)
 
     def text(value: object) -> str | None:
@@ -156,7 +154,7 @@ def build_models(
     k_list = 20
     ids = es.game_ids
     built: dict[str, Built] = {}
-    infos, features = _game_infos(games, ids)
+    infos, features = game_infos(games, ids)
     vectors = tfidf_vectors(features)
 
     def item_item(W: np.ndarray) -> Ranker:

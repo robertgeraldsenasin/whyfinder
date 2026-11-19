@@ -386,3 +386,50 @@ def results_command(
         path = out / f"{row['model']}.json"
         path.write_text(json.dumps(row, indent=2, sort_keys=True) + "\n")
         typer.echo(f"wrote {path}")
+
+
+@app.command("tune")
+def tune_command(
+    data: Annotated[Path, typer.Option(help="Directory with train/valid/games Parquet.")] = CI,
+    out: Annotated[
+        Path, typer.Option(help="Every candidate's score and the chosen values.")
+    ] = Path("tune.json"),
+    item_cap: Annotated[int | None, typer.Option(help="Override data.item_cap.")] = None,
+    gate: Annotated[
+        bool, typer.Option(help="Use the PR gate's item cap (eval.ci_item_cap).")
+    ] = False,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Search the grids in params.yaml (tune.*) on the validation split; never on test."""
+    import json
+
+    import pandas as pd
+
+    from whyfinder.eval.harness import eval_set
+    from whyfinder.eval.tune import tune
+
+    p = load_params(params)
+    if item_cap is not None:
+        cap = item_cap
+    else:
+        cap = param(p, "eval.ci_item_cap" if gate else "data.item_cap", int)
+    es = eval_set(
+        pd.read_parquet(data / "train.parquet"),
+        pd.read_parquet(data / "valid.parquet"),
+        item_cap=cap,
+        alpha=param(p, "data.confidence.alpha", float),
+        eps=param(p, "data.confidence.eps", float),
+        max_users=param(p, "tune.max_users", int),
+    )
+    if not es.users:
+        raise typer.BadParameter("no validation users inside the item cap", param_hint="--data")
+    report = tune(es, pd.read_parquet(data / "games.parquet"), p, seed=param(p, "seed", int))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+    for name, rows in report["grids"].items():
+        for row in rows:
+            typer.echo(f"{name:6s} " + "  ".join(f"{k}={v}" for k, v in row.items()))
+    typer.echo("best: " + ", ".join(f"{k}={v}" for k, v in report["best"].items()))
+    typer.echo(
+        f"{report['users']} users, {report['games']} games, {report['seconds']}s; wrote {out}"
+    )
