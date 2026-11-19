@@ -26,15 +26,15 @@ Version 1 does one job: **find my next game and tell me honestly why.**
 | US-09 | As maintainer, every PR gets a quality report: deltas vs main with confidence intervals. | Must |
 | US-10 | As a reviewer, `make reproduce` rebuilds every README number from raw data. | Must |
 
-## Success metrics (proposed; fixed in ADR-0006 after M1 baselines)
+## Success metrics (fixed in ADR-0006 from the M1 baselines)
 
 | Area | Target | Measured by |
 | --- | --- | --- |
-| Ranking | Blend non-inferior to iALS on NDCG@10 (margin 0.005); beats popularity with p < 0.05 | Paired bootstrap, time-split test set |
+| Ranking | Blend non-inferior to iALS on NDCG@10 (margin 0.005); Whyfinder beats popularity with p < 0.05 on NDCG@10 and Recall@20 | Paired bootstrap, time-split test set |
 | Attributions | Sum to the score within 1e-9 (exact) | Property test + CI |
 | Counterfactuals | 100% valid; exact minimal for sets up to 3 | Re-scoring the full pipeline |
 | Explanation fidelity | Removing top-3 attributed games drops the score more than 3 random ones for ≥ 95% of users | Deletion test |
-| Diversity | Intra-list diversity up ≥ 15% vs no re-ranking, NDCG@10 loss ≤ 0.005 | Paired bootstrap |
+| Diversity | DPP closes ≥ 10% of the ILD@10 headroom left by the relevance-only list, NDCG@10 loss ≤ 0.005 (was "ILD up ≥ 15%"; see ADR-0006) | Paired bootstrap |
 | RAG faithfulness | ≥ 95% of claims verified before fallback | Claim checker |
 | Serving | p95 < 150 ms for top 10 without the LLM | Locust at release |
 | Engineering | CI green; core line coverage ≥ 85%; axe 0 violations in the demo | GitHub Actions |

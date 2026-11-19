@@ -40,18 +40,21 @@ POST /explain
 
 ```json
 {
-  "game_id": "440", "title": "Team Fortress 2", "score": 2.695, "rank": 1,
+  "game_id": "440", "title": "Team Fortress 2", "score": 2.072, "rank": 1,
   "attributions": [
-    {"game_id": "620", "title": "Portal 2", "contribution": 1.263, "share": 0.469, "ease_part": 1.021, "ppr_part": 0.242},
-    {"game_id": "49520", "title": "Borderlands 2", "contribution": 1.065, "share": 0.395, "ease_part": 0.866, "ppr_part": 0.199},
-    {"game_id": "500", "title": "Left 4 Dead", "contribution": 0.367, "share": 0.136, "ease_part": 0.084, "ppr_part": 0.283}
+    {"game_id": "620", "title": "Portal 2", "contribution": 0.874, "share": 0.422, "ease_part": 0.510, "ppr_part": 0.363},
+    {"game_id": "49520", "title": "Borderlands 2", "contribution": 0.732, "share": 0.353, "ease_part": 0.433, "ppr_part": 0.299},
+    {"game_id": "500", "title": "Left 4 Dead", "contribution": 0.467, "share": 0.225, "ease_part": 0.042, "ppr_part": 0.425}
   ],
-  "counterfactual": {"removed_game_ids": ["620", "49520"], "guarantee": "irreducible", "pipeline_runs": 4},
-  "paths": [{"via": "tag", "label": "Comedy", "from_game_id": "620", "weight": 1.835}],
+  "counterfactual": {"removed_game_ids": ["620", "49520", "500"], "guarantee": "irreducible", "pipeline_runs": 6},
+  "paths": [
+    {"via": "tag", "label": "Comedy", "from_game_id": "620", "weight": 1.835},
+    {"via": "tag", "label": "Online Co-Op", "from_game_id": "620", "weight": 1.649}
+  ],
   "kept_for_variety": false,
   "claims": [
-    {"text": "Portal 2 is the biggest driver of this pick (47%).", "evidence": [{"type": "attribution", "game_id": "620", "share": 0.469}]},
-    {"text": "Borderlands 2 adds 40%.", "evidence": [{"type": "attribution", "game_id": "49520", "share": 0.395}]}
+    {"text": "Portal 2 is the biggest driver of this pick (42%).", "evidence": [{"type": "attribution", "game_id": "620", "share": 0.422}]},
+    {"text": "Borderlands 2 adds 35%.", "evidence": [{"type": "attribution", "game_id": "49520", "share": 0.353}]}
   ],
   "checker": {"passed": true, "fallback_used": true, "reasons": []},
   "model_version": "blend-slice-1"
