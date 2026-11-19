@@ -60,7 +60,7 @@ gantt
 ## M3 · Grounded RAG (6 days) → `v0.3.0`
 
 - [x] Review sample, chunking, BM25 (FR-14): over the demo's review export; the full-corpus DVC `index` stage is still to do
-- [x] Embeddings + hand-written HNSW + RRF (FR-15, ADR-0010): LSA vectors; the hnswlib benchmark is still to do
+- [x] Embeddings + hand-written HNSW + RRF (FR-15, ADR-0010): LSA vectors; benchmarked against hnswlib (`docs/evidence/hnsw-bench.md`)
 - [ ] Label 150 (pick, aspect) queries with a written guide (~1 day)
 - [ ] Ollama generation, claim schema, checker, fallback, cache (FR-16, FR-17, ADR-0009)
 - [x] Natural-language queries and filters (FR-18, FR-23)
