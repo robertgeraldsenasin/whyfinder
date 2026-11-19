@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { PIPS } from '../cards';
   import GameSearch from '../components/GameSearch.svelte';
   import Wordmark from '../components/Wordmark.svelte';
   import PickDetail from '../components/PickDetail.svelte';
@@ -81,29 +82,34 @@
 
 {#if !app.history.length}
   <div class="title">
+    <div class="sky" data-stage></div>
     <div class="hero">
-      <h1 class="lockup"><Wordmark size="var(--lockup)" line="— 500 STARS —" /></h1>
+      <h1 class="lockup">
+        <span class="halo" aria-hidden="true"></span>
+        <Wordmark size="var(--lockup)" ribbon="Find your next game. Know why." />
+      </h1>
       <p class="lead">
-        <strong>Name the games you love. Watch where your next one falls.</strong> Every star is one of Steam's 500
-        most-played games, placed by the players they share. Ten picks fall into your sky, each with the exact reasons and
-        what players say.
+        <strong>Name the games you love.</strong> Ten picks are dealt into your sky from Steam's 500 most-played games, and every
+        one shows its hand: the exact reasons, and what players say.
       </p>
       <GameSearch size="hero" />
       <div class="presets">
-        <p id="start-from">Or start from a sky someone else might have</p>
-        <ul aria-labelledby="start-from">
-          {#each presets as p (p.name)}
-            <li>
-              <button class="preset" disabled={!app.ready} onclick={() => usePreset(p.items)}>
-                <span class="pname">{p.name}</span>
+        <p id="start-from">Or start from someone else's hand</p>
+        <ul class="fan" aria-labelledby="start-from">
+          {#each presets as p, k (p.name)}
+            <li style:--k={k - (presets.length - 1) / 2}>
+              <button class="preset on-bone" disabled={!app.ready} onclick={() => usePreset(p.items)}>
+                <svg class="corner tl" viewBox="0 0 24 24" aria-hidden="true"><path d={PIPS.star} /></svg>
+                <span class="pname display">{p.name}</span>
+                <span class="rule" aria-hidden="true"></span>
                 <span class="ptitles">{p.items.map((x) => games[x.index].title).join(', ')}</span>
+                <svg class="corner br" viewBox="0 0 24 24" aria-hidden="true"><path d={PIPS.star} /></svg>
               </button>
             </li>
           {/each}
         </ul>
       </div>
     </div>
-    <div class="sky" data-stage></div>
   </div>
 {:else}
   <div class="discover" class:has-detail={!!result}>
@@ -114,7 +120,7 @@
     <div class="stage" data-stage>
       {#if !result && !app.running}
         <p class="hint">
-          {app.history.length === 1 ? 'One star in your sky. Add two or three more for sharper picks, or find your next game now.' : 'Your constellation is ready. Press Find my next game.'}
+          {app.history.length === 1 ? 'One star in your sky. Add two or three more for a sharper hand, or find your next game now.' : 'Your cast is ready. Press Find my next game and ten cards are dealt.'}
         </p>
       {/if}
     </div>
@@ -132,104 +138,174 @@
   .title {
     position: relative;
     z-index: 2;
-    min-height: calc(100dvh - 72px);
+    min-height: calc(100dvh - 68px);
     display: grid;
-    grid-template-columns: minmax(0, 46%) minmax(0, 1fr);
-    align-items: center;
-    padding: 0 var(--space-5) var(--space-6) clamp(24px, 6vw, 96px);
+    justify-items: center;
+    align-content: center;
+    padding: var(--space-2) var(--space-5) var(--space-6);
+    text-align: center;
     pointer-events: none;
   }
   .sky {
-    align-self: stretch;
+    position: absolute;
+    inset: 0;
+  }
+  /* A pool of dark behind the words, so stars never sit under text. */
+  .title::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 47%;
+    width: min(1120px, 130vw);
+    height: 780px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(closest-side, rgb(11 7 16 / 0.86), rgb(11 7 16 / 0.55) 62%, transparent);
+    pointer-events: none;
   }
   .hero {
+    position: relative;
     pointer-events: auto;
-    max-width: 620px;
+    width: min(760px, 100%);
     display: flex;
     flex-direction: column;
-    gap: var(--space-5);
-    animation: dawn 1100ms var(--ease-out);
+    align-items: center;
+    animation: curtain 900ms var(--ease-out);
   }
-  @keyframes dawn {
+  @keyframes curtain {
     from {
       opacity: 0;
-      transform: translateY(14px);
-      filter: blur(6px);
+      transform: translateY(18px) scale(0.98);
     }
     to {
       opacity: 1;
       transform: none;
-      filter: none;
     }
   }
   .lockup {
-    --lockup: clamp(46px, 5.4vw, 86px);
-    align-self: flex-start;
+    --lockup: clamp(60px, 9vw, 132px);
+    position: relative;
     max-width: 100%;
-    text-shadow: 0 0 40px rgb(7 11 30 / 0.9);
   }
-  .lead strong {
-    display: block;
-    margin-bottom: var(--space-2);
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: var(--text-xl);
-    line-height: 1.25;
-    color: var(--text);
+  .halo {
+    position: absolute;
+    z-index: -1;
+    left: 2%;
+    top: -22%;
+    width: 46%;
+    height: 112%;
+    color: var(--crimson-hot);
+    opacity: 0.34;
+    background-image: var(--halftone);
+    background-size: 10px 10px;
+    -webkit-mask: radial-gradient(closest-side, #000 20%, transparent);
+    mask: radial-gradient(closest-side, #000 20%, transparent);
   }
   .lead {
-    margin: 0;
-    max-width: 52ch;
+    max-width: 56ch;
+    margin: var(--space-5) auto 0;
     color: var(--muted);
-    font-size: var(--text-lg);
-    line-height: 1.5;
-    text-shadow: 0 0 20px rgb(7 11 30 / 1);
+    font-size: 19px;
+    line-height: 1.55;
+  }
+  .lead strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .hero :global(.search.hero) {
+    width: min(620px, 100%);
+    margin-top: var(--space-6);
+  }
+  .presets {
+    width: 100%;
   }
   .presets p {
-    margin: 0 0 var(--space-3);
-    font-size: var(--text-sm);
+    margin: var(--space-6) 0 var(--space-3);
+    font-size: 15px;
     color: var(--muted);
   }
-  .presets ul {
+  .fan {
     list-style: none;
     margin: 0;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-2);
+    padding: 0 0 var(--space-4);
+    display: flex;
+    justify-content: center;
+  }
+  .fan li {
+    position: relative;
+    margin: 0 -4px;
+  }
+  .fan li:hover,
+  .fan li:focus-within {
+    z-index: 5;
   }
   .preset {
-    width: 100%;
-    height: 100%;
+    position: relative;
+    width: 168px;
+    height: 214px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
-    text-align: left;
-    padding: 11px 14px 9px;
-    border: 1px solid var(--line);
-    border-left: 2px solid var(--frame-line);
-    background: color-mix(in srgb, var(--deep) 88%, transparent);
+    justify-content: center;
+    gap: 9px;
+    padding: 30px 22px 26px;
+    border: 0;
+    border-radius: 10px;
+    text-align: center;
     cursor: pointer;
+    box-shadow:
+      0 1px 0 1px rgb(0 0 0 / 0.3),
+      0 18px 30px -12px rgb(0 0 0 / 0.85);
+    transform: rotate(calc(var(--k) * 6deg)) translateY(calc(var(--k) * var(--k) * 8px));
     transition:
-      border-color var(--dur-fast) var(--ease-out),
-      background var(--dur-fast) var(--ease-out);
+      transform 240ms var(--ease-pop),
+      box-shadow 240ms var(--ease-out);
   }
-  .preset:hover:not([disabled]) {
-    border-color: color-mix(in srgb, var(--gold) 50%, transparent);
-    border-left-color: var(--gold);
-    background: var(--raised);
+  .preset::before {
+    content: '';
+    position: absolute;
+    inset: 7px;
+    border: 1px solid rgb(26 14 24 / 0.22);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+  .preset:hover:not([disabled]),
+  .preset:focus-visible {
+    transform: rotate(0) translateY(-18px) scale(1.04);
+    box-shadow:
+      0 0 0 3px var(--crimson),
+      0 26px 40px -12px rgb(0 0 0 / 0.9);
   }
   .preset[disabled] {
-    opacity: 0.6;
     cursor: progress;
+    filter: saturate(0.6) brightness(0.85);
+  }
+  .corner {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    fill: var(--crimson);
+  }
+  .tl {
+    left: 14px;
+    top: 14px;
+  }
+  .br {
+    right: 14px;
+    bottom: 14px;
   }
   .pname {
-    font-family: var(--font-display);
-    font-size: var(--text-lg);
+    font-size: 22px;
+    line-height: 1.1;
+  }
+  .rule {
+    width: 34px;
+    height: 2px;
+    margin: 0 auto;
+    background: var(--crimson);
   }
   .ptitles {
     font-size: var(--text-xs);
-    color: var(--muted);
+    line-height: 1.35;
+    color: var(--on-bone-muted);
   }
 
   .discover {
@@ -239,12 +315,12 @@
     grid-template-columns: 340px minmax(0, 1fr);
     grid-template-areas: 'left stage';
     gap: var(--space-5);
-    height: calc(100dvh - 72px);
+    height: calc(100dvh - 68px);
     padding: 0 var(--space-5) var(--space-5);
     pointer-events: none;
   }
   .discover.has-detail {
-    grid-template-columns: 340px minmax(0, 1fr) 420px;
+    grid-template-columns: 340px minmax(0, 1fr) 430px;
     grid-template-areas: 'left stage right';
   }
   .left,
@@ -276,11 +352,12 @@
   }
   .hint {
     margin: 0 0 var(--space-4);
-    max-width: 44ch;
+    max-width: 46ch;
     text-align: center;
-    padding: 9px 18px 7px;
+    padding: 10px 20px 8px;
     background: var(--surface-solid);
-    border: 1px solid var(--frame-line);
+    border: var(--border);
+    box-shadow: 4px 4px 0 var(--crimson);
     color: var(--muted);
     font-size: var(--text-sm);
     animation: rise var(--dur-mid) var(--ease-out);
@@ -299,20 +376,14 @@
     }
   }
   @media (max-width: 900px) {
-    .title {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: 34vh auto;
-      padding: 0 var(--space-4) var(--space-6);
-    }
-    .sky {
-      grid-row: 1;
-    }
     .lockup {
-      --lockup: clamp(34px, 10.6vw, 72px);
-      align-self: center;
+      --lockup: clamp(48px, 15vw, 96px);
     }
   }
   @media (max-width: 760px) {
+    .title {
+      padding: var(--space-3) var(--space-4) var(--space-6);
+    }
     .discover,
     .discover.has-detail {
       grid-template-columns: minmax(0, 1fr);
@@ -321,11 +392,22 @@
       height: auto;
       padding: 0 var(--space-3) var(--space-4);
     }
-    .presets ul {
-      grid-template-columns: minmax(0, 1fr);
-    }
     .lead {
       font-size: var(--text-md);
+    }
+    .fan {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 10px;
+    }
+    .fan li {
+      margin: 0;
+    }
+    .preset {
+      width: 100%;
+      height: 176px;
+      padding: 26px 16px 22px;
+      transform: rotate(calc(var(--k) * 1.6deg));
     }
   }
 </style>

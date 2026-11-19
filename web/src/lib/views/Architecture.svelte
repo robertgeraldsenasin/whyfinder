@@ -43,7 +43,7 @@
     { id: 'blend', lane: 2, col: 3, title: 'blend + score', detail: timings ? ms(timings.score + timings.pi) : 'waiting for games', status: 'live', about: 'M = β·B/c_B + (1−β)·Π/c_Π; your score is a sum over your games, which is what makes every reason exact.', files: ['web/src/engine/blend.ts'] },
     { id: 'dpp', lane: 2, col: 4, title: 'DPP re-rank', detail: '100 to 10', status: 'live', about: 'Greedy MAP on a determinantal point process keeps the top 10 relevant and varied; picks it adds for variety are flagged.', files: ['web/src/engine/dpp.ts', 'web/src/engine/pipeline.ts'] },
     { id: 'explain', lane: 2, col: 5, title: 'explain', detail: timings ? `${app.result?.explanations.reduce((n, e) => n + e.counterfactual.runs, 0) ?? 0} re-runs` : '…', status: 'live', about: 'Exact attributions per pick, the smallest counterfactual found by re-running the whole pipeline, and "related by" paths through the graph.', files: ['web/src/engine/explain.ts'] },
-    { id: 'ui', lane: 2, col: 6, title: 'Starfall UI', detail: 'Svelte on Pages', status: 'live', about: 'Svelte + TypeScript on GitHub Pages. The sky is the stage: picks fall into it, and the reasons and reviews sit on solid panels. Sound and impact effects are synthesized in the browser; every view is tested with axe.', files: ['web/src/lib/components/Atlas.svelte'] },
+    { id: 'ui', lane: 2, col: 6, title: 'Unmasked UI', detail: 'Svelte on Pages', status: 'live', about: 'Svelte + TypeScript on GitHub Pages. The sky is the stage: ten picks are dealt into it as cards, and the reasons and reviews sit on solid panels. Sound and impact effects are synthesized in the browser; every view is tested with axe.', files: ['web/src/lib/components/Atlas.svelte'] },
 
     { id: 'ials', lane: 3, col: 1, title: 'iALS rival', detail: 'must be matched', status: 'planned', milestone: 'M1', about: 'A latent-factor model the glass-box blend has to match on NDCG@10, so explainability isn’t bought with accuracy.', files: ['docs/spec/04_ALGORITHMS.md'] },
     { id: 'rag', lane: 3, col: 3, title: 'grounded RAG', detail: 'BM25 + HNSW', status: 'planned', milestone: 'M3', about: 'Hybrid retrieval over reviews and a local LLM that may only voice the computed reasons; a deterministic claim checker rejects anything it can’t verify.', files: ['docs/spec/06_RAG.md'] },
@@ -136,7 +136,7 @@
           onclick={() => (chosen = n.id)}
           onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), (chosen = n.id))}
         >
-          <rect width={NODE_W} height={NODE_H} rx="9" />
+          <rect width={NODE_W} height={NODE_H} rx="2" />
           <text class="t" x="12" y="24">{n.title}</text>
           <text class="d" x="12" y="43">{n.detail.length > 21 ? `${n.detail.slice(0, 20)}…` : n.detail}</text>
           {#if n.milestone}<text class="m" x={NODE_W - 10} y="18" text-anchor="end">{n.milestone}</text>{/if}
@@ -221,7 +221,7 @@
     stroke-dasharray: 4 5;
   }
   .edge.hot {
-    stroke: var(--pick);
+    stroke: var(--crimson-hot);
     stroke-width: 2.5;
   }
   .node {
@@ -229,7 +229,7 @@
     outline: none;
   }
   .node rect {
-    fill: var(--surface);
+    fill: var(--surface-solid);
     stroke: var(--line);
     stroke-width: 1;
     transition:
@@ -237,7 +237,7 @@
       fill var(--dur-fast);
   }
   .node.live rect {
-    stroke: color-mix(in srgb, var(--link) 70%, transparent);
+    stroke: color-mix(in srgb, var(--quantum) 80%, transparent);
   }
   .node.planned rect {
     stroke-dasharray: 4 4;
@@ -249,13 +249,13 @@
   }
   .node.chosen rect,
   .node:focus-visible rect {
-    stroke: var(--pick);
+    stroke: var(--crimson-text);
     stroke-width: 2;
   }
   .node.active rect {
-    stroke: var(--pick);
+    stroke: var(--crimson-hot);
     stroke-width: 2.5;
-    fill: color-mix(in srgb, var(--pick) 14%, var(--surface));
+    fill: color-mix(in srgb, var(--crimson) 22%, var(--velvet));
   }
   .t {
     font-family: var(--font-body);
@@ -294,7 +294,6 @@
     display: inline-block;
     width: 14px;
     height: 9px;
-    border-radius: 3px;
     border: 1px solid var(--line);
     margin-left: 6px;
   }
@@ -323,7 +322,7 @@
     font-size: var(--text-xs);
   }
   h3 {
-    font-size: var(--text-lg);
+    font-size: 18px;
   }
   .numbers {
     color: var(--link);

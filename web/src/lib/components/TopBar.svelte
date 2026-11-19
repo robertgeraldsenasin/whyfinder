@@ -31,13 +31,13 @@
 <header class="bar">
   <a class="brand" href="#/" onclick={(e) => go('discover', e)} aria-label="Whyfinder home">
     <svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true">
-      <g stroke="var(--violet-text)" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.9">
+      <g stroke="var(--quantum-text)" stroke-width="2.4" stroke-linecap="round" fill="none">
         <path d="M14 16 L31 30" /><path d="M50 12 L31 30" /><path d="M31 30 L32 47" />
       </g>
-      <g fill="var(--starlight)"><circle cx="14" cy="16" r="3.6" /><circle cx="50" cy="12" r="3.6" /><circle cx="31" cy="30" r="3.2" /></g>
-      <path fill="var(--gold)" d="M32 38 L34.4 45.6 L42 48 L34.4 50.4 L32 58 L29.6 50.4 L22 48 L29.6 45.6 Z" />
+      <g fill="var(--bone)"><circle cx="14" cy="16" r="3.8" /><circle cx="50" cy="12" r="3.8" /><circle cx="31" cy="30" r="3.4" /></g>
+      <path fill="var(--crimson-hot)" d="M32 37 L34.6 45.4 L43 48 L34.6 50.6 L32 59 L29.4 50.6 L21 48 L29.4 45.4 Z" />
     </svg>
-    {#if !(app.view === 'discover' && app.history.length === 0)}<Wordmark size={21} />{/if}
+    {#if !(app.view === 'discover' && app.history.length === 0)}<Wordmark size={27} />{/if}
   </a>
   <nav aria-label="Views">
     {#each tabs as [view, label] (view)}
@@ -81,20 +81,20 @@
     display: flex;
     align-items: center;
     gap: var(--space-5);
-    height: 72px;
+    height: 68px;
     padding: 0 var(--space-5);
     background: linear-gradient(var(--bg), color-mix(in srgb, var(--bg) 0%, transparent));
   }
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     color: var(--text);
     text-decoration: none;
   }
   nav {
     display: flex;
-    gap: var(--space-2);
+    gap: var(--space-1);
     margin-left: auto;
   }
   nav a {
@@ -102,34 +102,27 @@
     color: var(--muted);
     text-decoration: none;
     padding: 10px 14px 8px;
-    font-size: var(--text-sm);
-    font-weight: 600;
+    font-family: var(--font-poster);
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
     transition: color var(--dur-fast);
   }
   nav a:hover {
     color: var(--text);
   }
   nav a[aria-current='page'] {
-    color: var(--gold-bright);
+    color: var(--text);
   }
   nav a[aria-current='page']::after {
     content: '';
     position: absolute;
-    left: 14px;
-    right: 14px;
-    bottom: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--gold), transparent);
-  }
-  nav a[aria-current='page']::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    bottom: -3px;
-    width: 6px;
-    height: 6px;
-    background: var(--gold);
-    transform: translateX(-50%) rotate(45deg);
+    left: 10px;
+    right: 10px;
+    bottom: 2px;
+    height: 4px;
+    background: var(--crimson);
+    transform: skewX(-24deg);
   }
   .tools {
     display: flex;
@@ -145,13 +138,17 @@
     display: grid;
     place-items: center;
     border: var(--border);
-    background: color-mix(in srgb, var(--deep) 80%, transparent);
+    background: var(--surface-solid);
     color: var(--text);
     cursor: pointer;
+    transition:
+      border-color var(--dur-fast),
+      transform var(--dur-fast) var(--ease-pop);
   }
   .icon:hover,
   .icon[aria-expanded='true'] {
-    border-color: var(--gold);
+    border-color: var(--crimson-text);
+    transform: rotate(-4deg);
   }
   .icon svg {
     width: 19px;
@@ -173,6 +170,8 @@
   }
   .gh:hover {
     color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: var(--crimson);
   }
   @media (max-width: 900px) {
     .bar {
@@ -188,7 +187,8 @@
       justify-content: space-between;
     }
     nav a {
-      padding: 6px 10px;
+      padding: 6px 8px;
+      font-size: 14px;
     }
     .tools {
       margin-left: auto;

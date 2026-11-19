@@ -26,6 +26,11 @@ test('search, add three games and watch ten explained picks fall', async ({ page
   await expect(page.getByRole('list', { name: 'Your games and hours played' }).getByRole('listitem')).toHaveCount(3);
   await page.getByRole('button', { name: 'Find my next game' }).click();
   await expect(picks(page)).toHaveCount(10, { timeout: 15_000 });
+  // The hand: dealt Ace to 10, each card's suit naming the part of the model that carried it.
+  await expect(picks(page).first()).toHaveAccessibleName(/^Ace of (hearts|clubs):/);
+  await expect(picks(page).nth(9)).toHaveAccessibleName(/^10 of (hearts|clubs):/);
+  await expect(page.getByText('Hearts: mostly players in common')).toBeVisible();
+  await expect(page.getByText(/carried this pick, \d+% of the score/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Because you love' })).toBeVisible();
   await expect(page.getByText(/these shares are exact/i)).toBeVisible();
   await expect(page.getByText(/drops out of your ten/)).toBeVisible();
@@ -37,7 +42,7 @@ test('search, add three games and watch ten explained picks fall', async ({ page
   await expect(picks(page).nth(1)).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('the starfall can be skipped', async ({ page }) => {
+test('the deal can be skipped', async ({ page }) => {
   await ready(page);
   await page.getByRole('button', { name: /Survival crews/ }).click();
   await page.getByRole('button', { name: 'Skip' }).click();
@@ -58,7 +63,7 @@ test('settings change the star colours and are remembered', async ({ page }) => 
   await ready(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const dialog = page.getByRole('dialog', { name: 'Settings' });
-  await expect(dialog.getByRole('radio', { name: /Gold and violet/ })).toBeChecked();
+  await expect(dialog.getByRole('radio', { name: /Crimson and violet/ })).toBeChecked();
   await dialog.getByRole('radio', { name: /Star temperature/ }).check();
   await dialog.getByRole('radio', { name: /Reduced flashing/ }).check();
   await axe(page);

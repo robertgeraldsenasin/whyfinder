@@ -1,5 +1,5 @@
 /**
- * Closeness and its colours (ADR-0017).
+ * Closeness and its colours (ADR-0017; palettes from ADR-0018).
  *
  * Closeness is how near a game sits to your taste: c = sqrt(s / s_max), where s is the game's
  * score and s_max the best score among games you do not own. The square root spreads the many
@@ -7,29 +7,36 @@
  * Colours are interpolated in OKLab so equal steps in c look like equal steps in colour.
  */
 
-export type Palette = 'gold-violet' | 'gold' | 'spectrum';
+export type Palette = 'crimson-violet' | 'crimson' | 'spectrum';
 
 export const PALETTES: { id: Palette; name: string; description: string }[] = [
-  { id: 'gold-violet', name: 'Gold and violet', description: 'Violet for distant games, gold for the closest.' },
-  { id: 'gold', name: 'Gold', description: 'Dim bronze for distant games, bright gold for the closest.' },
+  { id: 'crimson-violet', name: 'Crimson and violet', description: 'Violet for distant games, crimson for the closest.' },
+  { id: 'crimson', name: 'Crimson', description: 'Dark maroon for distant games, bright rose for the closest.' },
   { id: 'spectrum', name: 'Star temperature', description: 'Like real stars: red for distant, blue-white for the closest.' },
 ];
 
+/** Palette ids saved by earlier versions of the demo (Starfall), mapped to today's. */
+export function migratePalette(id: unknown): Palette | null {
+  if (id === 'gold-violet') return 'crimson-violet';
+  if (id === 'gold') return 'crimson';
+  return PALETTES.some((p) => p.id === id) ? (id as Palette) : null;
+}
+
 /** Colour stops from distant (0) to closest (1). */
 const STOPS: Record<Palette, [number, string][]> = {
-  'gold-violet': [
-    [0, '#3b338f'],
-    [0.3, '#7d5fe6'],
-    [0.5, '#c7b6ff'],
-    [0.66, '#fff4dc'],
-    [0.84, '#ffd877'],
-    [1, '#f2b632'],
+  'crimson-violet': [
+    [0, '#2b2166'],
+    [0.3, '#6a46e6'],
+    [0.55, '#c35bd6'],
+    [0.75, '#ff7aa0'],
+    [0.9, '#ff3d5e'],
+    [1, '#ff1f45'],
   ],
-  gold: [
-    [0, '#5c4622'],
-    [0.4, '#a8781a'],
-    [0.75, '#f2c14e'],
-    [1, '#ffe7a6'],
+  crimson: [
+    [0, '#3d0d1c'],
+    [0.4, '#8f1230'],
+    [0.75, '#e5243f'],
+    [1, '#ffb3c1'],
   ],
   spectrum: [
     [0, '#d9503a'],

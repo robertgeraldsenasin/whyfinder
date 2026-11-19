@@ -1,41 +1,49 @@
-/* Whyfinder "Starfall" design tokens (ADR-0017). See docs/spec/11_DESIGN_SYSTEM.md. */
+/* Whyfinder "Unmasked" design tokens (ADR-0018). See docs/spec/11_DESIGN_SYSTEM.md. */
 :root {
-  /* Sky */
-  --midnight: #070b1e;
-  --deep: #0d1433;
-  --raised: #151d49;
-  --line: #273068;
-  /* Light */
-  --starlight: #f5f2ff;
-  --dust: #a9aed3;
-  --gold: #f2c14e;
-  --gold-bright: #ffe39a;
-  --gold-deep: #a8781a;
-  --violet: #8e6bf0;
-  --violet-text: #b8a4ff;
-  --ember: #ff9a4d;
+  /* The stage at night */
+  --ink: #0b0710;
+  --velvet: #160b1b;
+  --raised: #241329;
+  --seam: #3a1e40;
+  /* Light and paint */
+  --bone: #f7efe6;
+  --ash: #bcaab9;
+  --crimson: #d1173a;
+  --crimson-deep: #7d0b22;
+  --crimson-hot: #ff2e4f;
+  --crimson-text: #ff5c72;
+  --rose: #ff8fb1;
+  --quantum: #7b4dff;
+  --quantum-text: #b9a2ff;
   --good: #7fe0b0;
-  --bad: #ff8f8f;
+  --cold: #74d4e6;
+  /* On bone (card faces, tickets, speech balloons) */
+  --on-bone: #1a0e18;
+  --on-bone-muted: #5e4a58;
+  --club: #4a2bb8;
 
   /* Roles: views use these, not the raw colours. */
-  --bg: var(--midnight);
-  --surface: color-mix(in srgb, var(--deep) 97%, transparent);
-  --surface-solid: var(--deep);
-  --text: var(--starlight);
-  --muted: var(--dust);
-  --pick: var(--gold);
-  --on-pick: #1a1204;
-  --link: var(--violet-text);
-  --nebula: var(--violet);
-  --star: var(--starlight);
+  --bg: var(--ink);
+  --surface: color-mix(in srgb, var(--velvet) 97%, transparent);
+  --surface-solid: var(--velvet);
+  --line: var(--seam);
+  --text: var(--bone);
+  --muted: var(--ash);
+  --pick: var(--crimson);
+  --pick-text: var(--crimson-text);
+  --on-pick: var(--bone);
+  --link: var(--quantum-text);
+  --graph: var(--quantum);
+  --star: var(--bone);
+  --bad: var(--cold);
   color-scheme: dark;
 
-  /* Prata: a sharp, high-contrast display serif with wedge terminals, in the spirit of game title
-     lockups like Reverse: 1999 and Arknights. Josefin Sans: vintage geometric for the interface.
-     Cutive Mono: a typewriter for what players wrote, like notes in a case file. */
+  /* Anton: poster type for titles, labels and card indices, in capitals. Prata: a sharp didone for
+     names of things. Josefin Sans: the interface. Comic Relief: what players wrote, in balloons. */
+  --font-poster: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
   --font-display: 'Prata', 'Didot', Georgia, serif;
   --font-body: 'Josefin Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-note: 'Cutive Mono', 'Courier New', ui-monospace, monospace;
+  --font-voice: 'Comic Relief', 'Comic Sans MS', ui-rounded, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
   --space-1: 4px;
@@ -47,17 +55,11 @@
   --space-7: 48px;
   --space-8: 72px;
 
-  /* Deco frames: cut corners instead of rounded ones. */
-  --cut: 12px;
-  --cut-sm: 7px;
-  --octagon: polygon(var(--cut) 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, var(--cut) 100%, 0 calc(100% - var(--cut)), 0 var(--cut));
-  --octagon-sm: polygon(var(--cut-sm) 0, calc(100% - var(--cut-sm)) 0, 100% var(--cut-sm), 100% calc(100% - var(--cut-sm)), calc(100% - var(--cut-sm)) 100%, var(--cut-sm) 100%, 0 calc(100% - var(--cut-sm)), 0 var(--cut-sm));
-  --slant: polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
-  --radius-sm: 2px;
-  --radius: 2px;
-  --radius-pill: 2px;
+  /* Comic print: a dot for halftone fields (use with background-size). */
+  --halftone: radial-gradient(circle at center, currentColor 0 34%, transparent 36%);
+  --slant: -10deg;
+  --card-radius: 12px;
   --border: 1px solid var(--line);
-  --frame-line: color-mix(in srgb, var(--gold) 34%, var(--line));
 
   /* Type scale: a perfect fourth from 16px (Josefin Sans runs small). */
   --text-xs: 13px;
@@ -66,10 +68,10 @@
   --text-lg: 20px;
   --text-xl: 27px;
   --text-2xl: 36px;
-  --text-3xl: clamp(40px, 6vw, 76px);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-pop: cubic-bezier(0.2, 1.5, 0.4, 1);
   --dur-fast: 160ms;
   --dur-mid: 320ms;
   --dur-draw: 700ms;

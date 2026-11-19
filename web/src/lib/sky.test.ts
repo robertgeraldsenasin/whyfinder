@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closeness, colorAt, fromOklab, gradient, PALETTES, tier, TIERS, toOklab } from './sky';
+import { closeness, colorAt, fromOklab, gradient, migratePalette, PALETTES, tier, TIERS, toOklab } from './sky';
 
 describe('closeness', () => {
   it('is the square root of the score relative to the best game you do not own', () => {
@@ -30,22 +30,33 @@ describe('tiers', () => {
   });
 });
 
+describe('saved palettes', () => {
+  it('carry over from Starfall and drop unknown values', () => {
+    expect(migratePalette('gold-violet')).toBe('crimson-violet');
+    expect(migratePalette('gold')).toBe('crimson');
+    expect(migratePalette('spectrum')).toBe('spectrum');
+    expect(migratePalette('crimson')).toBe('crimson');
+    expect(migratePalette('neon')).toBeNull();
+    expect(migratePalette(undefined)).toBeNull();
+  });
+});
+
 describe('colours', () => {
   it('round-trip through OKLab', () => {
-    for (const hex of ['#000000', '#ffffff', '#f2c14e', '#8e6bf0', '#070b1e']) {
+    for (const hex of ['#000000', '#ffffff', '#d1173a', '#7b4dff', '#0b0710']) {
       expect(fromOklab(toOklab(hex))).toBe(hex);
     }
   });
 
   it('hit the stops exactly and clamp outside [0, 1]', () => {
-    expect(colorAt('gold-violet', 0)).toBe('#3b338f');
-    expect(colorAt('gold-violet', 1)).toBe('#f2b632');
-    expect(colorAt('gold', 2)).toBe(colorAt('gold', 1));
+    expect(colorAt('crimson-violet', 0)).toBe('#2b2166');
+    expect(colorAt('crimson-violet', 1)).toBe('#ff1f45');
+    expect(colorAt('crimson', 2)).toBe(colorAt('crimson', 1));
     expect(colorAt('spectrum', Number.NaN)).toBe(colorAt('spectrum', 0));
   });
 
-  it('get lighter as games get closer in the gold palette', () => {
-    const lightness = Array.from({ length: 11 }, (_, k) => toOklab(colorAt('gold', k / 10))[0]);
+  it('get lighter as games get closer in the crimson palette', () => {
+    const lightness = Array.from({ length: 11 }, (_, k) => toOklab(colorAt('crimson', k / 10))[0]);
     for (let k = 1; k < lightness.length; k++) expect(lightness[k]).toBeGreaterThan(lightness[k - 1]);
   });
 

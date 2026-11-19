@@ -65,6 +65,14 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Install
         run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Keep the build (for reviewing a branch without deploying it)
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist
+          retention-days: 5
       - name: Types and Svelte checks
         run: npm run check
       - name: Golden cross-check (the browser engine must equal the Python core)
@@ -73,6 +81,17 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: End-to-end and accessibility (Playwright + axe, both themes, desktop and phone)
         run: npm run e2e
+      - name: Screenshots of every view, desktop and phone
+        if: success() || failure()
+        run: npm run screens
+      - name: Keep the screenshots
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screens
+          path: web/screens/
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Keep the Playwright report
         if: failure()
         uses: actions/upload-artifact@v4

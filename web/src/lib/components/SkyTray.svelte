@@ -1,11 +1,12 @@
 <script lang="ts">
+  import { PIPS } from '../cards';
   import * as sfx from '../sfx';
   import { app } from '../state.svelte';
   import GameSearch from './GameSearch.svelte';
 
   const games = $derived(app.slice?.games ?? []);
   const label = $derived(
-    app.running ? 'Reading the sky' : app.result && !app.stale ? 'Your picks are up to date' : app.result ? 'Update my picks' : 'Find my next game',
+    app.running ? 'Shuffling the deck' : app.result && !app.stale ? 'Your picks are up to date' : app.result ? 'Update my picks' : 'Find my next game',
   );
 
   function find(): void {
@@ -24,7 +25,7 @@
     <ul class="mine" aria-label="Your games and hours played">
       {#each app.history as h (h.index)}
         <li>
-          <span class="star" aria-hidden="true"></span>
+          <svg class="star" viewBox="0 0 24 24" aria-hidden="true"><path d={PIPS.star} /></svg>
           <span class="title">{games[h.index]?.title}</span>
           <label class="hours">
             <span class="sr-only">Hours played in {games[h.index]?.title}</span>
@@ -63,7 +64,8 @@
     justify-content: space-between;
   }
   h2 {
-    font-size: var(--text-xl);
+    font-size: 22px;
+    line-height: 1;
   }
   .count {
     font-size: var(--text-xs);
@@ -75,28 +77,24 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
   }
   .mine li {
     display: grid;
-    grid-template-columns: 14px minmax(0, 1fr) auto auto;
+    grid-template-columns: 16px minmax(0, 1fr) auto auto;
     align-items: center;
     gap: var(--space-2);
-    padding: 7px 4px 5px 6px;
-    border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
-    animation: rise var(--dur-mid) var(--ease-out);
+    padding: 7px 2px 5px 2px;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+    animation: deal var(--dur-mid) var(--ease-pop);
   }
   .mine li:hover {
     background: color-mix(in srgb, var(--raised) 60%, transparent);
   }
   .star {
-    width: 7px;
-    height: 7px;
-    transform: rotate(45deg);
-    background: var(--starlight);
-    box-shadow:
-      0 0 6px 1px rgb(255 255 255 / 0.7),
-      0 0 14px 2px rgb(255 227 154 / 0.35);
+    width: 13px;
+    height: 13px;
+    fill: var(--bone);
+    filter: drop-shadow(0 0 4px rgb(247 239 230 / 0.6));
   }
   .title {
     overflow: hidden;
@@ -113,15 +111,15 @@
   .hours input {
     width: 58px;
     text-align: right;
-    border: 1px solid transparent;
+    border: var(--border);
     border-radius: 0;
-    background: color-mix(in srgb, var(--midnight) 60%, transparent);
+    background: var(--ink);
     color: var(--text);
     padding: 3px 6px;
   }
   .hours input:hover,
   .hours input:focus {
-    border-color: var(--line);
+    border-color: var(--crimson-text);
   }
   .remove {
     width: 28px;
@@ -141,15 +139,16 @@
     stroke-linecap: round;
   }
   .remove:hover {
-    color: var(--text);
+    color: var(--crimson-text);
     background: var(--raised);
   }
   .find {
+    margin-top: var(--space-1);
     padding: 14px 18px 12px;
-    font-size: var(--text-md);
+    font-size: 17px;
   }
   .note {
-    margin: 0;
+    margin: var(--space-1) 0 0;
     font-size: var(--text-xs);
     color: var(--muted);
   }

@@ -1,6 +1,6 @@
 # ADR-0017: Starfall: a celestial redesign with impact, evidence and sound
 
-- **Status:** Accepted (supersedes the palette, type and theme rules of ADR-0013; extends ADR-0016)
+- **Status:** Accepted; palette, type, frames and starfall visuals superseded by ADR-0018 (supersedes the palette, type and theme rules of ADR-0013; extends ADR-0016)
 - **Date:** 2026-11-17 (type and frames revised the same day, see Revision)
 - **Deciders:** Robert Gerald Senasin
 
