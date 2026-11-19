@@ -131,6 +131,7 @@ a crimson ribbon with forked ends sits beneath it: "Find your next game. Know wh
 | --- | --- |
 | Search | Combobox; the ticket on the title screen, a bone field in Your sky; adds a twinkle and a rose ring on the star |
 | Your sky | Your games with hours (the weight), remove, "Find my next game" |
+| Describe | "like Portal 2, co-op, under $20": titles join your sky, tags, price and years become filters (violet ticket chips you can remove), unknown words are said back; on the title screen it deals at once |
 | Your hand | Ranked list of ten mini cards (rank and suit on bone), title, closeness star and tier, "picked for variety"; rows are dealt in as each card lands; a suit key beneath |
 | Pick card | Bone card face: indices, Steam art (fallback plate), stamped tier, title, studio, year, price; then View on Steam; closeness scale; which suit and how much it carried; Because you love (exact shares, crimson co-play and violet graph parts); Players who also played X say (balloons); Other players say; Both communities talk about; What would change it; How it connects to your games |
 | Settings | Star colours, sound and volume, impact effects |

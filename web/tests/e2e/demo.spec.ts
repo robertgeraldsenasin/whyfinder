@@ -59,6 +59,26 @@ test('a preset sky flags picks kept for variety and shows what players say', asy
   await expect(page.getByRole('heading', { name: /^(Both communities talk about|Players talk about)$/ })).toBeVisible();
 });
 
+test('a description deals a hand that keeps every filter (FR-18, FR-23)', async ({ page }) => {
+  await ready(page);
+  await page.getByLabel('Or describe it').fill('like Portal 2, co-op, under $15, blorp');
+  await page.getByRole('button', { name: 'Apply' }).click();
+  await expect(picks(page).first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText(/Not understood: “blorp”/)).toBeVisible();
+  const chips = page.getByRole('list', { name: 'Filters' }).getByRole('button');
+  await expect(chips).toHaveCount(2);
+  await expect(page.getByRole('heading', { name: 'Because you love' })).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.facts span').last()).toHaveText(/^(Free|\$([0-9]|1[0-4])\.\d\d|\$15\.00)$/);
+
+  // A filter no game can pass: the hand is empty and says why.
+  await page.getByLabel('Describe what you want').fill('free, before 1999');
+  await page.getByRole('button', { name: 'Apply' }).click();
+  await page.getByRole('button', { name: /Update my picks/ }).click();
+  await expect(page.getByText(/No game among the 500 passes every filter/)).toBeVisible({ timeout: 15_000 });
+  await chips.filter({ hasText: /or earlier/ }).click();
+  await expect(chips).toHaveCount(2);
+});
+
 test('settings change the star colours and are remembered', async ({ page }) => {
   await ready(page);
   await page.getByRole('button', { name: 'Settings' }).click();

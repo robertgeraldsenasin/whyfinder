@@ -7,6 +7,8 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Describe what you want (FR-18, FR-23): "like Portal 2, co-op, under $20, after 2012" adds the named games to your sky and sets tag, price and release-year filters, shown as removable chips; anything not understood is said back. Filters remove games before the shortlist, so no pick can break one; a short or empty hand says which filters are responsible. The parser is deterministic (`web/src/lib/query.ts`) and keeps titles with commas whole.
+
 - Evaluation and the quality gate (M1: FR-04, FR-09, FR-19, FR-20):
   - baselines: popularity and item-kNN (cosine with shrinkage, top 100 per game), checked against the dense formula;
   - iALS, the latent-factor rival, hand-written with an exact Cholesky solver and a batched, warm-started conjugate-gradient solver; checked against the dense normal equations and the dense objective, and its loss falls every sweep;

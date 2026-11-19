@@ -5,7 +5,7 @@ import type { ModelFile, Slice } from './types';
 
 export type Request =
   | { id: number; type: 'init'; slice: Slice; model: ModelFile }
-  | { id: number; type: 'explain'; history: [number, number][]; beta?: number; theta?: number }
+  | { id: number; type: 'explain'; history: [number, number][]; beta?: number; theta?: number; allowed?: boolean[] | null }
   | { id: number; type: 'trace'; seeds: number[] }
   | { id: number; type: 'neighbours'; rows: number[] }
   | { id: number; type: 'verify' };

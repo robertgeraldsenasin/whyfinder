@@ -41,8 +41,8 @@ export class EngineClient {
     return r.info;
   }
 
-  async explain(history: [number, number][], beta?: number, theta?: number): Promise<Explained> {
-    const r = await this.call({ type: 'explain', history, beta, theta });
+  async explain(history: [number, number][], beta?: number, theta?: number, allowed?: boolean[] | null): Promise<Explained> {
+    const r = await this.call({ type: 'explain', history, beta, theta, allowed: allowed ?? null });
     if (r.type !== 'explained') throw new Error('unexpected reply');
     return r.result;
   }
