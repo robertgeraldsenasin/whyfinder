@@ -13,6 +13,7 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- iALS explanations (FR-11, #25): exact attributions for the rival and counterfactuals whose re-scoring uses Sherman–Morrison downdates instead of fresh solves, checked against a fresh solve to 1e-8 (`explain/ials.py`).
 - The REST API (FR-21, ADR-0019): `POST /recommend`, `POST /explain`, `GET /search`, `GET /healthz` and `GET /version`, serving the same model as the live demo, so the picks and their reasons agree.
   - a taste is liked Steam app IDs, a description in the demo's words, or both; the API's parser is the demo's twin and both are tested on the same cases;
   - `/explain` returns the exact attributions (EASE and graph parts), the irreducible counterfactual, the graph paths and template claims checked against the attributions;

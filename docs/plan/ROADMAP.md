@@ -51,7 +51,7 @@ gantt
 ## M2 · Explanations + variety (5 days) → `v0.2.0`
 
 - [ ] Exact attributions with EASE/PPR split (FR-10)
-- [ ] Counterfactuals: live greedy + offline exact; iALS Sherman–Morrison variant (FR-11, ADR-0012)
+- [x] Counterfactuals: live greedy + offline exact; iALS Sherman–Morrison variant (FR-11, ADR-0012)
 - [ ] DPP re-ranking + "kept for variety" flag (FR-12)
 - [ ] Graph paths (FR-13)
 - [x] Explanation checks in the gate (deletion, validity, minimality gap, sanity check)
