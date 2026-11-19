@@ -51,7 +51,7 @@ jobs:
           git worktree add /tmp/base "origin/${GITHUB_BASE_REF}"
           cd /tmp/base
           uv sync --frozen
-          if uv run whyfinder eval --help 2>/dev/null | grep -q -- '--gate'; then
+          if uv run python -c "import whyfinder.eval.harness" 2>/dev/null; then
             uv run whyfinder eval --data "$GITHUB_WORKSPACE/data/ci" --split valid --gate --out /tmp/base.json
           else
             echo "main has no whyfinder eval yet: this run becomes the baseline"
