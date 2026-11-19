@@ -1,0 +1,52 @@
+# Fixed-budget tuning on the validation split (docs/spec/07_EVALUATION.md). Manual: run it, read the
+# chosen values from the job summary, and record them in params.yaml in an ordinary PR (the quality
+# gate then checks the change). `data: full` runs the data pipeline on GitHub's runners first.
+name: tune
+
+on:
+  workflow_dispatch:
+    inputs:
+      data:
+        description: Tune on the pinned CI subsample (ci) or the full data (full)
+        type: choice
+        options: [full, ci]
+        default: full
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tune
+  cancel-in-progress: false
+
+jobs:
+  tune:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - name: Install
+        run: uv sync --frozen --group pipeline
+      - name: Data (CI subsample)
+        if: inputs.data == 'ci'
+        run: |
+          gh release download data-ci-v1 --repo "$GITHUB_REPOSITORY" --pattern 'data-ci-v1.tar.gz' --dir /tmp/ci
+          mkdir -p data && tar -xzf /tmp/ci/data-ci-v1.tar.gz -C data
+          echo "DATA=data/ci" >> "$GITHUB_ENV"
+      - name: Data (full pipeline up to the features)
+        if: inputs.data == 'full'
+        run: |
+          uv run whyfinder data fetch
+          uv run dvc repro features
+          echo "DATA=data/processed" >> "$GITHUB_ENV"
+      - name: Tune on validation
+        run: |
+          uv run whyfinder tune --data "$DATA" --out tune.json | tee tune.txt
+          { echo '## Tuning on validation'; echo '```'; cat tune.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          cat tune.json

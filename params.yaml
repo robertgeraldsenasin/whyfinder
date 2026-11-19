@@ -52,6 +52,15 @@ rag:
   bm25: {k1: 1.2, b: 0.75}
   hnsw: {M: 16, ef_construction: 200, ef_search: 64}
   rrf_k: 60
+tune:                     # fixed-budget grids searched on validation by `whyfinder tune`
+  ease_lambda: [100, 250, 500, 1000, 2000, 4000]
+  knn_shrinkage: [0, 10, 50, 200]
+  ials_reg: [0.1, 1.0, 10.0]
+  ials_alpha: [1.0, 5.0, 20.0]
+  blend_beta: [0.0, 0.25, 0.5, 0.75, 1.0]
+  dpp_theta: [1.0, 2.0, 3.0, 4.0, 6.0]
+  dpp_ndcg_budget: 0.005  # θ may cost at most this much NDCG@10 against the blend by score
+  max_users: 5000
 eval:
   k: 10
   bootstrap_resamples: 2000
