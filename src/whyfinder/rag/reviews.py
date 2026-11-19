@@ -16,10 +16,11 @@ import numpy as np
 from whyfinder.rag import bm25 as bm25_
 from whyfinder.rag import hnsw as hnsw_
 from whyfinder.rag import lsa as lsa_
+from whyfinder.rag.claims import MAX_QUOTE_WORDS, is_verbatim
 from whyfinder.rag.fuse import rrf
 from whyfinder.rag.text import chunk, tokenize
 
-MAX_QUOTE_WORDS = 25
+__all__ = ["MAX_QUOTE_WORDS", "Chunk", "Hit", "ReviewIndex", "build", "is_verbatim", "split"]
 
 
 @dataclass(frozen=True)
@@ -134,9 +135,3 @@ def build(
         ef_search=int(h["ef_search"]),
         rrf_k=int(p["rrf_k"]),
     )
-
-
-def is_verbatim(quote: str, text: str) -> bool:
-    """A quote is evidence only if it is a span of the chunk and at most 25 words long."""
-    words = quote.split()
-    return 0 < len(words) <= MAX_QUOTE_WORDS and " ".join(words) in " ".join(text.split())

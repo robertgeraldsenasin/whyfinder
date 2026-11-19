@@ -1,0 +1,186 @@
+"""Grounded generation (FR-16; ADR-0009): prompts, the cache, retries and the fallback."""
+
+from __future__ import annotations
+
+import json
+import threading
+from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from whyfinder.rag.claims import AttributionRef, Claim, Source, dump
+from whyfinder.rag.generate import (
+    Cache,
+    Cached,
+    CacheMissError,
+    LlmUnavailableError,
+    Ollama,
+    Pack,
+    explain,
+    prompt,
+    template,
+)
+
+QUOTE = "Tight, fast combat and a soundtrack that never lets up."
+PACK = Pack(
+    pick_title="Hades",
+    liked=(("3", "Celeste"), ("1", "Dead Cells"), ("2", "Hollow Knight")),
+    attributions=(("1", "Dead Cells", 0.5), ("2", "Hollow Knight", 0.3), ("3", "Celeste", 0.2)),
+    removed=(("1", "Dead Cells"),),
+    paths=("shares the tag Roguelite with Dead Cells",),
+    kept_for_variety=True,
+    quotes=(("c_7_0", "combat", QUOTE),),
+)
+SOURCE = Source(
+    pick_title="Hades",
+    attributions={"1": ("Dead Cells", 0.5), "2": ("Hollow Knight", 0.3), "3": ("Celeste", 0.2)},
+    chunks={"c_7_0": QUOTE},
+    removed=frozenset({"1"}),
+    catalogue=("Dead Cells", "Hollow Knight", "Celeste", "Hades", "Dota 2"),
+)
+GOOD = json.dumps(dump([Claim("Dead Cells carries it (50%).", (AttributionRef("1", 0.5),))]))
+BAD = json.dumps(dump([Claim("Dota 2 carries it (50%).", (AttributionRef("1", 0.5),))]))
+
+
+class Script:
+    model = "script"
+    digest = "sha256:script"
+
+    def __init__(self, *answers: str) -> None:
+        self.answers = list(answers)
+        self.prompts: list[str] = []
+
+    def complete(self, prompt: str, *, seed: int) -> str:
+        self.prompts.append(prompt)
+        return self.answers.pop(0)
+
+
+def test_the_prompt_lists_the_facts_and_the_ablation_hides_the_shares() -> None:
+    full = prompt(PACK)
+    for fact in ("Hades", '"share": 0.5', "c_7_0", QUOTE, "Roguelite", "kept_for_variety", '"1"'):
+        assert fact in full
+    bare = prompt(PACK, with_attributions=False)
+    assert bare.index("Celeste") < bare.index("Dead Cells") < bare.index("Hollow Knight")
+    assert '"share": 0.5' not in bare
+    assert QUOTE not in bare
+    again = prompt(PACK, feedback=["wrong share for Dead Cells"])
+    assert again.startswith(full)
+    assert "- wrong share for Dead Cells" in again
+
+
+def test_a_faithful_answer_is_kept() -> None:
+    backend = Script(GOOD)
+    out = explain(PACK, SOURCE, backend, lambda: template(PACK), seed=1)
+    assert out.used == "model"
+    assert not out.fallback_used
+    assert out.claims[0].text == "Dead Cells carries it (50%)."
+
+
+def test_a_rejected_answer_gets_one_retry_with_the_reasons() -> None:
+    backend = Script(BAD, GOOD)
+    out = explain(PACK, SOURCE, backend, lambda: template(PACK), seed=1)
+    assert out.used == "model-retry"
+    assert "Dota 2" in backend.prompts[1]
+    assert out.attempts[0].reasons
+
+
+def test_two_rejections_fall_back_to_the_template() -> None:
+    out = explain(PACK, SOURCE, Script("{}", BAD), lambda: template(PACK), seed=1)
+    assert out.used == "template"
+    assert out.fallback_used
+    assert "claim schema" in out.attempts[0].reasons[0]
+    assert out.claims == template(PACK)
+    empty = explain(PACK, SOURCE, Script('{"claims": []}', '{"claims": []}'), lambda: [], seed=1)
+    assert empty.attempts[0].reasons == ["no claims"]
+
+
+def test_the_template_is_faithful_and_within_limits() -> None:
+    from whyfinder.rag.claims import check
+
+    claims = template(PACK)
+    assert [c.text for c in claims] == [
+        "Dead Cells is the biggest driver of this pick (50%).",
+        "Hollow Knight adds 30%.",
+        f'Players of Hades mention combat: "{QUOTE}"',
+    ]
+    assert check(claims, SOURCE) == []
+    small = Pack(**{**PACK.__dict__, "attributions": (("1", "Dead Cells", 0.95), ("2", "B", 0.05))})
+    assert len([c for c in template(small) if isinstance(c.evidence[0], AttributionRef)]) == 1
+
+
+def test_the_cache_replays_and_refuses_misses(tmp_path: Path) -> None:
+    path = tmp_path / "cache.jsonl"
+    filling = Cached(Cache.load(path), "script", "sha256:script", inner=Script(GOOD))
+    assert filling.complete("p", seed=3) == GOOD
+    filling.cache.save()
+    replay = Cached(Cache.load(path), "script", "sha256:script")
+    assert replay.complete("p", seed=3) == GOOD
+    with pytest.raises(CacheMissError, match="no cached generation"):
+        replay.complete("p", seed=4)
+    other_model = Cached(Cache.load(path), "script", "sha256:other")
+    with pytest.raises(CacheMissError):
+        other_model.complete("p", seed=3)
+    row = json.loads(path.read_text().splitlines()[0])
+    assert set(row) == {"key", "model", "digest", "seed", "prompt_sha256", "response"}
+    Cache(tmp_path / "empty.jsonl").save()
+    assert (tmp_path / "empty.jsonl").read_text() == ""
+
+
+@pytest.fixture
+def server() -> Iterator[tuple[str, list[dict[str, Any]]]]:
+    seen: list[dict[str, Any]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args: object) -> None:
+            return
+
+        def reply(self, body: dict[str, Any]) -> None:
+            raw = json.dumps(body).encode()
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+
+        def do_GET(self) -> None:
+            self.reply({"models": [{"name": "tiny:latest", "digest": "abc123"}]})
+
+        def do_POST(self) -> None:
+            body = json.loads(self.rfile.read(int(self.headers["content-length"])))
+            seen.append(body)
+            self.reply({"response": GOOD})
+
+    httpd = HTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{httpd.server_port}", seen
+    finally:
+        httpd.shutdown()
+
+
+def test_ollama_asks_for_schema_constrained_deterministic_output(
+    server: tuple[str, list[dict[str, Any]]],
+) -> None:
+    url, seen = server
+    llm = Ollama("tiny", url=url)
+    assert llm.digest == "abc123"
+    assert llm.complete("hello", seed=7) == GOOD
+    sent = seen[0]
+    assert sent["model"] == "tiny"
+    assert sent["stream"] is False
+    assert sent["options"]["temperature"] == 0
+    assert sent["options"]["seed"] == 7
+    assert sent["format"]["required"] == ["claims"]
+    with pytest.raises(LlmUnavailableError, match="not pulled"):
+        _ = Ollama("missing", url=url).digest
+
+
+def test_ollama_reports_an_unreachable_server() -> None:
+    with pytest.raises(LlmUnavailableError):
+        Ollama("tiny", url="http://127.0.0.1:9", timeout=0.5).complete("x", seed=1)
+    with pytest.raises(LlmUnavailableError, match="not an HTTP URL"):
+        Ollama("tiny", url="file:///etc/passwd").complete("x", seed=1)

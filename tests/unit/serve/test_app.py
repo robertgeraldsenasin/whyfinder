@@ -12,13 +12,10 @@ pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
 
 from tests.unit.serve.conftest import ROOT
-from whyfinder.serve import schemas as s
 from whyfinder.serve.app import (
     MAX_BODY,
     PROBLEM,
     RateLimiter,
-    check_claims,
-    claims_for,
     create_app,
 )
 from whyfinder.serve.model import Filters, ServedModel
@@ -267,59 +264,6 @@ def test_the_rate_limit_is_per_client_and_per_minute(served: ServedModel, liked:
     assert c.get("/healthz").status_code == 200
 
 
-def test_the_checker_rejects_claims_that_do_not_match_the_attributions() -> None:
-    rows = [
-        s.Attribution(
-            game_id="1", title="A", contribution=0.6, share=0.6, ease_part=0.4, ppr_part=0.2
-        ),
-        s.Attribution(
-            game_id="2", title="B", contribution=0.4, share=0.4, ease_part=0.1, ppr_part=0.3
-        ),
-    ]
-    claims = claims_for(rows)
-    assert [c.text for c in claims] == [
-        "A is the biggest driver of this pick (60%).",
-        "B adds 40%.",
-    ]
-    assert check_claims(claims, rows).passed
-    wrong_share = [
-        s.Claim(
-            text="A drives 60%.",
-            evidence=[s.AttributionEvidence(type="attribution", game_id="1", share=0.5)],
-        )
-    ]
-    outsider = [
-        s.Claim(
-            text="C drives it.",
-            evidence=[s.AttributionEvidence(type="attribution", game_id="9", share=0.6)],
-        )
-    ]
-    unstated = [
-        s.Claim(
-            text="A matters.",
-            evidence=[s.AttributionEvidence(type="attribution", game_id="1", share=0.6)],
-        )
-    ]
-    bare = [s.Claim(text="Trust me.", evidence=[])]
-    for bad in (wrong_share, outsider, unstated, bare):
-        checked = check_claims(bad, rows)
-        assert not checked.passed
-        assert checked.reasons
-
-
-def test_a_small_second_reason_is_left_out() -> None:
-    rows = [
-        s.Attribution(
-            game_id="1", title="A", contribution=0.95, share=0.95, ease_part=0.5, ppr_part=0.45
-        ),
-        s.Attribution(
-            game_id="2", title="B", contribution=0.05, share=0.05, ease_part=0.0, ppr_part=0.05
-        ),
-    ]
-    assert len(claims_for(rows)) == 1
-    assert claims_for([]) == []
-
-
 def test_the_committed_openapi_document_matches_the_code(client: TestClient) -> None:
     committed = json.loads((ROOT / "docs" / "openapi.json").read_text())
     assert client.get("/openapi.json").json() == committed, (
@@ -333,56 +277,114 @@ def test_a_body_that_is_not_json_is_a_bad_request(client: TestClient) -> None:
         assert is_problem(r, 400)["title"] == "Bad request"
 
 
-def test_the_checker_rejects_quotes_that_are_not_evidence() -> None:
-    from whyfinder.rag.reviews import Chunk
+class Fake:
+    """A stand-in model server: answers from a script, one answer per call."""
 
-    text = "Tight, fast combat and a soundtrack that never lets up."
-    chunks = {
-        "c_1_0": Chunk("c_1_0", game=7, text=text, hours=3.0, year=2016),
-        "c_2_0": Chunk("c_2_0", game=8, text="Slow.", hours=1.0, year=2016),
-    }
+    model = "fake"
 
-    def claim(quote: str, chunk_id: str = "c_1_0", said: str | None = None) -> list[s.Claim]:
-        evidence: list[s.Evidence] = [
-            s.ReviewEvidence(type="review", chunk_id=chunk_id, quote=quote)
-        ]
-        return [
-            s.Claim(text=said if said is not None else f'Players say "{quote}"', evidence=evidence)
-        ]
+    def __init__(self, answers: list[str], *, down: bool = False) -> None:
+        self.answers = list(answers)
+        self.prompts: list[str] = []
+        self.down = down
 
-    assert check_claims(claim("fast combat"), [], chunks=chunks, pick=7).passed
-    long_quote = " ".join(["word"] * 26)
-    long_chunks = {"c_1_0": Chunk("c_1_0", game=7, text=long_quote, hours=1.0, year=None)}
-    failures = [
-        (claim("fast combat", chunk_id="c_9_9"), chunks, "does not exist"),
-        (claim("Slow.", chunk_id="c_2_0"), chunks, "another game"),
-        (claim("fast, tight combat"), chunks, "verbatim"),
-        (claim("fast combat", said="Players like it."), chunks, "carry its quote"),
-        (claim(long_quote), long_chunks, "verbatim"),
-    ]
-    for claims, known, reason in failures:
-        checked = check_claims(claims, [], chunks=known, pick=7)
-        assert not checked.passed
-        assert reason in checked.reasons[0]
+    @property
+    def digest(self) -> str:
+        if self.down:
+            from whyfinder.rag.generate import LlmUnavailableError
+
+            raise LlmUnavailableError("connection refused")
+        return "sha256:fake"
+
+    def complete(self, prompt: str, *, seed: int) -> str:
+        self.prompts.append(prompt)
+        if self.down:
+            from whyfinder.rag.generate import LlmUnavailableError
+
+            raise LlmUnavailableError("connection refused")
+        return self.answers.pop(0)
 
 
-def test_the_checker_rejects_games_named_outside_the_pick_and_history() -> None:
-    from whyfinder.serve.app import unlisted_games
+def first_pick(c: TestClient, liked: list[str]) -> dict[str, Any]:
+    item: dict[str, Any] = c.post("/recommend", json={"liked_game_ids": liked}).json()["items"][0]
+    return item
 
-    catalogue = ["Portal", "Portal 2", "Dota 2", "Rust"]
-    allowed = {"Portal 2", "Team Fortress 2"}
-    assert unlisted_games("Portal 2 is the biggest driver.", [], catalogue, allowed) == []
-    assert unlisted_games("Like Dota 2, it rewards teamwork.", [], catalogue, allowed) == ["Dota 2"]
-    quoted = 'Players say "better than Dota 2".'
-    assert unlisted_games(quoted, ["better than Dota 2"], catalogue, allowed) == []
-    assert unlisted_games("Trust me.", [], catalogue, allowed) == []
-    rows = [
-        s.Attribution(
-            game_id="1", title="Portal 2", contribution=1.0, share=1.0, ease_part=1.0, ppr_part=0.0
-        )
-    ]
-    evidence: list[s.Evidence] = [s.AttributionEvidence(type="attribution", game_id="1", share=1.0)]
-    claim = s.Claim(text="Portal 2 (100%) and Dota 2 drive it.", evidence=evidence)
-    checked = check_claims([claim], rows, catalogue=catalogue, allowed=allowed)
-    assert not checked.passed
-    assert "Dota 2" in checked.reasons[0]
+
+def test_a_faithful_generation_is_served_as_is(full: ServedModel, liked: list[str]) -> None:
+    base = TestClient(create_app(full, limiter=RateLimiter(OPEN)))
+    pick = first_pick(base, liked)
+    top = base.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
+    a = top["attributions"][0]
+    said = f"{a['title']} carries this pick ({round(a['share'] * 100)}%)."
+    answer = json.dumps(
+        {
+            "claims": [
+                {
+                    "text": said,
+                    "evidence": [
+                        {"type": "attribution", "game_id": a["game_id"], "share": a["share"]}
+                    ],
+                }
+            ]
+        }
+    )
+    fake = Fake([answer])
+    c = TestClient(create_app(full, limiter=RateLimiter(OPEN), llm=fake))
+    e = c.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
+    assert [cl["text"] for cl in e["claims"]] == [said]
+    assert e["checker"] == {"passed": True, "fallback_used": False, "reasons": []}
+    assert len(fake.prompts) == 1
+    assert pick["title"] in fake.prompts[0]
+    assert c.get("/healthz").json()["llm"] == "ok"
+
+
+def test_an_unfaithful_generation_is_retried_then_replaced(
+    full: ServedModel, liked: list[str]
+) -> None:
+    pick = first_pick(TestClient(create_app(full, limiter=RateLimiter(OPEN))), liked)
+    wrong = json.dumps(
+        {
+            "claims": [
+                {
+                    "text": "Dota 2 is why (90%).",
+                    "evidence": [{"type": "attribution", "game_id": liked[0], "share": 0.9}],
+                }
+            ]
+        }
+    )
+    fake = Fake([wrong, "not json"])
+    c = TestClient(create_app(full, limiter=RateLimiter(OPEN), llm=fake))
+    e = c.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
+    assert e["checker"]["passed"]
+    assert e["checker"]["fallback_used"]
+    assert any("wrong share" in r for r in e["checker"]["reasons"])
+    assert any("claim schema" in r for r in e["checker"]["reasons"])
+    assert "Your last answer was rejected" in fake.prompts[1]
+    assert "is the biggest driver of this pick" in e["claims"][0]["text"]
+
+
+def test_a_model_server_that_is_down_degrades_to_the_template(
+    full: ServedModel, liked: list[str]
+) -> None:
+    c = TestClient(create_app(full, limiter=RateLimiter(OPEN), llm=Fake([], down=True)))
+    pick = first_pick(c, liked)
+    e = c.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
+    assert e["checker"]["passed"]
+    assert e["checker"]["fallback_used"]
+    assert e["checker"]["reasons"][0].startswith("llm unavailable")
+    health = c.get("/healthz").json()
+    assert (health["status"], health["llm"]) == ("degraded", "down")
+
+
+def test_counterfactual_evidence_round_trips_through_the_api_types() -> None:
+    from whyfinder.rag import claims as rc
+    from whyfinder.serve.app import to_api, to_rag
+
+    claim = rc.Claim(
+        "Without A and B it drops.",
+        (
+            rc.CounterfactualRef(("1", "2")),
+            rc.AttributionRef("1", 0.5),
+            rc.ReviewRef("c_1_0", "fun"),
+        ),
+    )
+    assert to_rag(to_api(claim)) == claim

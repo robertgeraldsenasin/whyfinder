@@ -498,3 +498,68 @@ def serve_openapi(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text)
     typer.echo(f"wrote {out}")
+
+
+rag_app = typer.Typer(help="Grounded explanations (docs/spec/06_RAG.md).", no_args_is_help=True)
+app.add_typer(rag_app, name="rag")
+LLM_CACHE = Path("data/llm/cache.jsonl")
+RAG_EVAL = Path("results/validation/rag-eval.json")
+
+
+@rag_app.command("eval")
+def rag_eval(
+    mode: Annotated[
+        str, typer.Option(help="replay: answers from the cache only (CI); fill: ask the model.")
+    ] = "replay",
+    model_name: Annotated[str, typer.Option("--model", help="Ollama model.")] = "qwen2.5:1.5b",
+    url: Annotated[str, typer.Option(help="Ollama server.")] = "http://127.0.0.1:11434",
+    cases: Annotated[int, typer.Option(help="Picks to explain.")] = 60,
+    cache: Annotated[Path, typer.Option(help="Generation cache (JSON lines).")] = LLM_CACHE,
+    out: Annotated[Path, typer.Option(help="Where the report goes.")] = RAG_EVAL,
+    check: Annotated[bool, typer.Option(help="Fail if the report differs from `out`.")] = False,
+    slice_path: SliceOption = WEB_SLICE,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Explain seeded sample picks with the local model and measure faithfulness (FR-16, FR-17)."""
+    import json
+
+    from whyfinder.rag.evaluate import Case, run
+    from whyfinder.rag.generate import Cache, Cached, Ollama, template
+    from whyfinder.serve import grounding
+    from whyfinder.serve.model import ServedModel
+
+    if mode not in ("replay", "fill"):
+        raise typer.BadParameter("mode is replay or fill")
+    store = Cache.load(cache)
+    if mode == "fill":
+        llm = Ollama(model_name, url=url)
+        backend = Cached(store, model_name, llm.digest, inner=llm)
+    else:
+        digests = {row["digest"] for row in store.entries.values() if row["model"] == model_name}
+        if len(digests) != 1:
+            typer.echo(
+                f"{cache} has no single digest for {model_name}; run with --mode fill", err=True
+            )
+            raise typer.Exit(1)
+        backend = Cached(store, model_name, digests.pop())
+    p = load_params(params)
+    served = ServedModel.load(slice_path, params, slice_path.parent / "reviews.json")
+    seed = param(p, "seed", int)
+    sample = []
+    for history, explanation in grounding.sample(served, cases, seed=seed):
+        pack, source = grounding.facts(served, history, explanation)
+        sample.append(Case(pack, source, lambda pack=pack: template(pack)))
+    report = run(sample, backend, seed=seed)
+    text = json.dumps(report, indent=2, sort_keys=True) + "\n"
+    if mode == "fill":
+        store.save()
+    if check:
+        if not out.exists() or out.read_text() != text:
+            typer.echo(text)
+            typer.echo(f"{out} does not match the replayed report", err=True)
+            raise typer.Exit(1)
+        typer.echo(f"{out} matches the replayed report")
+        return
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text)
+    typer.echo(text)

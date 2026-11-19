@@ -12,10 +12,9 @@ pass through the same checker; until then `checker.fallback_used` is true.
 from __future__ import annotations
 
 import os
-import re
 import time
 from collections.abc import Callable, Mapping
-from typing import Annotated, Any, cast
+from typing import Annotated, Any, Literal, cast
 
 from fastapi import FastAPI, Query
 from fastapi.exceptions import RequestValidationError
@@ -26,7 +25,15 @@ from starlette.requests import Request
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from whyfinder import __version__
-from whyfinder.rag.reviews import Chunk, is_verbatim
+from whyfinder.rag import claims as rc
+from whyfinder.rag.generate import (
+    Backend,
+    CacheMissError,
+    LlmUnavailableError,
+    template,
+)
+from whyfinder.rag.generate import explain as generate
+from whyfinder.serve import grounding
 from whyfinder.serve import schemas as s
 from whyfinder.serve.model import MODEL_VERSION, Filters, ServedModel
 from whyfinder.serve.query import parse_query
@@ -126,118 +133,39 @@ class Guard:
         await self.app(scope, replay, send)
 
 
-def claims_for(attributions: list[s.Attribution]) -> list[s.Claim]:
-    """Template sentences: the largest positive contribution, and the second when it matters."""
-    positive = [a for a in attributions if a.contribution > 0]
-    out: list[s.Claim] = []
-    for n, a in enumerate(positive[:2]):
-        if n == 1 and a.share < 0.1:
-            break
-        pct = f"{round(a.share * 100)}%"
-        text = (
-            f"{a.title} is the biggest driver of this pick ({pct})."
-            if n == 0
-            else f"{a.title} adds {pct}."
-        )
-        evidence: list[s.Evidence] = [
-            s.AttributionEvidence(type="attribution", game_id=a.game_id, share=a.share)
-        ]
-        out.append(s.Claim(text=text, evidence=evidence))
-    return out
+def to_api(claim: rc.Claim) -> s.Claim:
+    evidence: list[s.Evidence] = []
+    for e in claim.evidence:
+        if isinstance(e, rc.AttributionRef):
+            evidence.append(
+                s.AttributionEvidence(type="attribution", game_id=e.game_id, share=e.share)
+            )
+        elif isinstance(e, rc.ReviewRef):
+            evidence.append(s.ReviewEvidence(type="review", chunk_id=e.chunk_id, quote=e.quote))
+        else:
+            evidence.append(
+                s.CounterfactualEvidence(
+                    type="counterfactual", removed_game_ids=list(e.removed_game_ids)
+                )
+            )
+    return s.Claim(text=claim.text, evidence=evidence)
 
 
-def review_claims(model: ServedModel, pick: int, source: int, limit: int = 2) -> list[s.Claim]:
-    """For each aspect the pick shares with its top liked game, the best review of the pick that
-    names it (BM25 must match: a quote only counts if it mentions the aspect). Distinct quotes."""
-    if model.reviews is None:
-        return []
-    index = model.reviews
-    out: list[s.Claim] = []
-    used: set[int] = set()
-    for aspect in model.aspects(pick, source):
-        hit = next(
-            (
-                h
-                for h in index.search(aspect, 5, game=pick)
-                if h.bm25_rank is not None and h.chunk not in used
-            ),
-            None,
-        )
-        if hit is None:
-            continue
-        used.add(hit.chunk)
-        chunk = index.chunks[hit.chunk]
-        text = f'Players of {model.title(pick)} mention {aspect}: "{chunk.text}"'
-        evidence: list[s.Evidence] = [
-            s.ReviewEvidence(type="review", chunk_id=chunk.chunk_id, quote=chunk.text)
-        ]
-        out.append(s.Claim(text=text, evidence=evidence))
-        if len(out) == limit:
-            break
-    return out
+def to_rag(claim: s.Claim) -> rc.Claim:
+    evidence: list[rc.Evidence] = []
+    for e in claim.evidence:
+        if isinstance(e, s.ReviewEvidence):
+            evidence.append(rc.ReviewRef(e.chunk_id, e.quote))
+        elif isinstance(e, s.CounterfactualEvidence):
+            evidence.append(rc.CounterfactualRef(tuple(e.removed_game_ids)))
+        else:
+            evidence.append(rc.AttributionRef(e.game_id, e.share))
+    return rc.Claim(claim.text, tuple(evidence))
 
 
-def check_claims(
-    claims: list[s.Claim],
-    attributions: list[s.Attribution],
-    *,
-    chunks: dict[str, Chunk] | None = None,
-    pick: int | None = None,
-    catalogue: list[str] | None = None,
-    allowed: set[str] | None = None,
-) -> s.Checker:
-    """FR-17. Attribution claims cite a liked game and state its title and share exactly; review
-    claims cite a chunk of the pick's reviews and quote it verbatim, 25 words at most; outside its
-    quotes, a claim names no game but the pick and the liked games."""
-    by_id = {a.game_id: a for a in attributions}
-    known = chunks or {}
-    reasons: list[str] = []
-    for claim in claims:
-        if not claim.evidence:
-            reasons.append(f"no evidence for: {claim.text}")
-        if catalogue is not None:
-            quotes = [e.quote for e in claim.evidence if isinstance(e, s.ReviewEvidence)]
-            stray = unlisted_games(claim.text, quotes, catalogue, allowed or set())
-            reasons += [f"names a game outside the pick and the history: {g}" for g in stray]
-        for e in claim.evidence:
-            if isinstance(e, s.ReviewEvidence):
-                c = known.get(e.chunk_id)
-                if c is None:
-                    reasons.append(f"cites a review chunk that does not exist: {e.chunk_id}")
-                elif pick is not None and c.game != pick:
-                    reasons.append(f"cites a review of another game: {e.chunk_id}")
-                elif not is_verbatim(e.quote, c.text):
-                    reasons.append(f"the quote is not a verbatim span of {e.chunk_id}")
-                elif e.quote not in claim.text:
-                    reasons.append(f"the sentence does not carry its quote from {e.chunk_id}")
-                continue
-            a = by_id.get(e.game_id)
-            if a is None:
-                reasons.append(f"cites a game outside the history: {e.game_id}")
-            elif abs(a.share - e.share) > 1e-9:
-                reasons.append(f"wrong share for {a.title}")
-            elif a.title not in claim.text or f"{round(a.share * 100)}%" not in claim.text:
-                reasons.append(f"the sentence does not state {a.title}'s share")
-    return s.Checker(passed=not reasons, fallback_used=True, reasons=reasons)
-
-
-def unlisted_games(
-    text: str, quotes: list[str], catalogue: list[str], allowed: set[str]
-) -> list[str]:
-    """Catalogue titles a sentence names, outside its quotes, that are not allowed. Allowed titles
-    are blanked first, longest first, so "Portal 2" never reads as "Portal"."""
-    rest = text
-    for quote in quotes:
-        rest = rest.replace(quote, " ")
-    for title in sorted(allowed, key=len, reverse=True):
-        rest = re.sub(rf"(?<!\w){re.escape(title)}(?!\w)", " ", rest)
-    return [
-        title
-        for title in catalogue
-        if title not in allowed
-        and len(title) > 3
-        and re.search(rf"(?<!\w){re.escape(title)}(?!\w)", rest)
-    ]
+def check_claims(claims: list[s.Claim], source: rc.Source) -> list[str]:
+    """FR-17 on the API's claims (`rag.claims.check`)."""
+    return rc.check([to_rag(c) for c in claims], source)
 
 
 Responses = dict[int | str, dict[str, Any]]
@@ -285,8 +213,14 @@ def problem_openapi(app: FastAPI) -> dict[str, Any]:
 
 
 def create_app(
-    model: ServedModel, *, git_sha: str | None = None, limiter: RateLimiter | None = None
+    model: ServedModel,
+    *,
+    git_sha: str | None = None,
+    limiter: RateLimiter | None = None,
+    llm: Backend | None = None,
 ) -> FastAPI:
+    """The API over a served model. With `llm`, explanations are generated by that model, checked,
+    retried once and otherwise replaced by the template sentences (06_RAG)."""
     app = FastAPI(
         title="Whyfinder API",
         version=__version__,
@@ -295,8 +229,7 @@ def create_app(
     app.openapi = lambda: problem_openapi(app)  # type: ignore[method-assign]
     app.add_middleware(Guard, limiter=limiter or RateLimiter(LIMITS))
     sha = git_sha or os.environ.get("WHYFINDER_GIT_SHA", "unknown")
-    chunks = {c.chunk_id: c for c in model.reviews.chunks} if model.reviews is not None else {}
-    catalogue = [model.title(i) for i in range(len(model.ids))]
+    seed = int(model.p.get("seed", 0))
 
     @app.exception_handler(HTTPException)
     async def http_problem(_: Request, exc: HTTPException) -> JSONResponse:
@@ -393,10 +326,19 @@ def create_app(
             raise HTTPException(409, "the game to explain is one of the liked games")
         e = model.explain(history, pick, filters=filters)
         rows = attribution_rows(history, pick)
-        top = next((r for r in rows if r.contribution > 0), None)
-        claims = claims_for(rows)
-        if top is not None:
-            claims += review_claims(model, pick, model.index[int(top.game_id)])
+        pack, source = grounding.facts(model, history, e)
+        rejected: list[str] = []
+        if llm is None:
+            final, fallback = template(pack), True
+        else:
+            try:
+                outcome = generate(pack, source, llm, lambda: template(pack), seed=seed)
+                final, fallback = outcome.claims, outcome.fallback_used
+                rejected = [r for a in outcome.attempts for r in a.reasons]
+            except (LlmUnavailableError, CacheMissError) as exc:
+                final, fallback, rejected = template(pack), True, [f"llm unavailable: {exc}"]
+        claims = [to_api(c) for c in final]
+        reasons = check_claims(claims, source)
         return s.ExplainOut(
             game_id=str(model.ids[pick]),
             title=model.title(pick),
@@ -419,13 +361,8 @@ def create_app(
             ],
             kept_for_variety=e.kept_for_variety,
             claims=claims,
-            checker=check_claims(
-                claims,
-                rows,
-                chunks=chunks,
-                pick=pick,
-                catalogue=catalogue,
-                allowed={model.title(pick), *(r.title for r in rows)},
+            checker=s.Checker(
+                passed=not reasons, fallback_used=fallback, reasons=reasons or rejected
             ),
             model_version=MODEL_VERSION,
         )
@@ -476,12 +413,16 @@ def create_app(
 
     @app.get("/healthz", response_model=s.Health, responses=RATE_ERRORS)
     def health() -> s.Health:
-        """The model is loaded; the review index is built if the server was given reviews. The LLM
-        stays off: claims are template sentences checked by the claim checker."""
-        built = model.reviews is not None
-        return s.Health(
-            status="ok", artifacts="ok", index="ok" if built else "not_built", llm="off"
-        )
+        """The model is loaded; the review index is built if the server was given reviews; the LLM
+        is off, ok or down (then explanations fall back to the template sentences)."""
+        index: Literal["ok", "not_built"] = "ok" if model.reviews is not None else "not_built"
+        if llm is None:
+            return s.Health(status="ok", artifacts="ok", index=index, llm="off")
+        try:
+            _ = llm.digest
+        except LlmUnavailableError:
+            return s.Health(status="degraded", artifacts="ok", index=index, llm="down")
+        return s.Health(status="ok", artifacts="ok", index=index, llm="ok")
 
     @app.get("/version", response_model=s.Version, responses=RATE_ERRORS)
     def version() -> s.Version:
