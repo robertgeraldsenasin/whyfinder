@@ -1,0 +1,33 @@
+# The HNSW benchmark (FR-15; 04_ALGORITHMS.md §A9): our pure-Python graph against hnswlib, the
+# reference C++ implementation, on the demo's review quotes and on random vectors. hnswlib is pulled
+# in for this job only (`uv run --with`), so it never enters the lock or the image.
+name: bench
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/bench_hnsw.py"
+      - "src/whyfinder/rag/hnsw.py"
+      - ".github/workflows/bench.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hnsw:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install
+        run: uv sync --frozen --group dev
+      - name: Benchmark
+        run: |
+          uv run --frozen --with hnswlib python scripts/bench_hnsw.py --out bench.json | tee bench.md
+          { echo '## HNSW: Whyfinder vs hnswlib'; echo; cat bench.md; } >> "$GITHUB_STEP_SUMMARY"
+          cat bench.json
