@@ -37,13 +37,14 @@ gantt
 
 ## M1 · Glass-box core + gate (7 days) → `v0.1.0` (first resume bullet)
 
-- [ ] Popularity, item-kNN (FR-04)
+- [x] Popularity, item-kNN (FR-04)
 - [ ] EASE^R with item cap (FR-05, ADR-0004)
 - [ ] Game graph + PPR forward push + Π (FR-06, FR-07)
 - [ ] Blend M, scoring, β tuning (FR-08)
-- [ ] iALS rival with oracle test (FR-09)
-- [ ] Metrics, per-user arrays, bootstrap, Holm; `whyfinder eval` (FR-19)
-- [ ] `quality-gate.yml` live with PR comment (FR-20); prove it with a deliberately worse PR and keep the screenshot
+- [x] iALS rival with oracle test (FR-09): dense normal equations and objective as oracles; the `implicit` comparison waits for the dev dependency
+- [x] Metrics, per-user arrays, bootstrap, Holm; `whyfinder eval` (FR-19)
+- [x] `quality-gate.yml` live with PR comment (FR-20)
+- [ ] Prove the gate with a deliberately worse PR and keep the screenshot
 - [ ] README tables from `results/`; ADR-0006 fixed from baselines
 - [ ] Demo track: EASE^R, graph + PPR push and the blend land in Python and TypeScript together, golden-matched; "Under the hood" steps 1–4 live
 

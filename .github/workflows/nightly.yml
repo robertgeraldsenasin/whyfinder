@@ -1,10 +1,11 @@
-# Enabled in M1: replace `on: workflow_dispatch` with the schedule below.
+# Nightly: a dependency audit and the full validation report on the CI subsample (every model, the
+# whole item cap), so drift shows up even on days without a model PR.
 name: nightly
 
 on:
   workflow_dispatch:
-  # schedule:
-  #   - cron: "17 19 * * *"   # 03:17 Manila
+  schedule:
+    - cron: "17 19 * * *"   # 03:17 Manila
 
 permissions:
   contents: read
@@ -22,5 +23,13 @@ jobs:
       - run: uv sync --frozen --group dev
       - name: Dependency audit
         run: uvx pip-audit --strict || true   # becomes blocking in M1
-      - name: Validation report and iALS stability over 3 seeds
-        run: echo "TODO(M1) uv run whyfinder eval --split valid --seeds 3"
+      - name: Fetch the pinned CI subsample (data-ci-v1)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download data-ci-v1 --repo "$GITHUB_REPOSITORY" --pattern 'data-ci-v1.tar.gz' --dir /tmp/ci
+          mkdir -p data && tar -xzf /tmp/ci/data-ci-v1.tar.gz -C data
+      - name: Validation report (every model, full item cap)
+        run: |
+          uv run whyfinder eval --data data/ci --split valid --out eval-valid.json | tee -a "$GITHUB_STEP_SUMMARY"
+          uv run whyfinder eval --data data/ci --split cold-valid --models popularity,itemknn,ease,blend,whyfinder --out eval-cold.json | tee -a "$GITHUB_STEP_SUMMARY"

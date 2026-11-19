@@ -7,6 +7,14 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Evaluation and the quality gate (M1: FR-04, FR-09, FR-19, FR-20):
+  - baselines: popularity and item-kNN (cosine with shrinkage, top 100 per game), checked against the dense formula;
+  - iALS, the latent-factor rival, hand-written with an exact Cholesky solver and a batched, warm-started conjugate-gradient solver; checked against the dense normal equations and the dense objective, and its loss falls every sweep;
+  - per-user metrics: NDCG@10, Recall@20, MRR, catalogue coverage@10, intra-list diversity@10 and average recommendation popularity@10;
+  - paired bootstrap of the mean difference with a non-inferiority p-value, and Holm–Bonferroni across the gated metrics;
+  - `whyfinder eval` (every model on the same held-out users; the test split refuses to run outside a release), `whyfinder gate` and `whyfinder results`;
+  - `quality-gate.yml` runs on every model PR against main on the CI subsample and keeps one PR comment up to date; `release.yml` scores the sealed test set on a tag; the nightly job reports validation numbers; the data pipeline gains an `eval_valid` stage.
+
 - Unmasked, the demo's new design language (ADR-0018, FR-22):
   - a stage at night in crimson, bone and ink, with violet for the graph; Anton poster type, Prata for names, Comic Relief for what players wrote;
   - the ten picks are dealt as a hand of cards, Ace to 10, and each card's suit says which part of the model carried it (hearts: players in common; clubs: tags and studios), computed from the exact attributions;
