@@ -14,6 +14,7 @@ and [Semantic Versioning](https://semver.org/).
   - paired bootstrap of the mean difference with a non-inferiority p-value, and Holm–Bonferroni across the gated metrics;
   - `whyfinder eval` (every model on the same held-out users; the test split refuses to run outside a release), `whyfinder gate` and `whyfinder results`;
   - `whyfinder tune` and the manual `tune.yml` workflow: fixed-budget grids on validation for EASE^R's λ, item-kNN's shrinkage, iALS's regularisation and confidence, the blend's β and DPP's θ (the highest diversity within 0.005 NDCG@10 of the blend);
+  - explanation checks on each user's first pick (05_EXPLAINABILITY.md): additivity and counterfactual validity must hold for every user; the deletion test (removing the three most-attributed games pushes the pick down further than three random ones) and the greedy-versus-exact minimality gap are gated non-inferior; a shuffled-model rank correlation is reported as a sanity check;
   - `quality-gate.yml` runs on every model PR against main on the CI subsample and keeps one PR comment up to date; `release.yml` scores the sealed test set on a tag; the nightly job reports validation numbers; the data pipeline gains an `eval_valid` stage.
 
 - Unmasked, the demo's new design language (ADR-0018, FR-22):

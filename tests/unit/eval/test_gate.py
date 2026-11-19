@@ -64,3 +64,50 @@ def test_reports_on_different_users_cannot_be_compared() -> None:
     del broken["models"]["whyfinder"]
     with pytest.raises(GateError, match="no per-user metrics"):
         compare(report(), broken, margins=MARGINS, resamples=50, seed=1)
+
+
+def with_explanations(
+    r: dict, *, valid: float = 1.0, deletion_shift: float = 0.0, seed: int = 0
+) -> dict:
+    rng = np.random.default_rng(seed)
+    n = 200
+    per_user = {
+        "additivity": [1.0] * n,
+        "cf_validity": [1.0 if k < valid * n else 0.0 for k in range(n)],
+        "deletion": [float(x < 0.9 + deletion_shift) for x in rng.random(n)],
+        "minimality_gap": [None if k % 10 == 0 else float(rng.integers(0, 2)) for k in range(n)],
+        "sanity_spearman": rng.normal(0, 0.2, n).tolist(),
+    }
+    means = {m: float(np.mean([v for v in vals if v is not None])) for m, vals in per_user.items()}
+    out = copy.deepcopy(r)
+    out["explanations"] = {"users": n, "means": means, "per_user": per_user}
+    return out
+
+
+EXPLAIN = {"deletion": 0.01, "minimality_gap": 0.1}
+
+
+def test_explanation_checks_are_compared_and_gated() -> None:
+    base = with_explanations(report())
+    v = compare(
+        base, copy.deepcopy(base), margins=MARGINS, resamples=300, seed=1, explain_margins=EXPLAIN
+    )
+    assert v.passed
+    assert "Counterfactual validity" in v.markdown
+    assert "Deletion test" in v.markdown
+
+
+def test_an_invalid_counterfactual_fails_the_gate_even_without_a_baseline() -> None:
+    head = with_explanations(report(), valid=0.9)
+    assert not compare(None, head, margins=MARGINS, resamples=100, seed=1).passed
+    base = with_explanations(report())
+    v = compare(base, head, margins=MARGINS, resamples=100, seed=1, explain_margins=EXPLAIN)
+    assert not v.passed
+    assert "100% ✗" in v.markdown
+
+
+def test_a_worse_deletion_test_fails() -> None:
+    base = with_explanations(report())
+    head = with_explanations(report(), deletion_shift=-0.3)
+    v = compare(base, head, margins=MARGINS, resamples=300, seed=1, explain_margins=EXPLAIN)
+    assert not v.passed

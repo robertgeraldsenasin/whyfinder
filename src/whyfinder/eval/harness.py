@@ -118,6 +118,34 @@ def top_n(scores: np.ndarray, owned: set[int], game_ids: np.ndarray, n: int) -> 
     return [int(i) for i in tied[order][:n]]
 
 
+@dataclass(frozen=True)
+class Served:
+    """Everything the served pipeline (blend + DPP) needs, for the explanation checks."""
+
+    M: np.ndarray
+    B: np.ndarray
+    Pi: np.ndarray
+    beta: float
+    c_B: float
+    c_Pi: float
+    vectors: list[SparseVector]
+    game_ids: list[int]
+    candidates: int
+    theta: float
+
+    def run(self, history: History) -> list[int]:
+        """The ten picks for a history (the function counterfactual search re-runs)."""
+        return recommend(
+            history,
+            self.M,
+            vectors=self.vectors,
+            game_ids=self.game_ids,
+            k=10,
+            n_candidates=self.candidates,
+            theta=self.theta,
+        ).picks
+
+
 @dataclass
 class Built:
     """A ranker plus how long the model took to build."""
@@ -146,8 +174,9 @@ def game_infos(games: pd.DataFrame, game_ids: np.ndarray) -> tuple[list[GameInfo
 
 def build_models(
     es: EvalSet, games: pd.DataFrame, p: dict[str, Any], *, seed: int, only: Sequence[str] = MODELS
-) -> tuple[dict[str, Built], list[SparseVector]]:
-    """Build the requested models on es.X; returns rankers (top 20) and the DPP tag vectors."""
+) -> tuple[dict[str, Built], list[SparseVector], Served | None]:
+    """Build the requested models on es.X: rankers (top 20), the DPP tag vectors, and the served
+    pipeline when the blend was built."""
     unknown = sorted(set(only) - set(MODELS))
     if unknown:
         raise ValueError(f"unknown model(s): {', '.join(unknown)}")
@@ -178,6 +207,7 @@ def build_models(
     need_pi = bool({"ppr", "blend", "whyfinder"} & set(only))
     B: np.ndarray | None = None
     Pi: np.ndarray | None = None
+    served_model: Served | None = None
     if need_b:
         t = time.perf_counter()
         B = ease(G, float(p["ease"]["lambda"]))
@@ -214,6 +244,18 @@ def build_models(
         )
         seconds = time.perf_counter() - t
         info = {"c_B": c_B, "c_Pi": c_Pi, "beta": float(p["blend"]["beta"])}
+        served_model = Served(
+            M=M,
+            B=B,
+            Pi=Pi,
+            beta=float(p["blend"]["beta"]),
+            c_B=c_B,
+            c_Pi=c_Pi,
+            vectors=vectors,
+            game_ids=ids.tolist(),
+            candidates=int(p["dpp"]["candidates"]),
+            theta=float(p["dpp"]["theta"]),
+        )
         if "blend" in only:
             built["blend"] = Built(item_item(M), seconds, info)
         if "whyfinder" in only:
@@ -257,7 +299,7 @@ def build_models(
             time.perf_counter() - t,
             {"losses": model.losses},
         )
-    return built, vectors
+    return built, vectors, served_model
 
 
 def score_lists(
@@ -277,7 +319,7 @@ def evaluate(
     es: EvalSet, games: pd.DataFrame, p: dict[str, Any], *, seed: int, only: Sequence[str] = MODELS
 ) -> dict[str, Any]:
     """Build, rank and score every requested model. JSON-ready, per-user arrays included."""
-    built, vectors = build_models(es, games, p, seed=seed, only=only)
+    built, vectors, served_model = build_models(es, games, p, seed=seed, only=only)
     pop = popularity(es.X)
     share = pop / pop.max() if pop.size and pop.max() > 0 else pop
     report: dict[str, Any] = {"users": es.users, "n_items": es.n_items, "models": {}}
@@ -297,4 +339,16 @@ def evaluate(
             "means": {m: float(v.mean()) if v.size else 0.0 for m, v in per_user.items()},
             "per_user": {m: [round(float(x), 6) for x in v] for m, v in per_user.items()},
         }
+    if served_model is not None and "explain" in p.get("eval", {}):
+        from whyfinder.eval.explanations import check
+
+        e = p["eval"]["explain"]
+        report["explanations"] = check(
+            es,
+            served_model,
+            users=int(e["users"]),
+            pool=int(e["pool"]),
+            draws=int(e["deletion_draws"]),
+            seed=seed,
+        )
     return report

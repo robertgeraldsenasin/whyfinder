@@ -347,6 +347,7 @@ def gate_command(
 
     p = load_params(params)
     margins = {k: float(v) for k, v in p["eval"]["margins"].items()}
+    explain_margins = {k: float(v) for k, v in p["eval"].get("explain_margins", {}).items()}
     base_report = json.loads(base.read_text()) if base is not None and base.exists() else None
     verdict = compare(
         base_report,
@@ -355,6 +356,7 @@ def gate_command(
         resamples=param(p, "eval.bootstrap_resamples", int),
         seed=param(p, "seed", int),
         superiority=superiority,
+        explain_margins=explain_margins,
     )
     out.write_text(verdict.markdown)
     typer.echo(verdict.markdown)

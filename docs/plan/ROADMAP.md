@@ -54,7 +54,7 @@ gantt
 - [ ] Counterfactuals: live greedy + offline exact; iALS Sherman–Morrison variant (FR-11, ADR-0012)
 - [ ] DPP re-ranking + "kept for variety" flag (FR-12)
 - [ ] Graph paths (FR-13)
-- [ ] Explanation checks in the gate (deletion, validity, minimality gap, sanity check)
+- [x] Explanation checks in the gate (deletion, validity, minimality gap, sanity check)
 - [ ] Demo track: attributions, counterfactuals and DPP live in the browser; Discover view with the why panel; "Under the hood" steps 5–7
 
 ## M3 · Grounded RAG (6 days) → `v0.3.0`
