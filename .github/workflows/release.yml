@@ -1,13 +1,19 @@
-# A tagged release scores the sealed test set, the only place it is ever read (ADR-0005). It runs the
-# data pipeline on the full raw files, evaluates every model on the test users, writes results/ and
-# attaches everything to the GitHub release. Committing results/ (and regenerating the README table
-# from it) is then an ordinary PR.
+# A release scores the sealed test set, the only place it is ever read (ADR-0005). It starts from a
+# pushed v* tag, or from a dispatch whose `tag` input names the release to create on that commit.
+# It runs the data pipeline on the full raw files, evaluates every model on the test users, writes
+# results/ and attaches everything to the GitHub release. Committing results/ (and regenerating the
+# README tables from it) is then an ordinary PR.
 name: release
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to create on the dispatched commit, e.g. v0.2.0 (empty: a dated results release)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -53,12 +59,16 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           for f in results/*.json results/targets/test.json; do echo "== $f"; cat "$f"; done
       - name: Attach to the GitHub release
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
         run: |
           tag="${GITHUB_REF_NAME}"
-          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then tag="results-$(date -u +%Y%m%d-%H%M)"; fi
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then tag="${INPUT_TAG:-results-$(date -u +%Y%m%d-%H%M)}"; fi
+          sed -n "/^## \[${tag#v}\]/,/^## \[/p" CHANGELOG.md | sed '$d' > notes.md
+          [ -s notes.md ] || echo "Sealed test-set results for $tag." > notes.md
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --title "$tag" --notes-file <(sed -n "/^## \[${tag#v}\]/,/^## \[/p" CHANGELOG.md | sed '$d') --verify-tag || \
-            gh release create "$tag" --title "$tag" --notes "Sealed test-set results for $tag."
+            # On a tag push the tag exists; on dispatch, --target creates it on the dispatched commit.
+            gh release create "$tag" --title "$tag" --notes-file notes.md --target "$GITHUB_SHA"
           fi
           (cd dist && sha256sum -- * > SHA256SUMS)
           gh release upload "$tag" dist/* --clobber
