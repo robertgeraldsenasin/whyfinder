@@ -31,7 +31,7 @@ graph:
   weights: {tag: 1.0, developer: 1.0, publisher: 0.5, coplay: 1.0}
 blend:
   beta: 0.5
-  top_k_per_row: 500
+  top_k_per_row: 3
 dpp:
   candidates: 100
   theta: 2.0
