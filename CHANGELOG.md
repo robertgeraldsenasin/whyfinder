@@ -5,6 +5,8 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-20
+
 ### Changed
 
 - Tuned on full-data validation (5,000 users, 8,000 games; `results/validation/tune-2026-11-19.json`): blend β 0.5 → 0.25, DPP θ 2 → 1, item-kNN shrinkage 10 → 50, iALS reg 0.01 → 0.1 and α 10 → 5. The demo's model and goldens are rebuilt from them.
@@ -83,5 +85,6 @@ M0 Foundation: the repository, the data pipeline and its first full run, and the
 
 - HTML entities (including doubly escaped ones) in game titles, developers, publishers and tags.
 
-[Unreleased]: https://github.com/robertgeraldsenasin/whyfinder/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/robertgeraldsenasin/whyfinder/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/robertgeraldsenasin/whyfinder/compare/v0.0.1...v0.2.0
 [0.0.1]: https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v0.0.1

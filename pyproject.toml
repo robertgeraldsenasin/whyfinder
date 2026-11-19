@@ -1,6 +1,6 @@
 [project]
 name = "whyfinder"
-version = "0.0.1"
+version = "0.2.0"
 description = "Find your next game. Know why. An explainable Steam game recommender with exact attributions, grounded RAG and statistical CI gates."
 readme = "README.md"
 requires-python = ">=3.12"
