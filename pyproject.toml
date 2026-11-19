@@ -19,9 +19,9 @@ dependencies = [
 ]
 
 # Added in later milestones (see docs/plan/ROADMAP.md):
-#   M0: pandera, dvc, requests      M1: mlflow; dev oracles: implicit
+#   M0: pandera, dvc, requests      M1: dev oracles: implicit
 #   M3: sentence-transformers (or onnxruntime), ollama client; dev oracles: hnswlib, rank-bm25
-#   M4: fastapi, uvicorn, slowapi; dev: schemathesis, httpx, locust
+#   M4: the `serve` group (fastapi, uvicorn; httpx and schemathesis for its tests)
 
 [project.scripts]
 whyfinder = "whyfinder.cli:app"
@@ -40,6 +40,12 @@ dev = [
 ]
 pipeline = [
     "dvc>=3.55",
+]
+serve = [
+  "fastapi>=0.115",
+  "uvicorn>=0.32",
+  "httpx>=0.27",
+  "schemathesis>=3.36",
 ]
 
 [build-system]
