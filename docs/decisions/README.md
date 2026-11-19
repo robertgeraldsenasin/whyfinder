@@ -9,7 +9,7 @@ Architecture decision records in the Hasik format (context, options, decision, c
 | [0003](ADR-0003-pipeline-and-data-versioning.md) | DVC pipeline without a remote; data runs on GitHub Actions; CI uses a pinned subsample | Accepted |
 | [0004](ADR-0004-item-cap-and-confidence.md) | Item cap for EASE^R and confidence weighting | Proposed |
 | [0005](ADR-0005-gate-statistics.md) | Quality gates: paired bootstrap non-inferiority, sealed test set | Accepted |
-| [0006](ADR-0006-targets-and-margins.md) | Success targets and gate margins | Proposed (fix after M1 baselines) |
+| [0006](ADR-0006-targets-and-margins.md) | Success targets and gate margins | Accepted (baselines recorded) |
 | [0007](ADR-0007-glass-box-blend.md) | Glass-box blend: EASE^R + Personalized PageRank, iALS as rival | Accepted |
 | [0008](ADR-0008-hosting.md) | Hosting: static demo on GitHub Pages, optional live API | Accepted (API: see 0019) |
 | [0009](ADR-0009-llm-runtime.md) | LLM: local model through Ollama, cached in CI | Accepted |

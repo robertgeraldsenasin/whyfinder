@@ -5,6 +5,12 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Tuned on full-data validation (5,000 users, 8,000 games; `results/validation/tune-2026-11-19.json`): blend β 0.5 → 0.25, DPP θ 2 → 1, item-kNN shrinkage 10 → 50, iALS reg 0.01 → 0.1 and α 10 → 5. The demo's model and goldens are rebuilt from them.
+- ADR-0006 accepted with the real baselines: the diversity target is now a share of the ILD headroom (relevance-only lists already reach 0.81), and the explanation checks run on 1,000 users with a deletion margin of 0.02.
+- Proved the quality gate fails a deliberately worse model (PR #74; `docs/evidence/gate-proof.md`).
+
 ### Added
 
 - The REST API (FR-21, ADR-0019): `POST /recommend`, `POST /explain`, `GET /search`, `GET /healthz` and `GET /version`, serving the same model as the live demo, so the picks and their reasons agree.
