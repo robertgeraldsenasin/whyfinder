@@ -162,6 +162,7 @@ def check_claims(claims: list[s.Claim], attributions: list[s.Attribution]) -> s.
 
 Responses = dict[int | str, dict[str, Any]]
 ERRORS: Responses = {
+    400: {"description": "The body is not valid JSON"},
     404: {"description": "None of the liked games, or the game asked about, is in the catalogue"},
     413: {"description": "The body is over 16 KB"},
     422: {"description": "The request does not match the schema"},
@@ -212,7 +213,7 @@ def create_app(
 
     @app.exception_handler(HTTPException)
     async def http_problem(_: Request, exc: HTTPException) -> JSONResponse:
-        titles = {404: "Not found", 405: "Method not allowed", 409: "Conflict"}
+        titles = {400: "Bad request", 404: "Not found", 405: "Method not allowed", 409: "Conflict"}
         title = titles.get(exc.status_code, "Request failed")
         return problem(exc.status_code, title, str(exc.detail), headers=exc.headers)
 

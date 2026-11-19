@@ -17,7 +17,7 @@ A `query` is read like the demo's description box (the two parsers share their t
 `web/src/lib/__fixtures__/queries.json`): titles become liked games, tags, prices and years become
 filters, and anything else comes back in `unresolved_terms`.
 
-**Status codes:** 404 when no liked game (from IDs or the query) is in the catalogue, or the game to
+**Status codes:** 400 when a body is not valid JSON; 404 when no liked game (from IDs or the query) is in the catalogue, or the game to
 explain is not; 409 when the game to explain is one of the liked games; 413 for bodies over 16 KB;
 422 when the body does not match the schema (the problem lists each error); 429 over the rate limit.
 Inputs are strict: `"2010"` is not a year and `1` is not `true`, though `2010.0` is an integer, as
