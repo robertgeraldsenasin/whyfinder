@@ -13,7 +13,7 @@ Architecture decision records in the Hasik format (context, options, decision, c
 | [0007](ADR-0007-glass-box-blend.md) | Glass-box blend: EASE^R + Personalized PageRank, iALS as rival | Accepted |
 | [0008](ADR-0008-hosting.md) | Hosting: static demo on GitHub Pages, optional live API | Accepted (API: see 0019) |
 | [0009](ADR-0009-llm-runtime.md) | LLM: local model through Ollama, cached in CI | Accepted |
-| [0010](ADR-0010-retrieval.md) | Retrieval: hybrid BM25 + dense on our own HNSW, merged by RRF | Proposed (embedding model chosen in M3) |
+| [0010](ADR-0010-retrieval.md) | Retrieval: hybrid BM25 + dense on our own HNSW, merged by RRF | Accepted (dense side: LSA) |
 | [0011](ADR-0011-dpp-reranking.md) | DPP re-ranking for variety | Accepted |
 | [0012](ADR-0012-counterfactual-guarantees.md) | Counterfactual search modes and guarantees | Accepted |
 | [0013](ADR-0013-design-language.md) | Design language: Star Atlas | Superseded by 0017 (palette, type, themes), then 0018 |

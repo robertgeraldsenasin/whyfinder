@@ -119,10 +119,19 @@ class PathOut(BaseModel):
     weight: float
 
 
-class Evidence(BaseModel):
+class AttributionEvidence(BaseModel):
     type: Literal["attribution"]
     game_id: AppId
     share: float
+
+
+class ReviewEvidence(BaseModel):
+    type: Literal["review"]
+    chunk_id: str
+    quote: str
+
+
+Evidence = Annotated[AttributionEvidence | ReviewEvidence, Field(discriminator="type")]
 
 
 class Claim(BaseModel):
@@ -160,10 +169,26 @@ class SearchOut(BaseModel):
     items: list[SearchHit]
 
 
+class ReviewHit(BaseModel):
+    chunk_id: str
+    game_id: AppId
+    title: str
+    text: str
+    hours: float
+    year: int | None
+    score: float
+    bm25_rank: int | None
+    dense_rank: int | None
+
+
+class ReviewsOut(BaseModel):
+    items: list[ReviewHit]
+
+
 class Health(BaseModel):
     status: Literal["ok", "degraded"]
     artifacts: Literal["ok"]
-    index: Literal["not_built"]
+    index: Literal["ok", "not_built"]
     llm: Literal["off"]
 
 

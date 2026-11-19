@@ -50,6 +50,7 @@ rag:
   chunk_words: 100
   chunk_overlap: 20
   bm25: {k1: 1.2, b: 0.75}
+  lsa: {dim: 128, min_df: 2}  # ADR-0010: latent semantic analysis as the dense side
   hnsw: {M: 16, ef_construction: 200, ef_search: 64}
   rrf_k: 60
 tune:                     # fixed-budget grids searched on validation by `whyfinder tune`

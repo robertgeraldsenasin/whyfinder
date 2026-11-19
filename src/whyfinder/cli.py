@@ -454,14 +454,16 @@ def serve_run(
     slice_path: SliceOption = WEB_SLICE,
     params: ParamsOption = Path("params.yaml"),
 ) -> None:
-    """Serve /recommend, /explain, /search, /healthz and /version (needs the `serve` group)."""
+    """Serve the API (needs the `serve` group); reviews.json next to the slice adds /reviews and
+    quoted evidence, after about 20 s of indexing."""
     import uvicorn
 
     from whyfinder.serve.app import create_app
     from whyfinder.serve.model import ServedModel
 
-    api = create_app(ServedModel.load(slice_path, params))
-    uvicorn.run(api, host=host, port=port, proxy_headers=True)
+    reviews = slice_path.parent / "reviews.json"
+    model = ServedModel.load(slice_path, params, reviews if reviews.exists() else None)
+    uvicorn.run(create_app(model), host=host, port=port, proxy_headers=True)
 
 
 @serve_app.command("openapi")

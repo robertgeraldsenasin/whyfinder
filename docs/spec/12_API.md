@@ -10,7 +10,8 @@ its picks and reasons equal the live demo's for the same games.
 | `POST /recommend` | `liked_game_ids` (1–50 Steam app IDs as strings) and/or `query` (≤ 300 chars); `k` (1–20, default 10); `filters` {`tags`, `max_price`, `year_min`, `year_max`}; `diversity` (bool, default true; false gives the relevance-only top k) | `items`: [{`game_id`, `title`, `score`, `rank`, `kept_for_variety`, `top_reason`}]; `liked_game_ids` (the ones used); `unknown_game_ids`; `unresolved_terms`; `model_version` |
 | `POST /explain` | the same taste fields; `game_id` | `score`, `rank` (null if not picked); `attributions`: [{`game_id`, `title`, `contribution`, `share`, `ease_part`, `ppr_part`}]; `counterfactual` {`removed_game_ids`, `guarantee`: `irreducible` \| `exact_min` \| `not_in_picks`, `pipeline_runs`}; `paths` [{`via`, `label`, `from_game_id`, `weight`}]; `kept_for_variety`; `claims` (verified); `checker` {`passed`, `fallback_used`, `reasons`} |
 | `GET /search?q=` | 1–100 characters | up to 10 catalogue titles: those starting with `q`, then those containing it |
-| `GET /healthz` | — | `status`, `artifacts`, `index`, `llm` (LLM down ⇒ `degraded`; template explanations are still served) |
+| `GET /reviews?q=&game_id=&k=` | 1–200 characters; optional game; `k` 1–20 (default 5) | review quotes ranked by RRF over BM25 and LSA vectors in HNSW, each with `chunk_id`, `game_id`, `title`, `text`, `hours`, `year`, `score`, `bm25_rank`, `dense_rank`; 503 if the server has no review index |
+| `GET /healthz` | — | `status`, `artifacts`, `index` (`ok` once the review index is built, `not_built` without reviews), `llm` (LLM down ⇒ `degraded`; template explanations are still served) |
 | `GET /version` | — | git SHA, model version, data version, SHA-256 of the slice and params |
 
 A `query` is read like the demo's description box (the two parsers share their test cases in
@@ -26,10 +27,12 @@ in JSON Schema.
 **Limits:** 30 requests/min per client IP on `/explain`, 120 on the rest (fixed one-minute windows,
 per process); request body ≤ 16 KB.
 
-**Claims and the checker.** Until the grounded LLM of M3, the claims are template sentences built
-from the attributions (`fallback_used: true`). Each cites the attribution it states, and the checker
-confirms the cited game is in the history and the sentence states its title and exact share. LLM
-sentences will go through the same checker.
+**Claims and the checker.** Until the grounded LLM, the claims are template sentences
+(`fallback_used: true`): one or two from the attributions, each citing the attribution it states,
+and up to two quoting a review of the pick that mentions an aspect the pick shares with your top
+game (06_RAG). The checker confirms each cited game is in the history with its exact share, each
+quote is a verbatim span (≤ 25 words) of a chunk of the pick's reviews, and no sentence names a
+game outside the pick and the history. LLM sentences will go through the same checker.
 
 **Example** (real output, numbers rounded)
 
@@ -65,7 +68,7 @@ POST /explain
 
 ```bash
 uv sync --group serve
-uv run whyfinder serve run                     # http://127.0.0.1:8000/docs
+uv run whyfinder serve run                     # http://127.0.0.1:8000/docs (reviews index ~20 s)
 docker build -f docker/Dockerfile.api -t whyfinder-api .
 docker run -p 8000:8000 whyfinder-api          # or ghcr.io/robertgeraldsenasin/whyfinder-api
 ```

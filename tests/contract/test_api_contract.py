@@ -5,8 +5,6 @@ response schemas, no server errors, valid data accepted and invalid data rejecte
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 schemathesis = pytest.importorskip("schemathesis")
@@ -14,13 +12,13 @@ pytest.importorskip("fastapi")
 
 from hypothesis import HealthCheck, settings  # noqa: E402
 
+from tests.serving import served  # noqa: E402
 from whyfinder.serve.app import RateLimiter, create_app  # noqa: E402
-from whyfinder.serve.model import ServedModel  # noqa: E402
 
-ROOT = Path(__file__).resolve().parents[2]
-MODEL = ServedModel.load(ROOT / "web" / "public" / "data" / "demo-slice.json", ROOT / "params.yaml")
 APP = create_app(
-    MODEL, git_sha="contract", limiter=RateLimiter({"explain": 10**9, "default": 10**9})
+    served(with_reviews=True),
+    git_sha="contract",
+    limiter=RateLimiter({"explain": 10**9, "default": 10**9}),
 )
 schema = schemathesis.openapi.from_asgi("/openapi.json", APP)
 

@@ -13,6 +13,7 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Review retrieval (FR-14, FR-15, ADR-0010), hand-written: a tokenizer and chunker, BM25 with the Lucene IDF, LSA vectors from a randomized SVD, an HNSW graph and reciprocal rank fusion. The API indexes the demo's 6,000 review quotes at start-up, adds `GET /reviews`, and `/explain` now quotes reviews of the pick that mention what it shares with your top game. The claim checker (FR-17) also rejects quotes that are not verbatim spans of the pick's reviews and sentences that name games outside the pick and the history.
 - iALS explanations (FR-11, #25): exact attributions for the rival and counterfactuals whose re-scoring uses Sherman–Morrison downdates instead of fresh solves, checked against a fresh solve to 1e-8 (`explain/ials.py`).
 - EASE's peak memory is logged in every evaluation report and shown in the gate comment (FR-05, ADR-0004).
 - `whyfinder results` also scores every ADR-0006 target on the sealed test report (paired bootstrap; Holm over the two popularity tests) into `results/targets/test.json`, and the README gains a met/not-met table generated from it (#20).
