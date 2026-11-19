@@ -309,8 +309,8 @@
           "year_max": {
             "anyOf": [
               {
-                "ge": 1970,
-                "le": 2100,
+                "maximum": 2100.0,
+                "minimum": 1970.0,
                 "type": "integer"
               },
               {
@@ -322,8 +322,8 @@
           "year_min": {
             "anyOf": [
               {
-                "ge": 1970,
-                "le": 2100,
+                "maximum": 2100.0,
+                "minimum": 1970.0,
                 "type": "integer"
               },
               {

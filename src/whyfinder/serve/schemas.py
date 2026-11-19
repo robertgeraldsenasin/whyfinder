@@ -21,7 +21,9 @@ def _integral(value: object) -> object:
     return value
 
 
-JsonInt = Annotated[int, BeforeValidator(_integral)]
+# Bounds go before the validator so the JSON schema states them as minimum and maximum.
+Year = Annotated[int, Field(ge=1970, le=2100), BeforeValidator(_integral)]
+Count = Annotated[int, Field(ge=1, le=20), BeforeValidator(_integral)]
 
 
 class FiltersIn(BaseModel):
@@ -31,8 +33,8 @@ class FiltersIn(BaseModel):
         default_factory=list, max_length=20
     )
     max_price: float | None = Field(default=None, ge=0)
-    year_min: JsonInt | None = Field(default=None, ge=1970, le=2100)
-    year_max: JsonInt | None = Field(default=None, ge=1970, le=2100)
+    year_min: Year | None = None
+    year_max: Year | None = None
 
 
 # The schema states the rule the validator enforces: at least one liked game, or a query.
@@ -61,7 +63,7 @@ class Liked(BaseModel):
 
 
 class RecommendIn(Liked):
-    k: JsonInt = Field(default=10, ge=1, le=20)
+    k: Count = 10
     diversity: bool = True
 
 
