@@ -5,6 +5,10 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A benchmark of the hand-written HNSW against hnswlib (FR-15): equal recall@10 at every efSearch (0.999 vs 0.994 on the review quotes at efSearch 64), about 20 times fewer queries per second and a 30 times slower build in pure Python (`docs/evidence/hnsw-bench.md`).
+
 ## [0.2.0] - 2026-11-20
 
 ### Changed
