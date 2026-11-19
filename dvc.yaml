@@ -58,6 +58,17 @@ stages:
     params: [demo.quotes_per_game, demo.terms_per_game, demo.reviews_per_game, data.user_salt]
     outs:
       - data/export/reviews.json: {cache: false}
-  # build:    (M1) uv run whyfinder build ease graph blend ials
+  eval_valid:
+    cmd: uv run whyfinder eval --data data/processed --split valid --out data/export/eval-valid.json
+    deps:
+      - data/processed/train.parquet
+      - data/processed/valid.parquet
+      - data/processed/games.parquet
+      - src/whyfinder/core
+      - src/whyfinder/graph
+      - src/whyfinder/rerank
+      - src/whyfinder/eval
+    params: [seed, data.item_cap, data.confidence, ease, graph, blend, dpp, knn, ials, eval.max_users]
+    outs:
+      - data/export/eval-valid.json: {cache: false}
   # index:    (M3) uv run whyfinder index reviews
-  # eval:     (M1) uv run whyfinder eval --split valid   metrics: results/valid.json

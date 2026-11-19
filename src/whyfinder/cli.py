@@ -256,3 +256,133 @@ def export_reviews(
     typer.echo(
         f"wrote {out}: {quotes} quotes from {read} of {len(df)} reviews before {t1:%Y-%m-%d}"
     )
+
+
+RELEASE_ENV = "WHYFINDER_RELEASE"
+SPLITS = ("valid", "test", "cold-valid", "cold-test")
+
+
+@app.command("eval")
+def eval_command(
+    data: Annotated[
+        Path, typer.Option(help="Directory with train/valid/test/cold/games Parquet.")
+    ] = CI,
+    split: Annotated[str, typer.Option(help="valid, test, cold-valid or cold-test.")] = "valid",
+    out: Annotated[Path, typer.Option(help="Report JSON (per-user metrics included).")] = Path(
+        "eval.json"
+    ),
+    models: Annotated[str, typer.Option(help="Comma-separated models (default: all).")] = "",
+    item_cap: Annotated[int | None, typer.Option(help="Override data.item_cap.")] = None,
+    max_users: Annotated[int | None, typer.Option(help="Override eval.max_users.")] = None,
+    gate: Annotated[
+        bool, typer.Option(help="Use the PR gate's item cap (eval.ci_item_cap).")
+    ] = False,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Build every model on train and score held-out users (FR-19). The test split is sealed."""
+    import json
+    import os
+
+    import pandas as pd
+
+    from whyfinder.eval.harness import MODELS, eval_set, evaluate
+
+    if split not in SPLITS:
+        raise typer.BadParameter(f"split must be one of {', '.join(SPLITS)}", param_hint="--split")
+    if split.endswith("test") and os.environ.get(RELEASE_ENV) != "1":
+        raise typer.BadParameter(
+            "the test split is sealed: it is scored only by release.yml", param_hint="--split"
+        )
+    p = load_params(params)
+    train = pd.read_parquet(data / "train.parquet")
+    if split.startswith("cold-"):
+        cold = pd.read_parquet(data / "cold.parquet")
+        holdout = cold.loc[cold["part"] == split.removeprefix("cold-")]
+    else:
+        holdout = pd.read_parquet(data / f"{split}.parquet")
+    games = pd.read_parquet(data / "games.parquet")
+    if item_cap is not None:
+        cap = item_cap
+    else:
+        cap = param(p, "eval.ci_item_cap" if gate else "data.item_cap", int)
+    limit = max_users if max_users is not None else param(p, "eval.max_users", int)
+    es = eval_set(
+        train,
+        holdout,
+        item_cap=cap,
+        alpha=param(p, "data.confidence.alpha", float),
+        eps=param(p, "data.confidence.eps", float),
+        max_users=limit,
+    )
+    if not es.users:
+        raise typer.BadParameter("no held-out users inside the item cap", param_hint="--data")
+    only = tuple(m for m in models.split(",") if m) or MODELS
+    report = evaluate(es, games, p, seed=param(p, "seed", int), only=only)
+    report["split"] = split
+    report["sample"] = f"{split} users from {data}"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, separators=(",", ":"), sort_keys=True) + "\n")
+    for name, block in report["models"].items():
+        m = block["means"]
+        typer.echo(
+            f"{name:11s} NDCG@10 {m['ndcg_at_10']:.4f}  Recall@20 {m['recall_at_20']:.4f}  "
+            f"MRR {m['mrr']:.4f}  ILD@10 {m['ild_at_10']:.4f}  "
+            f"coverage {block['coverage_at_10']:.4f}  build {block['build_seconds']:.1f}s"
+        )
+    typer.echo(f"{len(es.users)} users, {es.n_items} games; wrote {out}")
+
+
+@app.command("gate")
+def gate_command(
+    head: Annotated[Path, typer.Option(help="This PR's eval report.")],
+    base: Annotated[Path | None, typer.Option(help="Main's eval report, if main has one.")] = None,
+    out: Annotated[Path, typer.Option(help="Markdown for the PR comment.")] = Path("gate.md"),
+    superiority: Annotated[bool, typer.Option(help="Require improvement (model:gainer).")] = False,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Compare head with base user by user; exit 1 when the gate fails (FR-20)."""
+    import json
+
+    from whyfinder.eval.gate import compare
+
+    p = load_params(params)
+    margins = {k: float(v) for k, v in p["eval"]["margins"].items()}
+    base_report = json.loads(base.read_text()) if base is not None and base.exists() else None
+    verdict = compare(
+        base_report,
+        json.loads(head.read_text()),
+        margins=margins,
+        resamples=param(p, "eval.bootstrap_resamples", int),
+        seed=param(p, "seed", int),
+        superiority=superiority,
+    )
+    out.write_text(verdict.markdown)
+    typer.echo(verdict.markdown)
+    if not verdict.passed:
+        raise typer.Exit(1)
+
+
+@app.command("results")
+def results_command(
+    report: Annotated[Path, typer.Option(help="An eval report on the sealed test split.")],
+    out: Annotated[Path, typer.Option(help="Directory for one JSON per model.")] = Path("results"),
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Write results/<model>.json (means with 95% intervals) for the README table."""
+    import json
+
+    from whyfinder.eval.results import summarize
+
+    p = load_params(params)
+    data = json.loads(report.read_text())
+    rows = summarize(
+        data,
+        str(data.get("split", "test")),
+        resamples=param(p, "eval.bootstrap_resamples", int),
+        seed=param(p, "seed", int),
+    )
+    out.mkdir(parents=True, exist_ok=True)
+    for row in rows:
+        path = out / f"{row['model']}.json"
+        path.write_text(json.dumps(row, indent=2, sort_keys=True) + "\n")
+        typer.echo(f"wrote {path}")

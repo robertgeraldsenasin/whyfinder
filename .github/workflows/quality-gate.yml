@@ -1,20 +1,33 @@
-# Enabled in M1 (docs/plan/ROADMAP.md): replace `on: workflow_dispatch` with the pull_request trigger
-# below once `whyfinder gate` exists, and make the job a required check on main.
+# The quality gate (FR-20, ADR-0005, docs/spec/07_EVALUATION.md): every PR that touches the model is
+# evaluated on the pinned CI subsample's validation users, main is evaluated on the same users with
+# the same seeds, and a paired bootstrap decides. The result is posted (and kept up to date) as one
+# PR comment. Label a PR `model:gainer` to require improvement instead of non-inferiority.
 name: quality-gate
 
 on:
-  workflow_dispatch:
-  # pull_request:
-  #   paths: ["src/whyfinder/**", "!src/whyfinder/serve/**", "params.yaml", "dvc.yaml"]
+  pull_request:
+    paths:
+      - "src/whyfinder/**"
+      - "!src/whyfinder/serve/**"
+      - "params.yaml"
+      - "dvc.yaml"
+      - "uv.lock"
+      - ".github/workflows/quality-gate.yml"
 
 permissions:
   contents: read
   pull-requests: write
 
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,10 +36,48 @@ jobs:
         with:
           python-version: "3.12"
           enable-cache: true
-      - run: uv sync --frozen --group dev
+      - name: Install
+        run: uv sync --frozen
       - name: Fetch the pinned CI subsample (data-ci-v1)
-        run: echo "TODO(M1) uv run whyfinder data fetch-ci --tag data-ci-v1"
-      - name: Build base (main) and head with the same seeds, run the gate
-        run: echo "TODO(M1) uv run whyfinder gate --base origin/main --head HEAD --out gate.md"
+        run: |
+          gh release download data-ci-v1 --repo "$GITHUB_REPOSITORY" --pattern 'data-ci-v1.tar.gz' --pattern SHA256SUMS --dir /tmp/ci
+          (cd /tmp/ci && grep ' data-ci-v1.tar.gz$' SHA256SUMS | sha256sum --check -)
+          mkdir -p data && tar -xzf /tmp/ci/data-ci-v1.tar.gz -C data
+          ls -la data/ci
+      - name: Evaluate this PR (head)
+        run: uv run whyfinder eval --data data/ci --split valid --gate --out /tmp/head.json
+      - name: Evaluate main (base) on the same users with the same seeds
+        run: |
+          git worktree add /tmp/base "origin/${GITHUB_BASE_REF}"
+          cd /tmp/base
+          uv sync --frozen
+          if uv run whyfinder eval --help 2>/dev/null | grep -q -- '--gate'; then
+            uv run whyfinder eval --data "$GITHUB_WORKSPACE/data/ci" --split valid --gate --out /tmp/base.json
+          else
+            echo "main has no whyfinder eval yet: this run becomes the baseline"
+          fi
+      - name: Gate
+        id: gate
+        run: |
+          args=(--head /tmp/head.json --out gate.md)
+          if [ -f /tmp/base.json ]; then args+=(--base /tmp/base.json); fi
+          if [ "${{ contains(github.event.pull_request.labels.*.name, 'model:gainer') }}" = "true" ]; then args+=(--superiority); fi
+          set +e
+          uv run whyfinder gate "${args[@]}"
+          status=$?
+          set -e
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          cat gate.md >> "$GITHUB_STEP_SUMMARY"
       - name: Post or update the PR comment
-        run: echo "TODO(M1) gh api to create or update the comment marked <!-- whyfinder-gate -->"
+        if: always() && hashFiles('gate.md') != ''
+        run: |
+          comments="repos/${GITHUB_REPOSITORY}/issues/${{ github.event.pull_request.number }}/comments"
+          id=$(gh api "$comments" --paginate --jq '.[] | select(.body | startswith("<!-- whyfinder-gate -->")) | .id' | head -n 1)
+          if [ -n "$id" ]; then
+            gh api "repos/${GITHUB_REPOSITORY}/issues/comments/$id" --method PATCH -F body=@gate.md > /dev/null
+          else
+            gh api "$comments" --method POST -F body=@gate.md > /dev/null
+          fi
+      - name: Fail when the gate fails
+        if: steps.gate.outputs.status != '0'
+        run: exit 1
