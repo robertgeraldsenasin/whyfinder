@@ -71,7 +71,7 @@ gantt
 - [x] FastAPI + OpenAPI + Schemathesis; Docker image to GHCR (FR-21)
 - [ ] Demo finish: natural-language query bar, filters, optional API mode, "Under the hood" step 8 (grounded words), final polish (FR-22, 11_DESIGN_SYSTEM)
 - [ ] `pages.yml` deploy with health check; ADR-0008
-- [ ] Sealed test-set results ✓ (v0.2.0), model card ✓, demo GIF, portfolio case study, paper draft in `docs/paper/`
+- [ ] Sealed test-set results ✓ (v0.2.0), model card ✓, portfolio case study ✓ (`docs/case-study.md`), demo GIF, paper draft in `docs/paper/`
 
 ## Definition of done
 

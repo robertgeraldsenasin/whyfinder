@@ -24,7 +24,8 @@ way.
 
 > **Status:** [v0.2.0](https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v0.2.0) is out:
 > the glass-box recommender, its exact explanations and their checks, the quality gate, a REST API
-> and review retrieval, scored once on a sealed test set (below; [model card](docs/model-card.md)).
+> and review retrieval, scored once on a sealed test set (below; [model card](docs/model-card.md),
+> [case study](docs/case-study.md)).
 > Grounded LLM sentences are in progress. Roadmap: [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
 
 ## How it works
