@@ -78,6 +78,10 @@ removing the top-attributed games hurts the score more than removing random ones
 
 ## What's next
 
-Grounded sentences from a small local model, cached so CI stays free, evaluated on how often their
-claims survive the checker; a full-corpus review index; and 150 hand-labelled retrieval queries so
-retrieval quality is measured rather than assumed.
+I also tried letting small local models write the sentences, with the checker as a gate. On 60 picks
+the best of three (qwen2.5:3b) produced a fully faithful answer within two tries only 32% of the
+time: these models praise the recommended game instead of naming the liked one, and paraphrase
+quotes. They do cite the liked games in the right order, and handing them the exact shares moves
+their first citation from 57% right to 88%. So generation stays opt-in, and the checker earns its
+place. Next: a larger model, narrower outputs, a full-corpus review index, and 150 hand-labelled
+retrieval queries so retrieval quality is measured rather than assumed.
