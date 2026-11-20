@@ -1,0 +1,48 @@
+{
+  "split": "test",
+  "users": 20000,
+  "targets": [
+    {
+      "id": "ranking-ials",
+      "target": "Blend non-inferior to iALS on NDCG@10 (δ = 0.005)",
+      "detail": "0.0456 vs 0.0321, Δ +0.0135 (95% CI +0.0118, +0.0153), p = 0.000",
+      "met": true
+    },
+    {
+      "id": "ranking-popularity-ndcg-at-10",
+      "target": "Whyfinder beats popularity on NDCG@10 (p < 0.05, Holm over two)",
+      "detail": "0.0447 vs 0.0454, Δ -0.0007 (95% CI -0.0026, +0.0011), p = 0.777",
+      "met": false
+    },
+    {
+      "id": "ranking-popularity-recall-at-20",
+      "target": "Whyfinder beats popularity on Recall@20 (p < 0.05, Holm over two)",
+      "detail": "0.1194 vs 0.1075, Δ +0.0119 (95% CI +0.0078, +0.0159), p = 0.000",
+      "met": true
+    },
+    {
+      "id": "diversity",
+      "target": "DPP closes ≥ 10% of the ILD@10 headroom at an NDCG@10 cost ≤ 0.005",
+      "detail": "ILD@10 0.7774 → 0.8280, 22.7% of the headroom; NDCG@10 0.0447 vs 0.0456, Δ -0.0010 (95% CI -0.0016, -0.0003), p = 0.000",
+      "met": true
+    },
+    {
+      "id": "additivity",
+      "target": "Attributions sum to the score (share of picks)",
+      "detail": "1.0000",
+      "met": true
+    },
+    {
+      "id": "cf-validity",
+      "target": "Counterfactuals valid (share of picks)",
+      "detail": "1.0000",
+      "met": true
+    },
+    {
+      "id": "deletion",
+      "target": "Deletion test ≥ 95% of users",
+      "detail": "0.9680",
+      "met": true
+    }
+  ]
+}

@@ -22,9 +22,11 @@ way.
   <img src="docs/design/screenshots/unmasked-hand.jpg" width="860" alt="The demo: your three games on the left, ten picks dealt as cards from Ace to 10, the sky with the reasons drawn as lines, and the pick card for Bastion with its exact shares">
 </p>
 
-> **Status:** M0 foundation done (data pipeline, first full data run in [`data/stats.json`](data/stats.json));
-> the core runs on the demo slice; model numbers appear here when the first gated release (v0.1) ships.
-> Roadmap: [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md) · step-by-step build: [docs/guide/IMPLEMENTATION.md](docs/guide/IMPLEMENTATION.md).
+> **Status:** [v0.2.0](https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v0.2.0) is out:
+> the glass-box recommender, its exact explanations and their checks, the quality gate, a REST API
+> and review retrieval, scored once on a sealed test set (below; [model card](docs/model-card.md),
+> [case study](docs/case-study.md)).
+> Grounded LLM sentences are in progress. Roadmap: [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
 
 ## How it works
 
@@ -51,17 +53,66 @@ uv run whyfinder --help    # data pipeline and exports
 cd web && npm ci && npm test && npm run dev   # browser engine vs Python goldens, then the demo
 ```
 
-`make reproduce` (from M1) rebuilds every number in this README from the raw data.
+`uv run dvc repro` rebuilds the data pipeline and the validation numbers from the raw files; the
+test-set numbers come only from `release.yml`, the one place the sealed split is read.
+
+### The API
+
+```bash
+uv sync --group serve
+uv run whyfinder serve run          # http://127.0.0.1:8000/docs (indexing reviews takes ~20 s)
+docker run -p 8000:8000 ghcr.io/robertgeraldsenasin/whyfinder-api
+```
+
+```bash
+curl -s localhost:8000/recommend -H 'content-type: application/json' \
+  -d '{"query": "like Portal 2, co-op, under $20"}'
+curl -s localhost:8000/explain -H 'content-type: application/json' \
+  -d '{"liked_game_ids": ["620", "49520", "500"], "game_id": "440"}'
+```
+
+`/explain` returns the exact attributions, the counterfactual, graph paths and checked sentences,
+some quoting players' reviews of the pick. Endpoints, errors and limits:
+[docs/spec/12_API.md](docs/spec/12_API.md); the OpenAPI document is [docs/openapi.json](docs/openapi.json).
 
 ## Results
 
+The sealed test split is read only by `release.yml`; the tables below are generated from what it
+wrote to [`results/`](results/). Popularity is hard to beat at the very top of a time-split list:
+Whyfinder matches it on NDCG@10 and beats it on Recall@20 while covering 30% of the catalogue
+against its 0.7%. The ADR-0006 targets, including the one missed, are in the second table.
+
 <!-- results:start -->
-_Generated from `results/` at each release. None yet._
+| Model | coverage_at_10 | ild_at_10 | mrr | ndcg_at_10 | recall_at_20 |
+| --- | --- | --- | --- | --- | --- |
+| blend | 0.2983 [0.2983, 0.2983] | 0.7774 [0.7766, 0.7783] | 0.0605 [0.0580, 0.0631] | 0.0456 [0.0437, 0.0477] | 0.1196 [0.1157, 0.1236] |
+| ease | 0.2214 [0.2214, 0.2214] | 0.7815 [0.7807, 0.7822] | 0.0600 [0.0575, 0.0625] | 0.0452 [0.0434, 0.0473] | 0.1189 [0.1150, 0.1229] |
+| ials | 0.1259 [0.1259, 0.1259] | 0.7900 [0.7891, 0.7908] | 0.0420 [0.0400, 0.0442] | 0.0321 [0.0305, 0.0338] | 0.0826 [0.0794, 0.0859] |
+| itemknn | 0.2405 [0.2405, 0.2405] | 0.7762 [0.7754, 0.7770] | 0.0582 [0.0556, 0.0609] | 0.0420 [0.0402, 0.0440] | 0.0976 [0.0941, 0.1012] |
+| popularity | 0.0074 [0.0074, 0.0074] | 0.7375 [0.7371, 0.7378] | 0.0636 [0.0609, 0.0664] | 0.0454 [0.0433, 0.0474] | 0.1075 [0.1038, 0.1115] |
+| ppr | 0.6208 [0.6208, 0.6208] | 0.7277 [0.7261, 0.7291] | 0.0444 [0.0421, 0.0466] | 0.0313 [0.0297, 0.0329] | 0.0771 [0.0741, 0.0804] |
+| whyfinder | 0.2986 [0.2986, 0.2986] | 0.8280 [0.8275, 0.8286] | 0.0600 [0.0575, 0.0626] | 0.0447 [0.0428, 0.0467] | 0.1194 [0.1155, 0.1235] |
+
+_Sealed test set, 95% bootstrap intervals._
 <!-- results:end -->
 
 <!-- targets:start -->
-_Generated from `results/` at each release. None yet._
+| Target (ADR-0006) | Result | Evidence |
+| --- | --- | --- |
+| Blend non-inferior to iALS on NDCG@10 (δ = 0.005) | met | 0.0456 vs 0.0321, Δ +0.0135 (95% CI +0.0118, +0.0153), p = 0.000 |
+| Whyfinder beats popularity on NDCG@10 (p < 0.05, Holm over two) | **not met** | 0.0447 vs 0.0454, Δ -0.0007 (95% CI -0.0026, +0.0011), p = 0.777 |
+| Whyfinder beats popularity on Recall@20 (p < 0.05, Holm over two) | met | 0.1194 vs 0.1075, Δ +0.0119 (95% CI +0.0078, +0.0159), p = 0.000 |
+| DPP closes ≥ 10% of the ILD@10 headroom at an NDCG@10 cost ≤ 0.005 | met | ILD@10 0.7774 → 0.8280, 22.7% of the headroom; NDCG@10 0.0447 vs 0.0456, Δ -0.0010 (95% CI -0.0016, -0.0003), p = 0.000 |
+| Attributions sum to the score (share of picks) | met | 1.0000 |
+| Counterfactuals valid (share of picks) | met | 1.0000 |
+| Deletion test ≥ 95% of users | met | 0.9680 |
+
+_Sealed test set, 20,000 users, paired bootstrap._
 <!-- targets:end -->
+
+**Evidence:** the gate failing a deliberately worse model ([docs/evidence/gate-proof.md](docs/evidence/gate-proof.md)),
+the hand-written HNSW against hnswlib ([docs/evidence/hnsw-bench.md](docs/evidence/hnsw-bench.md)),
+validation tuning ([results/validation/](results/validation/)).
 
 ## Data and citation
 
