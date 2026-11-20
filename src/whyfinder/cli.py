@@ -518,7 +518,7 @@ def rag_eval(
     mode: Annotated[
         str, typer.Option(help="replay: answers from the cache only (CI); fill: ask the model.")
     ] = "replay",
-    model_name: Annotated[str, typer.Option("--model", help="Ollama model.")] = "qwen2.5:1.5b",
+    model_name: Annotated[str, typer.Option("--model", help="Ollama model.")] = "qwen2.5:3b",
     url: Annotated[str, typer.Option(help="Ollama server.")] = "http://127.0.0.1:11434",
     cases: Annotated[int, typer.Option(help="Picks to explain.")] = 60,
     cache: Annotated[Path, typer.Option(help="Generation cache (JSON lines).")] = LLM_CACHE,

@@ -31,7 +31,8 @@ per process); request body ≤ 16 KB.
 (`fallback_used: true`): one or two from the attributions and up to two quoting a review of the pick
 that mentions an aspect it shares with your top game (06_RAG). With `WHYFINDER_LLM_MODEL` (and
 `WHYFINDER_LLM_URL`, default `http://127.0.0.1:11434`) set, an Ollama model writes them from the same
-facts in the claim schema (`docs/spec/claim.schema.json`); the checker verifies every claim, the
+facts (it cites numbered facts; code attaches the evidence in the claim schema,
+`docs/spec/claim.schema.json`); the checker verifies every claim, the
 model gets one retry with the checker's reasons, and the template sentences replace it after that.
 `checker.reasons` then lists why the model's answers were rejected. The checker confirms each cited
 game is among the top five with its computed share, any percentage is within a point of it, each

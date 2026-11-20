@@ -20,6 +20,7 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Grounded generation (FR-16, FR-17, ADR-0009): a local model through Ollama cites numbered facts (the top attributions, the counterfactual set, review quotes) and code attaches the evidence; the claim checker verifies every sentence, the model gets one retry, then the template sentences take over. Generations are cached and replayed in CI. On 60 picks the best of three small models (qwen2.5:3b) passes within two tries 32% of the time, far below the 95% target, so generation stays opt-in (`results/validation/rag-eval-*.json`, `whyfinder rag eval`).
 - Review retrieval (FR-14, FR-15, ADR-0010), hand-written: a tokenizer and chunker, BM25 with the Lucene IDF, LSA vectors from a randomized SVD, an HNSW graph and reciprocal rank fusion. The API indexes the demo's 6,000 review quotes at start-up, adds `GET /reviews`, and `/explain` now quotes reviews of the pick that mention what it shares with your top game. The claim checker (FR-17) also rejects quotes that are not verbatim spans of the pick's reviews and sentences that name games outside the pick and the history.
 - iALS explanations (FR-11, #25): exact attributions for the rival and counterfactuals whose re-scoring uses Sherman–Morrison downdates instead of fresh solves, checked against a fresh solve to 1e-8 (`explain/ials.py`).
 - EASE's peak memory is logged in every evaluation report and shown in the gate comment (FR-05, ADR-0004).

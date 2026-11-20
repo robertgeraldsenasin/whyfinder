@@ -28,7 +28,13 @@ pick's reviews, and a quote counts only if BM25 matches it.
 
 Generation runs when a model is configured (`WHYFINDER_LLM_MODEL` for `whyfinder serve run`, the
 llm workflow for the evaluation); otherwise the template sentences are served, through the same
-checker. Still to come: the full-corpus DVC `index` stage, the 150 labelled retrieval queries and
+checker. The model cites numbered facts and code attaches their evidence. Measured on 60 picks with
+three CPU-sized models (ADR-0009, `results/validation/rag-eval-*.json`), the best,
+qwen2.5:3b, passes the checker within two tries 32% of the time and keeps 27% of its first-try
+claims, far from the 95% target: small models praise the recommended game instead of naming the
+liked one, paraphrase quotes and run long. They do follow the attribution order (τ ≈ 0.95), and the
+shares make their first citation right far more often (88% against 57% without them). Generation
+therefore stays opt-in; the checker and the fallback keep served text faithful either way. Still to come: the full-corpus DVC `index` stage, the 150 labelled retrieval queries and
 the NLI entailment score.
 
 ## One explanation, step by step
