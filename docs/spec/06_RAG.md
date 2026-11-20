@@ -13,25 +13,29 @@ list of claims, each tied to evidence, and a deterministic checker rejects any c
 4. **Dense:** a small open sentence-embedding model (choice in ADR-0010), L2-normalised vectors in the
    hand-written **HNSW** index (§A9). Embedding runs once offline; vectors are versioned with DVC.
 
-## What runs today (M3, first part)
+## What runs today
 
-`src/whyfinder/rag/` holds the retrieval stack, all hand-written: the tokenizer and chunker
-(`text.py`), BM25 with the Lucene IDF (`bm25.py`), LSA vectors from a randomized SVD (`lsa.py`,
-ADR-0010), the HNSW graph (`hnsw.py`), RRF (`fuse.py`) and the review index that ties them together
-(`reviews.py`). The API builds it at start-up over the demo's review export (6,000 quotes of at most
-25 words from the train period, `whyfinder export reviews`), so steps 2, 3 and 5 below run now:
+`src/whyfinder/rag/` holds the whole path, hand-written: the tokenizer and chunker (`text.py`), BM25
+with the Lucene IDF (`bm25.py`), LSA vectors from a randomized SVD (`lsa.py`, ADR-0010), the HNSW graph
+(`hnsw.py`), RRF (`fuse.py`), the review index (`reviews.py`), claims, their schema and the checker
+(`claims.py`), generation with its cache, retry and fallback (`generate.py`) and the faithfulness
+report (`evaluate.py`). `serve/grounding.py` gathers the facts for one pick.
 
-- aspects are the tags the pick shares with its top-attributed game, then the review words both
-  games' players use;
-- each aspect is searched within the pick's reviews; a quote counts only if BM25 matches it, so the
-  quote really mentions the aspect;
-- the claim cites the chunk and quotes it whole; the checker confirms the chunk belongs to the pick
-  and the quote is a verbatim span of at most 25 words, and that the sentence names no game outside
-  the pick and the history.
+The corpus is the demo's review export: 6,000 quotes of at most 25 words from the train period
+(`whyfinder export reviews`), indexed when the API starts. Aspects are the tags a pick shares with
+its top-attributed game, then the review words both games' players use; each is searched within the
+pick's reviews, and a quote counts only if BM25 matches it.
 
-Generation (step 4) is still the template fallback: the sentences are built from E1 and the
-retrieved quotes, so `fallback_used` stays true until the LLM lands. The full-corpus DVC `index`
-stage and the 150 labelled queries are still to come.
+Generation runs when a model is configured (`WHYFINDER_LLM_MODEL` for `whyfinder serve run`, the
+llm workflow for the evaluation); otherwise the template sentences are served, through the same
+checker. The model cites numbered facts and code attaches their evidence. Measured on 60 picks with
+three CPU-sized models (ADR-0009, `results/validation/rag-eval-*.json`), the best,
+qwen2.5:3b, passes the checker within two tries 32% of the time and keeps 27% of its first-try
+claims, far from the 95% target: small models praise the recommended game instead of naming the
+liked one, paraphrase quotes and run long. They do follow the attribution order (τ ≈ 0.95), and the
+shares make their first citation right far more often (88% against 57% without them). Generation
+therefore stays opt-in; the checker and the fallback keep served text faithful either way. Still to come: the full-corpus DVC `index` stage, the 150 labelled retrieval queries and
+the NLI entailment score.
 
 ## One explanation, step by step
 

@@ -64,8 +64,9 @@ popularity signal.
 Review retrieval (BM25, LSA vectors in a hand-written HNSW, RRF) runs over 6,000 review quotes from
 the train period. HNSW recall@10 against exact search is 0.999 at efSearch 64 on those vectors
 (`docs/evidence/hnsw-bench.md`). Explanations served by v0.2.0 are template sentences built from the
-exact attributions plus verbatim quotes, every one checked; LLM-written sentences are evaluated
-separately (06_RAG) and are not part of this release.
+exact attributions plus verbatim quotes, every one checked. After v0.2.0, three small local models
+were measured writing them (ADR-0009): the best, qwen2.5:3b, passes the checker within two tries
+32% of the time, so generated sentences stay opt-in.
 
 ## Limitations
 

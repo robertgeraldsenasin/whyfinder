@@ -43,6 +43,11 @@ jobs:
         run: uv run python scripts/gen_readme_tables.py --check
       - name: OpenAPI document matches the code
         run: uv run whyfinder serve openapi --check
+      - name: Grounded generation replays its cache (ADR-0009)
+        run: |
+          for model in qwen2.5:1.5b qwen2.5:3b llama3.2:3b; do
+            uv run whyfinder rag eval --mode replay --model "$model" --check
+          done
       - name: Coverage report
         if: matrix.python == '3.12'
         uses: actions/upload-artifact@v4

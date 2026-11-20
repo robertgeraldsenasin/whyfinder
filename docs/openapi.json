@@ -96,6 +96,7 @@
               "discriminator": {
                 "mapping": {
                   "attribution": "#/components/schemas/AttributionEvidence",
+                  "counterfactual": "#/components/schemas/CounterfactualEvidence",
                   "review": "#/components/schemas/ReviewEvidence"
                 },
                 "propertyName": "type"
@@ -106,6 +107,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/ReviewEvidence"
+                },
+                {
+                  "$ref": "#/components/schemas/CounterfactualEvidence"
                 }
               ]
             },
@@ -122,6 +126,28 @@
           "evidence"
         ],
         "title": "Claim",
+        "type": "object"
+      },
+      "CounterfactualEvidence": {
+        "properties": {
+          "removed_game_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed Game Ids",
+            "type": "array"
+          },
+          "type": {
+            "const": "counterfactual",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "removed_game_ids"
+        ],
+        "title": "CounterfactualEvidence",
         "type": "object"
       },
       "CounterfactualOut": {
@@ -366,7 +392,11 @@
             "type": "string"
           },
           "llm": {
-            "const": "off",
+            "enum": [
+              "off",
+              "ok",
+              "down"
+            ],
             "title": "Llm",
             "type": "string"
           },
@@ -954,7 +984,7 @@
     },
     "/healthz": {
       "get": {
-        "description": "The model is loaded; the review index is built if the server was given reviews. The LLM\nstays off: claims are template sentences checked by the claim checker.",
+        "description": "The model is loaded; the review index is built if the server was given reviews; the LLM\nis off, ok or down (then explanations fall back to the template sentences).",
         "operationId": "health_healthz_get",
         "responses": {
           "200": {

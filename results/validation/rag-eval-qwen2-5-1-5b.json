@@ -1,0 +1,20 @@
+{
+  "attribution_agreement_outputs": 47,
+  "attribution_agreement_tau": 0.9574468085106383,
+  "cases": 60,
+  "claim_support_before_fallback": 0.18333333333333332,
+  "digest": "65ec06548149b04c096a120e4a6da9d4017ea809c91734ea5631e89f96ddc57b",
+  "fallback_rate": 0.9333333333333333,
+  "first_try_pass_rate": 0.05,
+  "first_try_rejections": {
+    "carry its quote": 43,
+    "matches no cited share": 5,
+    "the limit is": 27,
+    "without naming it": 142
+  },
+  "model": "qwen2.5:1.5b",
+  "pass_within_two_tries": 0.06666666666666667,
+  "seed": 20261117,
+  "top1_cited_with_attributions": 0.9833333333333333,
+  "top1_cited_without_attributions": 0.36666666666666664
+}

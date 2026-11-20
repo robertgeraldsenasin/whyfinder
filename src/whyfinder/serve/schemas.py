@@ -131,7 +131,14 @@ class ReviewEvidence(BaseModel):
     quote: str
 
 
-Evidence = Annotated[AttributionEvidence | ReviewEvidence, Field(discriminator="type")]
+class CounterfactualEvidence(BaseModel):
+    type: Literal["counterfactual"]
+    removed_game_ids: list[AppId]
+
+
+Evidence = Annotated[
+    AttributionEvidence | ReviewEvidence | CounterfactualEvidence, Field(discriminator="type")
+]
 
 
 class Claim(BaseModel):
@@ -189,7 +196,7 @@ class Health(BaseModel):
     status: Literal["ok", "degraded"]
     artifacts: Literal["ok"]
     index: Literal["ok", "not_built"]
-    llm: Literal["off"]
+    llm: Literal["off", "ok", "down"]
 
 
 class ProblemError(BaseModel):

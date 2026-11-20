@@ -11,7 +11,7 @@ its picks and reasons equal the live demo's for the same games.
 | `POST /explain` | the same taste fields; `game_id` | `score`, `rank` (null if not picked); `attributions`: [{`game_id`, `title`, `contribution`, `share`, `ease_part`, `ppr_part`}]; `counterfactual` {`removed_game_ids`, `guarantee`: `irreducible` \| `exact_min` \| `not_in_picks`, `pipeline_runs`}; `paths` [{`via`, `label`, `from_game_id`, `weight`}]; `kept_for_variety`; `claims` (verified); `checker` {`passed`, `fallback_used`, `reasons`} |
 | `GET /search?q=` | 1–100 characters | up to 10 catalogue titles: those starting with `q`, then those containing it |
 | `GET /reviews?q=&game_id=&k=` | 1–200 characters; optional game; `k` 1–20 (default 5) | review quotes ranked by RRF over BM25 and LSA vectors in HNSW, each with `chunk_id`, `game_id`, `title`, `text`, `hours`, `year`, `score`, `bm25_rank`, `dense_rank`; 503 if the server has no review index |
-| `GET /healthz` | — | `status`, `artifacts`, `index` (`ok` once the review index is built, `not_built` without reviews), `llm` (LLM down ⇒ `degraded`; template explanations are still served) |
+| `GET /healthz` | — | `status`, `artifacts`, `index` (`ok` once the review index is built, `not_built` without reviews), `llm` (`off` with no model, `ok`, or `down`, which makes `status` `degraded` while template explanations are still served) |
 | `GET /version` | — | git SHA, model version, data version, SHA-256 of the slice and params |
 
 A `query` is read like the demo's description box (the two parsers share their test cases in
@@ -27,12 +27,17 @@ in JSON Schema.
 **Limits:** 30 requests/min per client IP on `/explain`, 120 on the rest (fixed one-minute windows,
 per process); request body ≤ 16 KB.
 
-**Claims and the checker.** Until the grounded LLM, the claims are template sentences
-(`fallback_used: true`): one or two from the attributions, each citing the attribution it states,
-and up to two quoting a review of the pick that mentions an aspect the pick shares with your top
-game (06_RAG). The checker confirms each cited game is in the history with its exact share, each
-quote is a verbatim span (≤ 25 words) of a chunk of the pick's reviews, and no sentence names a
-game outside the pick and the history. LLM sentences will go through the same checker.
+**Claims and the checker.** With no model configured, the claims are template sentences
+(`fallback_used: true`): one or two from the attributions and up to two quoting a review of the pick
+that mentions an aspect it shares with your top game (06_RAG). With `WHYFINDER_LLM_MODEL` (and
+`WHYFINDER_LLM_URL`, default `http://127.0.0.1:11434`) set, an Ollama model writes them from the same
+facts (it cites numbered facts; code attaches the evidence in the claim schema,
+`docs/spec/claim.schema.json`); the checker verifies every claim, the
+model gets one retry with the checker's reasons, and the template sentences replace it after that.
+`checker.reasons` then lists why the model's answers were rejected. The checker confirms each cited
+game is among the top five with its computed share, any percentage is within a point of it, each
+quote is a verbatim span (≤ 25 words) of a chunk of the pick's reviews, a counterfactual claim cites
+exactly the computed set, and no sentence names a game outside the pick and the history.
 
 **Example** (real output, numbers rounded)
 
