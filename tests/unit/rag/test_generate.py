@@ -11,7 +11,13 @@ from typing import Any
 
 import pytest
 
-from whyfinder.rag.claims import AttributionRef, Claim, Source, dump
+from whyfinder.rag.claims import (
+    AttributionRef,
+    CounterfactualRef,
+    ReviewRef,
+    SchemaError,
+    Source,
+)
 from whyfinder.rag.generate import (
     Cache,
     Cached,
@@ -20,7 +26,10 @@ from whyfinder.rag.generate import (
     Ollama,
     Pack,
     explain,
+    facts,
     prompt,
+    read,
+    schema,
     template,
 )
 
@@ -41,8 +50,9 @@ SOURCE = Source(
     removed=frozenset({"1"}),
     catalogue=("Dead Cells", "Hollow Knight", "Celeste", "Hades", "Dota 2"),
 )
-GOOD = json.dumps(dump([Claim("Dead Cells carries it (50%).", (AttributionRef("1", 0.5),))]))
-BAD = json.dumps(dump([Claim("Dota 2 carries it (50%).", (AttributionRef("1", 0.5),))]))
+GOOD = json.dumps({"claims": [{"text": "Dead Cells carries it (50%).", "facts": ["A1"]}]})
+BAD = json.dumps({"claims": [{"text": "Dota 2 carries it (50%).", "facts": ["A1"]}]})
+NO_SCHEMA: dict[str, Any] = {}
 
 
 class Script:
@@ -52,28 +62,77 @@ class Script:
     def __init__(self, *answers: str) -> None:
         self.answers = list(answers)
         self.prompts: list[str] = []
+        self.schemas: list[dict[str, Any]] = []
 
-    def complete(self, prompt: str, *, seed: int) -> str:
+    def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str:
         self.prompts.append(prompt)
+        self.schemas.append(schema)
         return self.answers.pop(0)
+
+
+def test_facts_carry_ids_and_the_evidence_behind_them() -> None:
+    listed = facts(PACK)
+    assert [f.id for f in listed] == ["A1", "A2", "A3", "C1", "Q1"]
+    assert listed[0].line == "Dead Cells counted for 50% of the score"
+    assert listed[0].evidence == AttributionRef("1", 0.5)
+    assert listed[3].evidence == CounterfactualRef(("1",))
+    assert listed[4].evidence == ReviewRef("c_7_0", QUOTE)
+    blind = facts(PACK, with_attributions=False)
+    assert [(f.id, f.line) for f in blind] == [
+        ("L1", "Celeste"),
+        ("L2", "Dead Cells"),
+        ("L3", "Hollow Knight"),
+    ]
 
 
 def test_the_prompt_lists_the_facts_and_the_ablation_hides_the_shares() -> None:
     full = prompt(PACK)
-    for fact in ("Hades", '"share": 0.5', "c_7_0", QUOTE, "Roguelite", "kept_for_variety", '"1"'):
+    for fact in (
+        "Write in English",
+        "Recommended game: Hades",
+        "A1: Dead Cells counted for 50%",
+        QUOTE,
+        "Roguelite",
+    ):
         assert fact in full
     bare = prompt(PACK, with_attributions=False)
-    assert bare.index("Celeste") < bare.index("Dead Cells") < bare.index("Hollow Knight")
-    assert '"share": 0.5' not in bare
+    assert "50%" not in bare
     assert QUOTE not in bare
+    assert bare.index("L1: Celeste") < bare.index("L2: Dead Cells")
     again = prompt(PACK, feedback=["wrong share for Dead Cells"])
     assert again.startswith(full)
     assert "- wrong share for Dead Cells" in again
 
 
+def test_the_schema_only_allows_the_listed_ids() -> None:
+    s = schema(facts(PACK))
+    ids = s["properties"]["claims"]["items"]["properties"]["facts"]["items"]["enum"]
+    assert ids == ["A1", "A2", "A3", "C1", "Q1"]
+    assert s["properties"]["claims"]["maxItems"] == 3
+
+
+def test_reading_an_answer_attaches_the_evidence_once() -> None:
+    raw = json.dumps({"claims": [{"text": "Dead Cells and Hades.", "facts": ["A1", "A1", "C1"]}]})
+    (claim,) = read(raw, facts(PACK))
+    assert claim.evidence == (AttributionRef("1", 0.5), CounterfactualRef(("1",)))
+    for bad in (
+        "nope",
+        "[]",
+        '{"claims": [], "x": 1}',
+        '{"claims": [{"text": "x"}]}',
+        '{"claims": [{"text": " ", "facts": ["A1"]}]}',
+        '{"claims": [{"text": "x", "facts": ["Z9"]}]}',
+        '{"claims": [{"text": "x", "facts": []}]}',
+        json.dumps({"claims": [{"text": "x", "facts": ["A1"]}] * 4}),
+    ):
+        with pytest.raises(SchemaError):
+            read(bad, facts(PACK))
+
+
 def test_a_faithful_answer_is_kept() -> None:
     backend = Script(GOOD)
     out = explain(PACK, SOURCE, backend, lambda: template(PACK), seed=1)
+    assert backend.schemas[0] == schema(facts(PACK))
     assert out.used == "model"
     assert not out.fallback_used
     assert out.claims[0].text == "Dead Cells carries it (50%)."
@@ -114,15 +173,17 @@ def test_the_template_is_faithful_and_within_limits() -> None:
 def test_the_cache_replays_and_refuses_misses(tmp_path: Path) -> None:
     path = tmp_path / "cache.jsonl"
     filling = Cached(Cache.load(path), "script", "sha256:script", inner=Script(GOOD))
-    assert filling.complete("p", seed=3) == GOOD
+    assert filling.complete("p", seed=3, schema=NO_SCHEMA) == GOOD
     filling.cache.save()
     replay = Cached(Cache.load(path), "script", "sha256:script")
-    assert replay.complete("p", seed=3) == GOOD
+    assert replay.complete("p", seed=3, schema=NO_SCHEMA) == GOOD
     with pytest.raises(CacheMissError, match="no cached generation"):
-        replay.complete("p", seed=4)
+        replay.complete("p", seed=4, schema=NO_SCHEMA)
+    with pytest.raises(CacheMissError):
+        replay.complete("p", seed=3, schema={"type": "object"})
     other_model = Cached(Cache.load(path), "script", "sha256:other")
     with pytest.raises(CacheMissError):
-        other_model.complete("p", seed=3)
+        other_model.complete("p", seed=3, schema=NO_SCHEMA)
     row = json.loads(path.read_text().splitlines()[0])
     assert set(row) == {"key", "model", "digest", "seed", "prompt_sha256", "response"}
     Cache(tmp_path / "empty.jsonl").save()
@@ -168,19 +229,19 @@ def test_ollama_asks_for_schema_constrained_deterministic_output(
     url, seen = server
     llm = Ollama("tiny", url=url)
     assert llm.digest == "abc123"
-    assert llm.complete("hello", seed=7) == GOOD
+    assert llm.complete("hello", seed=7, schema=schema(facts(PACK))) == GOOD
     sent = seen[0]
     assert sent["model"] == "tiny"
     assert sent["stream"] is False
     assert sent["options"]["temperature"] == 0
     assert sent["options"]["seed"] == 7
-    assert sent["format"]["required"] == ["claims"]
+    assert sent["format"] == schema(facts(PACK))
     with pytest.raises(LlmUnavailableError, match="not pulled"):
         _ = Ollama("missing", url=url).digest
 
 
 def test_ollama_reports_an_unreachable_server() -> None:
     with pytest.raises(LlmUnavailableError):
-        Ollama("tiny", url="http://127.0.0.1:9", timeout=0.5).complete("x", seed=1)
+        Ollama("tiny", url="http://127.0.0.1:9", timeout=0.5).complete("x", seed=1, schema={})
     with pytest.raises(LlmUnavailableError, match="not an HTTP URL"):
-        Ollama("tiny", url="file:///etc/passwd").complete("x", seed=1)
+        Ollama("tiny", url="file:///etc/passwd").complete("x", seed=1, schema={})

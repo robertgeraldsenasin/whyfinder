@@ -295,7 +295,7 @@ class Fake:
             raise LlmUnavailableError("connection refused")
         return "sha256:fake"
 
-    def complete(self, prompt: str, *, seed: int) -> str:
+    def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str:
         self.prompts.append(prompt)
         if self.down:
             from whyfinder.rag.generate import LlmUnavailableError
@@ -315,19 +315,7 @@ def test_a_faithful_generation_is_served_as_is(full: ServedModel, liked: list[st
     top = base.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
     a = top["attributions"][0]
     said = f"{a['title']} carries this pick ({round(a['share'] * 100)}%)."
-    answer = json.dumps(
-        {
-            "claims": [
-                {
-                    "text": said,
-                    "evidence": [
-                        {"type": "attribution", "game_id": a["game_id"], "share": a["share"]}
-                    ],
-                }
-            ]
-        }
-    )
-    fake = Fake([answer])
+    fake = Fake([json.dumps({"claims": [{"text": said, "facts": ["A1"]}]})])
     c = TestClient(create_app(full, limiter=RateLimiter(OPEN), llm=fake))
     e = c.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
     assert [cl["text"] for cl in e["claims"]] == [said]
@@ -341,22 +329,13 @@ def test_an_unfaithful_generation_is_retried_then_replaced(
     full: ServedModel, liked: list[str]
 ) -> None:
     pick = first_pick(TestClient(create_app(full, limiter=RateLimiter(OPEN))), liked)
-    wrong = json.dumps(
-        {
-            "claims": [
-                {
-                    "text": "Dota 2 is why (90%).",
-                    "evidence": [{"type": "attribution", "game_id": liked[0], "share": 0.9}],
-                }
-            ]
-        }
-    )
+    wrong = json.dumps({"claims": [{"text": "Dota 2 is why (90%).", "facts": ["A1"]}]})
     fake = Fake([wrong, "not json"])
     c = TestClient(create_app(full, limiter=RateLimiter(OPEN), llm=fake))
     e = c.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
     assert e["checker"]["passed"]
     assert e["checker"]["fallback_used"]
-    assert any("wrong share" in r for r in e["checker"]["reasons"])
+    assert any("matches no cited share" in r for r in e["checker"]["reasons"])
     assert any("claim schema" in r for r in e["checker"]["reasons"])
     assert "Your last answer was rejected" in fake.prompts[1]
     assert "is the biggest driver of this pick" in e["claims"][0]["text"]

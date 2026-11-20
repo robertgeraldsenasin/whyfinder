@@ -7,9 +7,9 @@ name: llm
 on:
   workflow_dispatch:
     inputs:
-      model:
-        description: "Ollama model"
-        default: "qwen2.5:1.5b"
+      models:
+        description: "Ollama models, as a JSON list"
+        default: '["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b"]'
       cases:
         description: "Picks to explain"
         default: "60"
@@ -27,9 +27,13 @@ concurrency:
 jobs:
   fill:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        model: ${{ fromJSON(inputs.models || '["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b"]') }}
     env:
-      MODEL: ${{ inputs.model || 'qwen2.5:1.5b' }}
+      MODEL: ${{ matrix.model }}
       CASES: ${{ inputs.cases || '60' }}
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +55,7 @@ jobs:
       - name: Report
         if: always()
         run: |
-          { echo '## Grounded generation'; echo '```json'; cat results/validation/rag-eval.json || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          { echo "## Grounded generation: $MODEL"; echo '```json'; cat results/validation/rag-eval-*.json || true; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
           echo "LLM-BEGIN"
-          tar czf - data/llm/cache.jsonl results/validation/rag-eval.json | base64 -w 3000
+          tar czf - data/llm/cache.jsonl results/validation/rag-eval-*.json | base64 -w 3000
           echo "LLM-END"

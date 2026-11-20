@@ -522,13 +522,16 @@ def rag_eval(
     url: Annotated[str, typer.Option(help="Ollama server.")] = "http://127.0.0.1:11434",
     cases: Annotated[int, typer.Option(help="Picks to explain.")] = 60,
     cache: Annotated[Path, typer.Option(help="Generation cache (JSON lines).")] = LLM_CACHE,
-    out: Annotated[Path, typer.Option(help="Where the report goes.")] = RAG_EVAL,
+    out: Annotated[
+        Path | None, typer.Option(help="Report path (default: per model, in results/validation).")
+    ] = None,
     check: Annotated[bool, typer.Option(help="Fail if the report differs from `out`.")] = False,
     slice_path: SliceOption = WEB_SLICE,
     params: ParamsOption = Path("params.yaml"),
 ) -> None:
     """Explain seeded sample picks with the local model and measure faithfulness (FR-16, FR-17)."""
     import json
+    from functools import partial
 
     from whyfinder.rag.evaluate import Case, run
     from whyfinder.rag.generate import Cache, Cached, Ollama, template
@@ -555,8 +558,11 @@ def rag_eval(
     sample = []
     for history, explanation in grounding.sample(served, cases, seed=seed):
         pack, source = grounding.facts(served, history, explanation)
-        sample.append(Case(pack, source, lambda pack=pack: template(pack)))
+        sample.append(Case(pack, source, partial(template, pack)))
     report = run(sample, backend, seed=seed)
+    if out is None:
+        slug = "".join(c if c.isalnum() else "-" for c in model_name)
+        out = RAG_EVAL.parent / f"rag-eval-{slug}.json"
     text = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if mode == "fill":
         store.save()

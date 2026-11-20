@@ -1,11 +1,13 @@
 """Grounded generation (FR-16; ADR-0009; docs/spec/06_RAG.md steps 4 and 6).
 
 A small local model only voices facts the recommender already computed: the pick's top
-attributions, its counterfactual set, graph paths, the variety flag and review quotes retrieved for
-it. It answers in the claim schema at temperature 0; `claims.check` verifies every claim; on failure
-the model gets one retry with the checker's reasons, then the template sentences take over (faithful
-by construction). Generations are cached under hash(model, digest, prompt, seed): CI replays the
-cache and fails on a miss, so it costs nothing and gives the same result every run.
+attributions, its counterfactual set and review quotes retrieved for it, each listed with an ID.
+The model writes one to three sentences and names the IDs each one uses; its output is constrained
+to that shape (the IDs are an enum in the per-prompt JSON schema), and code attaches the evidence
+behind each ID. `claims.check` then verifies every sentence against its evidence; on failure the
+model gets one retry with the checker's reasons, then the template sentences take over (faithful by
+construction). Generations are cached under hash(model, digest, prompt, schema, seed): CI replays
+the cache and fails on a miss, so it costs nothing and gives the same result every run.
 """
 
 from __future__ import annotations
@@ -22,15 +24,15 @@ from typing import Any, Literal, Protocol
 from whyfinder.rag.claims import (
     MAX_CLAIMS,
     MAX_WORDS,
-    SCHEMA,
     TOP,
     AttributionRef,
     Claim,
+    CounterfactualRef,
+    Evidence,
     ReviewRef,
     SchemaError,
     Source,
     check,
-    parse,
 )
 
 
@@ -47,61 +49,123 @@ class Pack:
     quotes: tuple[tuple[str, str, str], ...]  # (chunk_id, aspect, text)
 
 
-INSTRUCTIONS = (
-    "You explain one game recommendation to a player in at most {claims} short claims and "
-    "{words} words in all. Use only the facts below. Every claim must cite its evidence:\n"
-    '- {{"type": "attribution", "game_id": ..., "share": ...}} for a liked game that drove the '
-    "pick; name that game in the sentence; if you give a percentage, it is the share times 100;\n"
-    '- {{"type": "review", "chunk_id": ..., "quote": ...}} for a player quote; copy the quote '
-    "exactly and put it in the sentence in double quotes, at most 25 words;\n"
-    '- {{"type": "counterfactual", "removed_game_ids": [...]}} only for the exact set listed.\n'
-    "Name no game that is not in the facts. Answer with JSON only: "
-    '{{"claims": [{{"text": ..., "evidence": [...]}}]}}.'
+RULES = (
+    "Write in English. Explain to a player why the game below was recommended, in one to "
+    "{claims} short sentences and {words} words in all. Each sentence uses one to three facts "
+    "from the list and gives their IDs. Name every liked game you use exactly as written. Write a "
+    "percentage only as given. Copy a player quote word for word inside double quotes. Do not "
+    "mention any game that is not in the facts."
 )
 
-ABLATION = (
-    "You explain one game recommendation to a player in at most {claims} short claims and "
-    "{words} words in all. You are told which games the player liked, not how much each one "
-    'counted. Every claim must cite one liked game as {{"type": "attribution", "game_id": ..., '
-    '"share": 0}}; name that game in the sentence. Name no game that is not in the facts. '
-    'Answer with JSON only: {{"claims": [{{"text": ..., "evidence": [...]}}]}}.'
+BLIND = (
+    "Write in English. Explain to a player why the game below was recommended, in one to "
+    "{claims} short sentences and {words} words in all. You know which games the player liked, "
+    "not how much each one counted. Each sentence names the liked games it relies on, exactly as "
+    "written, and gives their IDs. Do not mention any game that is not in the facts."
 )
+
+
+@dataclass(frozen=True)
+class Fact:
+    id: str
+    line: str
+    evidence: Evidence
+
+
+def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
+    """The citable facts, with IDs: A for attributions, C for the counterfactual, Q for quotes;
+    without attributions (the research ablation) only L for the liked games, in the player's
+    order, since the attribution order would give the answer away."""
+    if not with_attributions:
+        return [
+            Fact(f"L{n}", title, AttributionRef(gid, 0.0))
+            for n, (gid, title) in enumerate(pack.liked, start=1)
+        ]
+    out: list[Fact] = []
+    positive = [a for a in pack.attributions[:TOP] if a[2] > 0]
+    for n, (gid, title, share) in enumerate(positive, start=1):
+        line = f"{title} counted for {round(share * 100)}% of the score"
+        out.append(Fact(f"A{n}", line, AttributionRef(gid, share)))
+    if pack.removed:
+        names = " and ".join(t for _, t in pack.removed)
+        line = f"without {names} in the list, {pack.pick_title} would drop out of the picks"
+        out.append(Fact("C1", line, CounterfactualRef(tuple(g for g, _ in pack.removed))))
+    for n, (cid, aspect, text) in enumerate(pack.quotes, start=1):
+        line = f'a player of {pack.pick_title}, on {aspect}: "{text}"'
+        out.append(Fact(f"Q{n}", line, ReviewRef(cid, text)))
+    return out
+
+
+def schema(listed: Sequence[Fact]) -> dict[str, Any]:
+    """The output the model is held to: sentences, each with the IDs of the facts it uses."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["claims"],
+        "properties": {
+            "claims": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": MAX_CLAIMS,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["text", "facts"],
+                    "properties": {
+                        "text": {"type": "string", "minLength": 1, "maxLength": 400},
+                        "facts": {
+                            "type": "array",
+                            "minItems": 1,
+                            "maxItems": 3,
+                            "items": {"enum": [f.id for f in listed]},
+                        },
+                    },
+                },
+            }
+        },
+    }
 
 
 def prompt(pack: Pack, *, with_attributions: bool = True, feedback: Sequence[str] = ()) -> str:
     """The prompt for a pack; `with_attributions=False` is the research ablation (06_RAG)."""
-    facts: dict[str, Any] = {"recommended": pack.pick_title}
-    if with_attributions:
-        facts["why"] = [
-            {"game_id": gid, "liked_game": title, "share": round(share, 3)}
-            for gid, title, share in pack.attributions[:TOP]
-        ]
-        if pack.removed:
-            facts["counterfactual"] = {
-                "removed_game_ids": [gid for gid, _ in pack.removed],
-                "means": "without all of "
-                + ", ".join(t for _, t in pack.removed)
-                + " in the list, the pick drops out",
-            }
-        if pack.paths:
-            facts["related_by"] = list(pack.paths)
-        if pack.kept_for_variety:
-            facts["kept_for_variety"] = True
-        if pack.quotes:
-            facts["player_quotes"] = [
-                {"chunk_id": cid, "about": aspect, "quote": text}
-                for cid, aspect, text in pack.quotes
-            ]
-        head = INSTRUCTIONS.format(claims=MAX_CLAIMS, words=MAX_WORDS)
-    else:
-        # The player's own order: the attribution order would leak the answer.
-        facts["liked_games"] = [{"game_id": gid, "title": title} for gid, title in pack.liked]
-        head = ABLATION.format(claims=MAX_CLAIMS, words=MAX_WORDS)
-    text = f"{head}\n\nFacts: {json.dumps(facts, ensure_ascii=False)}\n"
+    rules = (RULES if with_attributions else BLIND).format(claims=MAX_CLAIMS, words=MAX_WORDS)
+    listed = "\n".join(
+        f"{f.id}: {f.line}" for f in facts(pack, with_attributions=with_attributions)
+    )
+    text = f"{rules}\n\nRecommended game: {pack.pick_title}\nFacts:\n{listed}\n"
+    if with_attributions and pack.paths:
+        text += "Context (not citable): " + "; ".join(pack.paths) + ".\n"
+    text += '\nAnswer with JSON only: {"claims": [{"text": "...", "facts": ["..."]}]}\n'
     if feedback:
         text += "\nYour last answer was rejected:\n" + "\n".join(f"- {r}" for r in feedback)
         text += "\nAnswer again, fixing every point.\n"
     return text
+
+
+def read(raw: str, listed: Sequence[Fact]) -> list[Claim]:
+    """Claims from the model's answer: each sentence with the evidence behind the IDs it gave."""
+    by_id = {f.id: f for f in listed}
+    try:
+        doc = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise SchemaError(f"not JSON: {exc.msg}") from exc
+    items = doc.get("claims") if isinstance(doc, dict) else None
+    if not isinstance(items, list) or set(doc) != {"claims"}:
+        raise SchemaError('the answer must be {"claims": [...]}')
+    if len(items) > MAX_CLAIMS:
+        raise SchemaError(f"at most {MAX_CLAIMS} sentences")
+    out: list[Claim] = []
+    for item in items:
+        if not isinstance(item, dict) or set(item) != {"text", "facts"}:
+            raise SchemaError("each sentence needs exactly text and facts")
+        text, ids = item["text"], item["facts"]
+        if not isinstance(text, str) or not text.strip():
+            raise SchemaError("a sentence must be a non-empty string")
+        if not isinstance(ids, list) or not ids or not all(i in by_id for i in ids):
+            raise SchemaError(f"facts must be IDs from the list, got {ids!r}")
+        evidence = tuple(dict.fromkeys(by_id[i].evidence for i in ids))
+        out.append(Claim(text=text, evidence=evidence))
+    return out
 
 
 class Backend(Protocol):
@@ -110,7 +174,7 @@ class Backend(Protocol):
     @property
     def digest(self) -> str: ...
 
-    def complete(self, prompt: str, *, seed: int) -> str: ...
+    def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str: ...
 
 
 class CacheMissError(RuntimeError):
@@ -154,13 +218,13 @@ class Ollama:
             self._digest = str(match[0]["digest"])
         return self._digest
 
-    def complete(self, prompt: str, *, seed: int) -> str:
+    def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str:
         body = {
             "model": self.model,
             "prompt": prompt,
-            "format": SCHEMA,
+            "format": schema,
             "stream": False,
-            "options": {"temperature": 0, "seed": seed, "num_predict": 512},
+            "options": {"temperature": 0, "seed": seed, "num_predict": 400},
         }
         return str(self._post("/api/generate", body)["response"])
 
@@ -183,8 +247,8 @@ class Cache:
         return cls(path, entries)
 
     @staticmethod
-    def key(model: str, digest: str, prompt: str, seed: int) -> str:
-        raw = json.dumps([model, digest, prompt, seed], ensure_ascii=False)
+    def key(model: str, digest: str, prompt: str, schema: dict[str, Any], seed: int) -> str:
+        raw = json.dumps([model, digest, prompt, schema, seed], ensure_ascii=False, sort_keys=True)
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def save(self) -> None:
@@ -209,8 +273,8 @@ class Cached:
     def digest(self) -> str:
         return self.known_digest
 
-    def complete(self, prompt: str, *, seed: int) -> str:
-        key = Cache.key(self.model, self.known_digest, prompt, seed)
+    def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str:
+        key = Cache.key(self.model, self.known_digest, prompt, schema, seed)
         hit = self.cache.entries.get(key)
         if hit is not None:
             return str(hit["response"])
@@ -219,7 +283,7 @@ class Cached:
                 f"no cached generation for this prompt ({key[:12]}); refresh the cache with the "
                 "llm workflow or run with a local model"
             )
-        response = self.inner.complete(prompt, seed=seed)
+        response = self.inner.complete(prompt, seed=seed, schema=schema)
         self.cache.entries[key] = {
             "key": key,
             "model": self.model,
@@ -249,14 +313,28 @@ class Outcome:
         return self.used == "template"
 
 
-def attempt(raw: str, source: Source) -> Attempt:
+def attempt(raw: str, listed: Sequence[Fact], source: Source) -> Attempt:
     try:
-        claims = parse(raw)
+        claims = read(raw, listed)
     except SchemaError as exc:
         return Attempt(raw, [], [f"the output does not follow the claim schema: {exc}"])
     if not claims:
         return Attempt(raw, [], ["no claims"])
     return Attempt(raw, claims, check(claims, source))
+
+
+def ask(
+    backend: Backend,
+    pack: Pack,
+    source: Source,
+    *,
+    seed: int,
+    with_attributions: bool = True,
+    feedback: Sequence[str] = (),
+) -> Attempt:
+    listed = facts(pack, with_attributions=with_attributions)
+    text = prompt(pack, with_attributions=with_attributions, feedback=feedback)
+    return attempt(backend.complete(text, seed=seed, schema=schema(listed)), listed, source)
 
 
 def explain(
@@ -268,10 +346,10 @@ def explain(
     seed: int,
 ) -> Outcome:
     """Generate, check, retry once with the checker's reasons, then fall back to the template."""
-    first = attempt(backend.complete(prompt(pack), seed=seed), source)
+    first = ask(backend, pack, source, seed=seed)
     if not first.reasons:
         return Outcome(first.claims, "model", [first])
-    second = attempt(backend.complete(prompt(pack, feedback=first.reasons), seed=seed), source)
+    second = ask(backend, pack, source, seed=seed, feedback=first.reasons)
     if not second.reasons:
         return Outcome(second.claims, "model-retry", [first, second])
     return Outcome(template(), "template", [first, second])
