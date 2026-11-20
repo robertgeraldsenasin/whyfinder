@@ -45,7 +45,7 @@ gantt
 - [x] Metrics, per-user arrays, bootstrap, Holm; `whyfinder eval` (FR-19)
 - [x] `quality-gate.yml` live with PR comment (FR-20)
 - [x] Prove the gate with a deliberately worse PR and keep the record (`docs/evidence/gate-proof.md`, PR #74)
-- [ ] README tables from `results/` (at the v0.1.0 tag); ADR-0006 fixed from baselines ✓
+- [x] README tables from `results/` (v0.2.0); ADR-0006 fixed from baselines
 - [ ] Demo track: EASE^R, graph + PPR push and the blend land in Python and TypeScript together, golden-matched; "Under the hood" steps 1–4 live
 
 ## M2 · Explanations + variety (5 days) → `v0.2.0`
@@ -71,7 +71,7 @@ gantt
 - [x] FastAPI + OpenAPI + Schemathesis; Docker image to GHCR (FR-21)
 - [ ] Demo finish: natural-language query bar, filters, optional API mode, "Under the hood" step 8 (grounded words), final polish (FR-22, 11_DESIGN_SYSTEM)
 - [ ] `pages.yml` deploy with health check; ADR-0008
-- [ ] Sealed test-set results, model card, demo GIF, portfolio case study, paper draft in `docs/paper/`
+- [ ] Sealed test-set results ✓ (v0.2.0), model card ✓, demo GIF, portfolio case study, paper draft in `docs/paper/`
 
 ## Definition of done
 
