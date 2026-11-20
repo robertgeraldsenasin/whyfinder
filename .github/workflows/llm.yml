@@ -13,9 +13,6 @@ on:
       cases:
         description: "Picks to explain"
         default: "60"
-  pull_request:
-    paths:
-      - ".github/workflows/llm.yml"
 
 permissions:
   contents: read
