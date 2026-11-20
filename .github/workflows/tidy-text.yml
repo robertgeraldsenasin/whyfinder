@@ -24,7 +24,7 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         with:
           script: |
             const footer = /\n*(?:-{3,}[ \t]*\n)?[ \t]*_?(?:\p{Extended_Pictographic}\s*)?Generated (?:by|with) \[[^\]\n]+\]\([^)\n]*\)_?\s*$/iu;
