@@ -22,8 +22,8 @@ jobs:
       matrix:
         python: ["3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: ${{ matrix.python }}
           enable-cache: true
@@ -50,7 +50,7 @@ jobs:
           done
       - name: Coverage report
         if: matrix.python == '3.12'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-xml
           path: coverage.xml
@@ -64,8 +64,8 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -75,7 +75,7 @@ jobs:
       - name: Build
         run: npm run build
       - name: Keep the build (for reviewing a branch without deploying it)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-dist
           path: web/dist
@@ -93,7 +93,7 @@ jobs:
         run: npm run screens
       - name: Keep the screenshots
         if: success() || failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: screens
           path: web/screens/
@@ -101,7 +101,7 @@ jobs:
           if-no-files-found: ignore
       - name: Keep the Playwright report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |
@@ -119,7 +119,7 @@ jobs:
     env:
       IMAGE: ghcr.io/${{ github.repository_owner }}/whyfinder-api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build
         run: docker build -f docker/Dockerfile.api --build-arg GIT_SHA=${{ github.sha }} -t "$IMAGE:${{ github.sha }}" .
       - name: Smoke test (health, version, a recommendation, an explanation, a problem)
