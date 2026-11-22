@@ -5,16 +5,31 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-23
+
+The first complete release: the v0.2.0 model, unchanged and scored again on the sealed test set,
+with checked sentences, the last step of Under the hood, a live API mode and the write-ups.
+
 ### Added
 
+- Grounded generation (FR-16, FR-17, ADR-0009). A local model through Ollama writes one sentence per numbered fact (the top attributions, the counterfactual set, review quotes). The schema sent with each prompt pins every sentence to its fact while the model decodes: the liked game's exact title, the listed percentage or none, a quote copied word for word. Code attaches the evidence, the checker verifies every sentence, the model gets one retry, and then the template sentences take over. Generations are cached and replayed in CI.
+- The generation study (`whyfinder rag eval`, `results/validation/rag-eval-*.json`): on 60 validation picks, free sentences passed within two tries at most 32% of the time; pinned, llama3.2:3b keeps 99.4% of its claims on the first try and never falls back, so it is the default model. The report also counts sentences cut off by the length bound (8%) and sentences that only restate a fact (53%).
 - Under the hood step 8, grounded words (FR-22): for the selected pick, the numbered facts, the sentences built from them, the checker's verdict, and three sentences with the slips free models made, each with the checker's reasons. The checker, facts and template are ported to TypeScript and held to the same shared cases as Python (`web/src/lib/__fixtures__/claims.json`).
-- Live mode (ADR-0008): open the demo with `?api=<url>` and step 8 also shows a running API's own sentences for the same pick. The API now allows the demo's origins by CORS, answers the Private Network Access preflight, and takes `WHYFINDER_CORS_ORIGINS`.
-- A paper draft (`docs/paper/whyfinder.md`): the model, the evaluation protocol, the sealed test results, the explanation checks and the generation study, free and pinned.
-- Generated sentences are pinned to their facts while decoding (FR-16, ADR-0009): one sentence per fact, and the per-prompt schema holds each to the liked game's exact title, the listed percentage or none, and quotes verbatim. On the 60-pick evaluation llama3.2:3b keeps 99.4% of its claims on the first try with no fallback (it was 13% within two tries before), and becomes the default model. The report adds two plain-text proxies: sentences cut off by the length bound (8%) and sentences that only restate a fact (53%).
-- A demo GIF in the README, recorded from the real build in CI (`npm run gif`, the demo-gif workflow).
-- Grounded generation (FR-16, FR-17, ADR-0009): a local model through Ollama cites numbered facts (the top attributions, the counterfactual set, review quotes) and code attaches the evidence; the claim checker verifies every sentence, the model gets one retry, then the template sentences take over. Generations are cached and replayed in CI. On 60 picks the best of three small models (qwen2.5:3b) passes within two tries 32% of the time, far below the 95% target, so generation stays opt-in (`results/validation/rag-eval-*.json`, `whyfinder rag eval`).
-- The v0.2.0 sealed test results in `results/` and the README, with the ADR-0006 targets (one not met: Whyfinder does not beat popularity on NDCG@10), a model card (`docs/model-card.md`) and a case study (`docs/case-study.md`).
-- A benchmark of the hand-written HNSW against hnswlib (FR-15): equal recall@10 at every efSearch (0.999 vs 0.994 on the review quotes at efSearch 64), about 20 times fewer queries per second and a 30 times slower build in pure Python (`docs/evidence/hnsw-bench.md`).
+- Live mode (ADR-0008): open the demo with `?api=<url>` and step 8 also shows a running API's own sentences for the same pick. The API allows the demo's origins by CORS (`WHYFINDER_CORS_ORIGINS` overrides them) and answers the Private Network Access preflight.
+- The sealed test results in `results/` and the README with the ADR-0006 targets, a model card (`docs/model-card.md`), a case study (`docs/case-study.md`), a paper draft (`docs/paper/whyfinder.md`) and a demo GIF recorded from the real build in CI.
+- A benchmark of the hand-written HNSW against hnswlib (FR-15): equal recall@10 at every efSearch (0.999 against 0.994 on the review quotes at efSearch 64), about 20 times fewer queries per second and a 30 times slower build in pure Python (`docs/evidence/hnsw-bench.md`).
+
+### Changed
+
+- The architecture view shows retrieval, the checked words, the API, the gate and the sealed release as built.
+- `release.yml` also tags the API image with the release version, so `ghcr.io/robertgeraldsenasin/whyfinder-api:1.0.0` is the released commit (`latest` keeps following main).
+
+### Known limitations
+
+- Whyfinder does not beat popularity on NDCG@10 (0.0447 against 0.0454, p = 0.78), the one ADR-0006 target missed. It does beat it on Recall@20 and recommends from 30% of the catalogue against popularity's 0.7%.
+- Model-written sentences are faithful but often only restate the facts, so the demo and the API serve the template sentences unless a model is configured.
+- Retrieval is not yet measured against labelled queries (#33), the review index covers the demo's 6,000 quotes rather than the full corpus, and there is no entailment metric for generated sentences.
+- The API serves the 500-game demo slice (ADR-0019) and has no hosted instance; live mode needs a copy running locally.
 
 ## [0.2.0] - 2026-11-20
 
@@ -96,6 +111,7 @@ M0 Foundation: the repository, the data pipeline and its first full run, and the
 
 - HTML entities (including doubly escaped ones) in game titles, developers, publishers and tags.
 
-[Unreleased]: https://github.com/robertgeraldsenasin/whyfinder/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/robertgeraldsenasin/whyfinder/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/robertgeraldsenasin/whyfinder/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/robertgeraldsenasin/whyfinder/compare/v0.0.1...v0.2.0
 [0.0.1]: https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v0.0.1
