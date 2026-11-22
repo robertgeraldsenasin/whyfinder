@@ -353,7 +353,7 @@
           {:else if stage.id === 'explain' && pickE}
             <div class="seeds" role="group" aria-label="Pick">
               {#each result.picks as p, t (p)}
-                <button class="chip" class:link={t === app.selected} onclick={() => ((app.selected = t), (sub = 0))} aria-label={`Pick ${t + 1}: ${games[p].title}`}>{rank(t)}</button>
+                <button class="chip" class:link={t === app.selected} onclick={() => ((app.selected = t), (sub = 0))} aria-label={`Pick ${rank(t)}: ${games[p].title}`}>{rank(t)}</button>
               {/each}
             </div>
             <p><strong>{games[pickE.pick].title}</strong> scored {num(pickE.score)}. Because the score is a sum over your games, each game's share is exact.</p>
@@ -380,7 +380,7 @@
           {:else if stage.id === 'words' && pickE && grounded}
             <div class="seeds" role="group" aria-label="Pick">
               {#each result.picks as p, t (p)}
-                <button class="chip" class:link={t === app.selected} onclick={() => (app.selected = t)} aria-label={`Pick ${t + 1}: ${games[p].title}`}>{rank(t)}</button>
+                <button class="chip" class:link={t === app.selected} onclick={() => (app.selected = t)} aria-label={`Pick ${rank(t)}: ${games[p].title}`}>{rank(t)}</button>
               {/each}
             </div>
             <p class="micro step">{sub + 1} of {WORD_STEPS.length} · {WORD_STEPS[sub]}</p>

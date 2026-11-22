@@ -170,7 +170,7 @@ test('live mode asks a running API for its sentences about the same pick', async
 
   await page.unroute('http://api.test/explain');
   await page.route('http://api.test/explain', (route) => route.abort());
-  await page.getByRole('button', { name: /^Pick 2:/ }).click();
+  await page.getByRole('button', { name: /^Pick 02:/ }).click();
   await expect(page.getByText(/could not reach http:\/\/api\.test/)).toBeVisible();
 });
 
