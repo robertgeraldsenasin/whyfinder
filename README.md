@@ -19,7 +19,7 @@ way.
 > browser on the 500 most-played games; *Under the hood* replays every step on your own picks.
 >
 <p align="center">
-  <img src="docs/design/screenshots/unmasked-hand.jpg" width="860" alt="The demo: your three games on the left, ten picks dealt as cards from Ace to 10, the sky with the reasons drawn as lines, and the pick card for Bastion with its exact shares">
+  <img src="docs/design/demo.gif" width="860" alt="A recording of the demo: typing 'like Portal 2, co-op, under $20', ten picks dealt as cards into the sky, then the second pick, Team Fortress 2, opened with its exact shares and the games behind it">
 </p>
 
 > **Status:** [v0.2.0](https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v0.2.0) is out:
