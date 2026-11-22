@@ -48,12 +48,12 @@ def test_the_report_counts_support_fallbacks_agreement_and_the_ablation() -> Non
     two = json.dumps(
         {
             "claims": [
-                {"text": "Dead Cells drives it (50%).", "facts": ["A1"]},
-                {"text": "Hollow Knight adds 30%.", "facts": ["A2"]},
+                {"fact": "A1", "text": "Dead Cells drives it (50%)."},
+                {"fact": "A2", "text": "Hollow Knight adds 30%."},
             ]
         }
     )
-    guess = json.dumps({"claims": [{"text": "Celeste, probably.", "facts": ["L1"]}]})
+    guess = json.dumps({"claims": [{"fact": "L1", "text": "Celeste, probably."}]})
     backend = Script({False: [two, BAD, BAD, BAD, GOOD], True: [guess, guess, guess]})
     cases = [Case(PACK, SOURCE, lambda: template(PACK)) for _ in range(3)]
     report = run(cases, backend, seed=1)

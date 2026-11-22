@@ -315,7 +315,7 @@ def test_a_faithful_generation_is_served_as_is(full: ServedModel, liked: list[st
     top = base.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
     a = top["attributions"][0]
     said = f"{a['title']} carries this pick ({round(a['share'] * 100)}%)."
-    fake = Fake([json.dumps({"claims": [{"text": said, "facts": ["A1"]}]})])
+    fake = Fake([json.dumps({"claims": [{"fact": "A1", "text": said}]})])
     c = TestClient(create_app(full, limiter=RateLimiter(OPEN), llm=fake))
     e = c.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
     assert [cl["text"] for cl in e["claims"]] == [said]
@@ -329,7 +329,7 @@ def test_an_unfaithful_generation_is_retried_then_replaced(
     full: ServedModel, liked: list[str]
 ) -> None:
     pick = first_pick(TestClient(create_app(full, limiter=RateLimiter(OPEN))), liked)
-    wrong = json.dumps({"claims": [{"text": "Dota 2 is why (90%).", "facts": ["A1"]}]})
+    wrong = json.dumps({"claims": [{"fact": "A1", "text": "Dota 2 is why (90%)."}]})
     fake = Fake([wrong, "not json"])
     c = TestClient(create_app(full, limiter=RateLimiter(OPEN), llm=fake))
     e = c.post("/explain", json={"liked_game_ids": liked, "game_id": pick["game_id"]}).json()
