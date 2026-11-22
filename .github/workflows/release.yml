@@ -17,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 concurrency:
   group: release
@@ -72,3 +73,24 @@ jobs:
           fi
           (cd dist && sha256sum -- * > SHA256SUMS)
           gh release upload "$tag" dist/* --clobber
+      - name: Tag the API image with the version
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          IMAGE: ghcr.io/${{ github.repository_owner }}/whyfinder-api
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_REF_TYPE}" != "tag" ]; then tag="${INPUT_TAG}"; fi
+          case "$tag" in
+            v[0-9]*) ;;
+            *) echo "Not a version release; the image keeps its commit tag only."; exit 0 ;;
+          esac
+          echo "$TOKEN" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          # ci.yml publishes the image for each commit on main; wait for it if it is still building.
+          for i in $(seq 1 40); do
+            docker buildx imagetools inspect "$IMAGE:${GITHUB_SHA}" >/dev/null 2>&1 && break
+            [ "$i" = 40 ] && { echo "::error::$IMAGE:${GITHUB_SHA} was never published"; exit 1; }
+            echo "Waiting for $IMAGE:${GITHUB_SHA} from ci.yml"; sleep 30
+          done
+          docker buildx imagetools create -t "$IMAGE:${tag#v}" "$IMAGE:${GITHUB_SHA}"
+          echo "Tagged $IMAGE:${tag#v}" >> "$GITHUB_STEP_SUMMARY"

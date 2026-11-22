@@ -5,4 +5,4 @@ with exact attributions and counterfactuals, DPP re-ranking, claim-checked RAG e
 and statistical CI quality gates. See docs/spec/00_VISION.md.
 """
 
-__version__ = "0.2.0"
+__version__ = "1.0.0"

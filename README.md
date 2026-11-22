@@ -22,12 +22,12 @@ way.
   <img src="docs/design/demo.gif" width="860" alt="A recording of the demo: typing 'like Portal 2, co-op, under $20', ten picks dealt as cards into the sky, then the second pick, Team Fortress 2, opened with its exact shares and the games behind it">
 </p>
 
-> **Status:** [v0.2.0](https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v0.2.0) is out:
-> the glass-box recommender, its exact explanations and their checks, the quality gate, a REST API
-> and review retrieval, scored once on a sealed test set (below; [model card](docs/model-card.md),
-> [case study](docs/case-study.md), [paper draft](docs/paper/whyfinder.md)).
-> Model-written sentences are measured and opt-in ([ADR-0009](docs/decisions/ADR-0009-llm-runtime.md)).
-> Roadmap: [docs/plan/ROADMAP.md](docs/plan/ROADMAP.md).
+> **Status:** [v1.0.0](https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v1.0.0) is out:
+> the glass-box recommender with exact explanations and their checks, the quality gate, review
+> retrieval, checked sentences (model-written ones opt-in, [ADR-0009](docs/decisions/ADR-0009-llm-runtime.md)),
+> a REST API and the demo's live mode, scored once on a sealed test set (below;
+> [model card](docs/model-card.md), [case study](docs/case-study.md), [paper draft](docs/paper/whyfinder.md)).
+> What is still open: the known limitations in the [CHANGELOG](CHANGELOG.md) and the [roadmap](docs/plan/ROADMAP.md).
 
 ## How it works
 

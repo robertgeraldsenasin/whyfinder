@@ -1,7 +1,8 @@
-# Model card: Whyfinder v0.2.0
+# Model card: Whyfinder v1.0.0
 
 Format after Mitchell et al., FAT* 2019. Every number below comes from `results/` (the sealed test
-set, scored once by `release.yml` for v0.2.0) or from `results/validation/` (validation users only).
+set, scored by `release.yml` at each release; the ranking model is unchanged since v0.2.0) or from
+`results/validation/` (validation users only).
 
 ## Model
 
@@ -26,7 +27,7 @@ UCSD Steam datasets (Version 2: reviews and play time). 6.9 M interactions from 
 split: train before 2017-05-31, validation to 2017-10-01, test after. Test users need train
 history and test games must be known, which drops 34,582 test rows without history and 87,735 on
 unseen games. Usernames are hashed; no other personal data is used. Cold-start users (at most four
-train games) are scored separately; that report is attached to the v0.2.0 release.
+train games) are scored separately; that report is attached to each release.
 
 ## Metrics (sealed test set, 20,000 users, 95% bootstrap intervals)
 
@@ -64,11 +65,10 @@ popularity signal.
 
 Review retrieval (BM25, LSA vectors in a hand-written HNSW, RRF) runs over 6,000 review quotes from
 the train period. HNSW recall@10 against exact search is 0.999 at efSearch 64 on those vectors
-(`docs/evidence/hnsw-bench.md`). Explanations served by v0.2.0 are template sentences built from the
-exact attributions plus verbatim quotes, every one checked. After v0.2.0, small local models were
-measured writing them (ADR-0009). With each sentence pinned to its fact during decoding,
-llama3.2:3b keeps 99.4% of its claims, but half of its sentences only restate a fact, so generated
-sentences stay opt-in.
+(`docs/evidence/hnsw-bench.md`). By default explanations are template sentences built from the exact
+attributions plus verbatim quotes, every one checked. A local model can write them instead
+(ADR-0009): with each sentence pinned to its fact during decoding, llama3.2:3b keeps 99.4% of its
+claims, but half of its sentences only restate a fact, so model-written sentences stay opt-in.
 
 ## Limitations
 
