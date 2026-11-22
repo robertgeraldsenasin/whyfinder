@@ -9,7 +9,15 @@ import pytest
 
 from tests.unit.rag.test_generate import BAD, GOOD, PACK, SOURCE
 from whyfinder.rag.claims import AttributionRef, Claim
-from whyfinder.rag.evaluate import Case, cited_order, kendall_tau, reason_kind, run
+from whyfinder.rag.evaluate import (
+    Case,
+    cited_order,
+    kendall_tau,
+    parroted,
+    reason_kind,
+    run,
+    unfinished,
+)
 from whyfinder.rag.generate import template
 
 
@@ -48,12 +56,12 @@ def test_the_report_counts_support_fallbacks_agreement_and_the_ablation() -> Non
     two = json.dumps(
         {
             "claims": [
-                {"text": "Dead Cells drives it (50%).", "facts": ["A1"]},
-                {"text": "Hollow Knight adds 30%.", "facts": ["A2"]},
+                {"fact": "A1", "text": "Dead Cells drives it (50%)."},
+                {"fact": "A2", "text": "Hollow Knight adds 30%."},
             ]
         }
     )
-    guess = json.dumps({"claims": [{"text": "Celeste, probably.", "facts": ["L1"]}]})
+    guess = json.dumps({"claims": [{"fact": "L1", "text": "Celeste, probably."}]})
     backend = Script({False: [two, BAD, BAD, BAD, GOOD], True: [guess, guess, guess]})
     cases = [Case(PACK, SOURCE, lambda: template(PACK)) for _ in range(3)]
     report = run(cases, backend, seed=1)
@@ -70,3 +78,15 @@ def test_the_report_counts_support_fallbacks_agreement_and_the_ablation() -> Non
         "outside the pick and the history": 2,
         "without naming it": 2,
     }
+
+
+def test_fluency_proxies() -> None:
+    assert unfinished("Dead Cells counted for 50% of the score, making it ")
+    assert unfinished("Dead Cells counted for 50% of the score, making it")
+    assert unfinished("Dead Cells counted for 50% of the score,")
+    assert not unfinished("Dead Cells counted for 50% of the score")
+    assert not unfinished("Dead Cells counted for 50% of the score.")
+    assert not unfinished("They say \u201cgreat\u201d")
+    lines = ["Dead Cells counted for 50% of the score"]
+    assert parroted("Dead Cells counted for 50% of the score.", lines)
+    assert not parroted("You spent hours in Dead Cells, and it carries half of this pick.", lines)

@@ -7,6 +7,7 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Generated sentences are pinned to their facts while decoding (FR-16, ADR-0009): one sentence per fact, and the per-prompt schema holds each to the liked game's exact title, the listed percentage or none, and quotes verbatim. On the 60-pick evaluation llama3.2:3b keeps 99.4% of its claims on the first try with no fallback (it was 13% within two tries before), and becomes the default model. The report adds two plain-text proxies: sentences cut off by the length bound (8%) and sentences that only restate a fact (53%).
 - A demo GIF in the README, recorded from the real build in CI (`npm run gif`, the demo-gif workflow).
 - Grounded generation (FR-16, FR-17, ADR-0009): a local model through Ollama cites numbered facts (the top attributions, the counterfactual set, review quotes) and code attaches the evidence; the claim checker verifies every sentence, the model gets one retry, then the template sentences take over. Generations are cached and replayed in CI. On 60 picks the best of three small models (qwen2.5:3b) passes within two tries 32% of the time, far below the 95% target, so generation stays opt-in (`results/validation/rag-eval-*.json`, `whyfinder rag eval`).
 - The v0.2.0 sealed test results in `results/` and the README, with the ADR-0006 targets (one not met: Whyfinder does not beat popularity on NDCG@10), a model card (`docs/model-card.md`) and a case study (`docs/case-study.md`).

@@ -54,7 +54,8 @@ Against the targets fixed in ADR-0006 before the test set was read:
 
 Additivity 100% (contributions sum to the score within 1e-9); counterfactual validity 100% (every
 removal set, re-run through the full pipeline, drops the pick); deletion test 96.8% of users
-(removing the top-attributed games lowers the score more than removing random ones). On validation
+(removing the three most-attributed games pushes the pick further down than removing three
+random ones). On validation
 the greedy counterfactual is on average 0.018 games larger than the exact minimum, and a
 shuffled-model check correlates at 0.008, so the attributions track this model and not a generic
 popularity signal.
@@ -64,9 +65,10 @@ popularity signal.
 Review retrieval (BM25, LSA vectors in a hand-written HNSW, RRF) runs over 6,000 review quotes from
 the train period. HNSW recall@10 against exact search is 0.999 at efSearch 64 on those vectors
 (`docs/evidence/hnsw-bench.md`). Explanations served by v0.2.0 are template sentences built from the
-exact attributions plus verbatim quotes, every one checked. After v0.2.0, three small local models
-were measured writing them (ADR-0009): the best, qwen2.5:3b, passes the checker within two tries
-32% of the time, so generated sentences stay opt-in.
+exact attributions plus verbatim quotes, every one checked. After v0.2.0, small local models were
+measured writing them (ADR-0009). With each sentence pinned to its fact during decoding,
+llama3.2:3b keeps 99.4% of its claims, but half of its sentences only restate a fact, so generated
+sentences stay opt-in.
 
 ## Limitations
 

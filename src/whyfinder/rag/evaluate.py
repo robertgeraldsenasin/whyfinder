@@ -10,7 +10,10 @@ ablation). Reported:
 - **attribution agreement**: Kendall's τ between the order the model cites liked games and their
   attribution order (pass mark 0.7), over first answers citing at least two;
 - **ablation**: how often the first liked game cited is the real top contributor, with the facts and
-  without the shares.
+  without the shares;
+- **two plain-text proxies** over the model's claims that were served: the share cut off mid-way
+  by a length limit and the share that only copy a fact line back. The checker guards
+  faithfulness, not fluency; these say how much a model adds over the template.
 """
 
 from __future__ import annotations
@@ -18,11 +21,12 @@ from __future__ import annotations
 from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from itertools import combinations
 from typing import Any
 
 from whyfinder.rag.claims import AttributionRef, Claim, Source, check
-from whyfinder.rag.generate import Backend, Outcome, Pack, ask, explain
+from whyfinder.rag.generate import Backend, Outcome, Pack, ask, explain, facts
 
 
 @dataclass(frozen=True)
@@ -50,6 +54,52 @@ def cited_order(claims: Sequence[Claim]) -> list[str]:
             if isinstance(e, AttributionRef) and e.game_id not in out:
                 out.append(e.game_id)
     return out
+
+
+DANGLING = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "as",
+        "at",
+        "by",
+        "for",
+        "from",
+        "in",
+        "into",
+        "is",
+        "it",
+        "its",
+        "making",
+        "of",
+        "on",
+        "or",
+        "so",
+        "that",
+        "the",
+        "their",
+        "to",
+        "which",
+        "while",
+        "with",
+    }
+)
+
+
+def unfinished(text: str) -> bool:
+    """The sentence was cut off mid-way by a length limit: it ends on a space, a comma or a word
+    that cannot end a sentence ("making it", "and the")."""
+    if not text or text != text.rstrip() or text.rstrip()[-1] in ",;:-(":
+        return True
+    words = text.rstrip(" .!?\u201d\"')").split()
+    return not words or words[-1].lower() in DANGLING
+
+
+def parroted(text: str, lines: Sequence[str], at: float = 0.85) -> bool:
+    """The sentence is (nearly) a fact line copied back, adding nothing a template would not."""
+    norm = text.lower().strip(" .")
+    return any(SequenceMatcher(None, norm, line.lower()).ratio() >= at for line in lines)
 
 
 def reason_kind(reason: str) -> str:
@@ -82,9 +132,15 @@ def run(cases: Sequence[Case], backend: Backend, *, seed: int) -> dict[str, Any]
     kinds: Counter[str] = Counter()
     taus: list[float] = []
     top1 = top1_blind = 0
+    served = cut = copied = 0
     for case in cases:
         out = explain(case.pack, case.source, backend, case.template, seed=seed)
         outcomes.append(out)
+        if not out.fallback_used:
+            lines = [f.line for f in facts(case.pack)]
+            served += len(out.claims)
+            cut += sum(1 for c in out.claims if unfinished(c.text))
+            copied += sum(1 for c in out.claims if parroted(c.text, lines))
         first = out.attempts[0]
         first_claims += len(first.claims)
         first_supported += sum(1 for c in first.claims if not check([c], case.source))
@@ -119,4 +175,7 @@ def run(cases: Sequence[Case], backend: Backend, *, seed: int) -> dict[str, Any]
         "top1_cited_with_attributions": share(top1),
         "top1_cited_without_attributions": share(top1_blind),
         "first_try_rejections": dict(sorted(kinds.items())),
+        "served_model_claims": served,
+        "served_unfinished": cut / served if served else None,
+        "served_parroted": copied / served if served else None,
     }

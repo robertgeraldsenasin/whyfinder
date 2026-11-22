@@ -2,10 +2,12 @@
 
 A small local model only voices facts the recommender already computed: the pick's top
 attributions, its counterfactual set and review quotes retrieved for it, each listed with an ID.
-The model writes one to three sentences and names the IDs each one uses; its output is constrained
-to that shape (the IDs are an enum in the per-prompt JSON schema), and code attaches the evidence
-behind each ID. `claims.check` then verifies every sentence against its evidence; on failure the
-model gets one retry with the checker's reasons, then the template sentences take over (faithful by
+The model writes one to three sentences, each about one fact, and gives that fact's ID. Its
+output is held by the per-prompt JSON schema: each sentence must match a pattern for its fact (the
+liked game's exact title, the exact percentage if any, a player quote verbatim between curly
+quotes), which Ollama enforces while decoding. Code attaches the evidence behind each ID.
+`claims.check` then verifies every sentence against its evidence; on failure the model gets one
+retry with the checker's reasons, then the template sentences take over (faithful by
 construction). Generations are cached under hash(model, digest, prompt, schema, seed): CI replays
 the cache and fails on a miss, so it costs nothing and gives the same result every run.
 """
@@ -51,18 +53,27 @@ class Pack:
 
 RULES = (
     "Write in English. Explain to a player why the game below was recommended, in one to "
-    "{claims} short sentences and {words} words in all. Each sentence uses one to three facts "
-    "from the list and gives their IDs. Name every liked game you use exactly as written. Write a "
-    "percentage only as given. Copy a player quote word for word inside double quotes. Do not "
-    "mention any game that is not in the facts."
+    "{claims} short sentences and {words} words in all. Each sentence is about exactly one fact "
+    "from the list and gives its ID. A sentence about a liked game names it exactly as written; "
+    "if it gives a number, it is the percentage listed. A sentence about a player quote copies "
+    "the quote word for word between \u201c and \u201d. Do not mention any game that is not in "
+    "the facts."
 )
 
 BLIND = (
     "Write in English. Explain to a player why the game below was recommended, in one to "
     "{claims} short sentences and {words} words in all. You know which games the player liked, "
-    "not how much each one counted. Each sentence names the liked games it relies on, exactly as "
-    "written, and gives their IDs. Do not mention any game that is not in the facts."
+    "not how much each one counted. Each sentence is about one liked game, names it exactly as "
+    "written and gives its ID. Do not mention any game that is not in the facts."
 )
+
+FREE = '[^%"\\\\\u201c\u201d]'  # anything but %, straight or curly double quotes, backslash
+META = set("\\^$.|?*+()[]{}/")
+
+
+def literal(text: str) -> str:
+    """`text` as a regex that matches only itself (the subset llama.cpp grammars accept)."""
+    return "".join("\\" + c if c in META else c for c in text)
 
 
 @dataclass(frozen=True)
@@ -70,34 +81,48 @@ class Fact:
     id: str
     line: str
     evidence: Evidence
+    pattern: str  # what a sentence about this fact must look like
+
+
+def about(title: str) -> str:
+    return f"^{FREE}{{0,40}}{literal(title)}{FREE}{{0,45}}$"
 
 
 def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
     """The citable facts, with IDs: A for attributions, C for the counterfactual, Q for quotes;
     without attributions (the research ablation) only L for the liked games, in the player's
-    order, since the attribution order would give the answer away."""
+    order, since the attribution order would give the answer away. Quotes containing straight
+    double quotes or backslashes are left out: they cannot be pinned inside a JSON string."""
     if not with_attributions:
         return [
-            Fact(f"L{n}", title, AttributionRef(gid, 0.0))
+            Fact(f"L{n}", title, AttributionRef(gid, 0.0), about(title))
             for n, (gid, title) in enumerate(pack.liked, start=1)
         ]
     out: list[Fact] = []
     positive = [a for a in pack.attributions[:TOP] if a[2] > 0]
     for n, (gid, title, share) in enumerate(positive, start=1):
-        line = f"{title} counted for {round(share * 100)}% of the score"
-        out.append(Fact(f"A{n}", line, AttributionRef(gid, share)))
+        pct = round(share * 100)
+        line = f"{title} counted for {pct}% of the score"
+        pattern = f"^{FREE}{{0,40}}{literal(title)}{FREE}{{0,40}}({pct}%{FREE}{{0,25}})?$"
+        out.append(Fact(f"A{n}", line, AttributionRef(gid, share), pattern))
     if pack.removed:
         names = " and ".join(t for _, t in pack.removed)
         line = f"without {names} in the list, {pack.pick_title} would drop out of the picks"
-        out.append(Fact("C1", line, CounterfactualRef(tuple(g for g, _ in pack.removed))))
-    for n, (cid, aspect, text) in enumerate(pack.quotes, start=1):
-        line = f'a player of {pack.pick_title}, on {aspect}: "{text}"'
-        out.append(Fact(f"Q{n}", line, ReviewRef(cid, text)))
+        joined = f"{FREE}{{1,20}}".join(literal(t) for _, t in pack.removed)
+        pattern = f"^{FREE}{{0,40}}{joined}{FREE}{{0,60}}$"
+        ids = tuple(g for g, _ in pack.removed)
+        out.append(Fact("C1", line, CounterfactualRef(ids), pattern))
+    usable = [q for q in pack.quotes if '"' not in q[2] and "\\" not in q[2]]
+    for n, (cid, aspect, text) in enumerate(usable, start=1):
+        line = f"a player of {pack.pick_title}, on {aspect}: \u201c{text}\u201d"
+        pattern = f"^{FREE}{{0,45}}\u201c{literal(text)}\u201d{FREE}{{0,15}}$"
+        out.append(Fact(f"Q{n}", line, ReviewRef(cid, text), pattern))
     return out
 
 
 def schema(listed: Sequence[Fact]) -> dict[str, Any]:
-    """The output the model is held to: sentences, each with the IDs of the facts it uses."""
+    """The output the model is held to: one to three sentences, each naming one fact by ID and
+    matching that fact's pattern."""
     return {
         "type": "object",
         "additionalProperties": False,
@@ -108,18 +133,18 @@ def schema(listed: Sequence[Fact]) -> dict[str, Any]:
                 "minItems": 1,
                 "maxItems": MAX_CLAIMS,
                 "items": {
-                    "type": "object",
-                    "additionalProperties": False,
-                    "required": ["text", "facts"],
-                    "properties": {
-                        "text": {"type": "string", "minLength": 1, "maxLength": 400},
-                        "facts": {
-                            "type": "array",
-                            "minItems": 1,
-                            "maxItems": 3,
-                            "items": {"enum": [f.id for f in listed]},
-                        },
-                    },
+                    "anyOf": [
+                        {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": ["fact", "text"],
+                            "properties": {
+                                "fact": {"enum": [f.id]},
+                                "text": {"type": "string", "pattern": f.pattern},
+                            },
+                        }
+                        for f in listed
+                    ]
                 },
             }
         },
@@ -135,7 +160,7 @@ def prompt(pack: Pack, *, with_attributions: bool = True, feedback: Sequence[str
     text = f"{rules}\n\nRecommended game: {pack.pick_title}\nFacts:\n{listed}\n"
     if with_attributions and pack.paths:
         text += "Context (not citable): " + "; ".join(pack.paths) + ".\n"
-    text += '\nAnswer with JSON only: {"claims": [{"text": "...", "facts": ["..."]}]}\n'
+    text += '\nAnswer with JSON only: {"claims": [{"fact": "...", "text": "..."}]}\n'
     if feedback:
         text += "\nYour last answer was rejected:\n" + "\n".join(f"- {r}" for r in feedback)
         text += "\nAnswer again, fixing every point.\n"
@@ -143,7 +168,7 @@ def prompt(pack: Pack, *, with_attributions: bool = True, feedback: Sequence[str
 
 
 def read(raw: str, listed: Sequence[Fact]) -> list[Claim]:
-    """Claims from the model's answer: each sentence with the evidence behind the IDs it gave."""
+    """Claims from the model's answer: each sentence with the evidence behind its fact's ID."""
     by_id = {f.id: f for f in listed}
     try:
         doc = json.loads(raw)
@@ -156,15 +181,14 @@ def read(raw: str, listed: Sequence[Fact]) -> list[Claim]:
         raise SchemaError(f"at most {MAX_CLAIMS} sentences")
     out: list[Claim] = []
     for item in items:
-        if not isinstance(item, dict) or set(item) != {"text", "facts"}:
-            raise SchemaError("each sentence needs exactly text and facts")
-        text, ids = item["text"], item["facts"]
+        if not isinstance(item, dict) or set(item) != {"fact", "text"}:
+            raise SchemaError("each sentence needs exactly fact and text")
+        fact, text = item["fact"], item["text"]
         if not isinstance(text, str) or not text.strip():
             raise SchemaError("a sentence must be a non-empty string")
-        if not isinstance(ids, list) or not ids or not all(i in by_id for i in ids):
-            raise SchemaError(f"facts must be IDs from the list, got {ids!r}")
-        evidence = tuple(dict.fromkeys(by_id[i].evidence for i in ids))
-        out.append(Claim(text=text, evidence=evidence))
+        if not isinstance(fact, str) or fact not in by_id:
+            raise SchemaError(f"fact must be an ID from the list, got {fact!r}")
+        out.append(Claim(text=text, evidence=(by_id[fact].evidence,)))
     return out
 
 

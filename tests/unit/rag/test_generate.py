@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -27,6 +28,7 @@ from whyfinder.rag.generate import (
     Pack,
     explain,
     facts,
+    literal,
     prompt,
     read,
     schema,
@@ -50,8 +52,8 @@ SOURCE = Source(
     removed=frozenset({"1"}),
     catalogue=("Dead Cells", "Hollow Knight", "Celeste", "Hades", "Dota 2"),
 )
-GOOD = json.dumps({"claims": [{"text": "Dead Cells carries it (50%).", "facts": ["A1"]}]})
-BAD = json.dumps({"claims": [{"text": "Dota 2 carries it (50%).", "facts": ["A1"]}]})
+GOOD = json.dumps({"claims": [{"fact": "A1", "text": "Dead Cells carries it (50%)."}]})
+BAD = json.dumps({"claims": [{"fact": "A1", "text": "Dota 2 carries it (50%)."}]})
 NO_SCHEMA: dict[str, Any] = {}
 
 
@@ -104,26 +106,61 @@ def test_the_prompt_lists_the_facts_and_the_ablation_hides_the_shares() -> None:
     assert "- wrong share for Dead Cells" in again
 
 
-def test_the_schema_only_allows_the_listed_ids() -> None:
-    s = schema(facts(PACK))
-    ids = s["properties"]["claims"]["items"]["properties"]["facts"]["items"]["enum"]
-    assert ids == ["A1", "A2", "A3", "C1", "Q1"]
+def test_the_schema_pins_each_sentence_to_its_fact() -> None:
+    listed = facts(PACK)
+    s = schema(listed)
+    options = s["properties"]["claims"]["items"]["anyOf"]
+    assert [o["properties"]["fact"]["enum"] for o in options] == [[f.id] for f in listed]
     assert s["properties"]["claims"]["maxItems"] == 3
+    by_id = {f.id: f.pattern for f in listed}
+    fits = {
+        "A1": ["Dead Cells is the main reason (50%).", "You liked Dead Cells, so here it is."],
+        "C1": ["Take Dead Cells off your list and Hades drops out."],
+        "Q1": [f"One player puts it simply: \u201c{QUOTE}\u201d."],
+    }
+    misses = {
+        "A1": ["Hades is great.", "Dead Cells drove 90% of it.", 'Dead Cells, "they" say.'],
+        "Q1": [f'Players say "{QUOTE}"', f"\u201c{QUOTE[:-1]}\u201d"],
+    }
+    for fid, texts in fits.items():
+        assert all(re.fullmatch(by_id[fid], x) for x in texts), fid
+    for fid, texts in misses.items():
+        assert not any(re.fullmatch(by_id[fid], x) for x in texts), fid
 
 
-def test_reading_an_answer_attaches_the_evidence_once() -> None:
-    raw = json.dumps({"claims": [{"text": "Dead Cells and Hades.", "facts": ["A1", "A1", "C1"]}]})
-    (claim,) = read(raw, facts(PACK))
-    assert claim.evidence == (AttributionRef("1", 0.5), CounterfactualRef(("1",)))
+def test_titles_are_pinned_literally_and_odd_quotes_left_out() -> None:
+    odd = Pack(
+        **{
+            **PACK.__dict__,
+            "attributions": (("9", "S.T.A.L.K.E.R.: Call of Pripyat (2010)", 0.6),),
+            "removed": (),
+            "quotes": (("c_1_0", "story", 'He said "wow"'), ("c_1_1", "story", "Fine.")),
+        }
+    )
+    listed = facts(odd)
+    assert [f.id for f in listed] == ["A1", "Q1"]
+    a1 = listed[0].pattern
+    assert re.fullmatch(a1, "Because of S.T.A.L.K.E.R.: Call of Pripyat (2010).")
+    assert not re.fullmatch(a1, "Because of SxTxAxLxKxExRx: Call of Pripyat (2010).")
+    assert literal("a.b(c)") == "a\\.b\\(c\\)"
+
+
+def test_reading_an_answer_attaches_each_facts_evidence() -> None:
+    raw = json.dumps(
+        {"claims": [{"fact": "A1", "text": "Dead Cells."}, {"fact": "C1", "text": "Hades."}]}
+    )
+    first, second = read(raw, facts(PACK))
+    assert first.evidence == (AttributionRef("1", 0.5),)
+    assert second.evidence == (CounterfactualRef(("1",)),)
     for bad in (
         "nope",
         "[]",
         '{"claims": [], "x": 1}',
         '{"claims": [{"text": "x"}]}',
-        '{"claims": [{"text": " ", "facts": ["A1"]}]}',
-        '{"claims": [{"text": "x", "facts": ["Z9"]}]}',
-        '{"claims": [{"text": "x", "facts": []}]}',
-        json.dumps({"claims": [{"text": "x", "facts": ["A1"]}] * 4}),
+        '{"claims": [{"fact": "A1", "text": " "}]}',
+        '{"claims": [{"fact": "Z9", "text": "x"}]}',
+        '{"claims": [{"fact": ["A1"], "text": "x"}]}',
+        json.dumps({"claims": [{"fact": "A1", "text": "x"}] * 4}),
     ):
         with pytest.raises(SchemaError):
             read(bad, facts(PACK))

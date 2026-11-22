@@ -28,13 +28,14 @@ pick's reviews, and a quote counts only if BM25 matches it.
 
 Generation runs when a model is configured (`WHYFINDER_LLM_MODEL` for `whyfinder serve run`, the
 llm workflow for the evaluation); otherwise the template sentences are served, through the same
-checker. The model cites numbered facts and code attaches their evidence. Measured on 60 picks with
-three CPU-sized models (ADR-0009, `results/validation/rag-eval-*.json`), the best,
-qwen2.5:3b, passes the checker within two tries 32% of the time and keeps 27% of its first-try
-claims, far from the 95% target: small models praise the recommended game instead of naming the
-liked one, paraphrase quotes and run long. They do follow the attribution order (τ ≈ 0.95), and the
-shares make their first citation right far more often (88% against 57% without them). Generation
-therefore stays opt-in; the checker and the fallback keep served text faithful either way. Still to come: the full-corpus DVC `index` stage, the 150 labelled retrieval queries and
+checker. The model writes one sentence per numbered fact; the per-prompt schema pins each sentence
+to its fact (the exact title, the listed percentage or none, the quote verbatim) and Ollama enforces
+it while decoding; code attaches the evidence. Measured on 60 picks with three CPU-sized models
+(ADR-0009, `results/validation/rag-eval-*.json`), llama3.2:3b keeps 99.4% of its claims on the
+first try and never needs the fallback, meeting the 95% target; before pinning, the best model
+passed within two tries 32% of the time. The checker guards faithfulness, not prose: half of
+llama3.2:3b's sentences only restate a fact line and 8% are cut off by the length bound, so
+generation stays opt-in. Still to come: the full-corpus DVC `index` stage, the 150 labelled retrieval queries and
 the NLI entailment score.
 
 ## One explanation, step by step

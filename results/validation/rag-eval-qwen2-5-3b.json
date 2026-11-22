@@ -1,21 +1,23 @@
 {
-  "attribution_agreement_outputs": 31,
-  "attribution_agreement_tau": 0.9354838709677419,
+  "attribution_agreement_outputs": 1,
+  "attribution_agreement_tau": 1.0,
   "cases": 60,
-  "claim_support_before_fallback": 0.2682926829268293,
+  "claim_support_before_fallback": 0.9703703703703703,
   "digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
-  "fallback_rate": 0.6833333333333333,
-  "first_try_pass_rate": 0.1,
+  "fallback_rate": 0.1,
+  "first_try_pass_rate": 0.7666666666666667,
   "first_try_rejections": {
-    "carry its quote": 59,
-    "matches no cited share": 10,
-    "outside the pick and the history": 1,
-    "the limit is": 38,
-    "without naming it": 53
+    "carry its quote": 2,
+    "claim schema": 4,
+    "outside the pick and the history": 2,
+    "the limit is": 8
   },
   "model": "qwen2.5:3b",
-  "pass_within_two_tries": 0.31666666666666665,
+  "pass_within_two_tries": 0.9,
   "seed": 20261117,
-  "top1_cited_with_attributions": 0.8833333333333333,
+  "served_model_claims": 125,
+  "served_parroted": 0.76,
+  "served_unfinished": 0.192,
+  "top1_cited_with_attributions": 0.5666666666666667,
   "top1_cited_without_attributions": 0.5666666666666667
 }

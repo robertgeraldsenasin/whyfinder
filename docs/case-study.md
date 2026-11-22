@@ -64,7 +64,8 @@ and it was missed. Popularity is a strong baseline at the very top of a time-spl
 games everyone starts playing next really are what many users play next. Whyfinder gets the same
 precision while recommending from 40 times more of the catalogue, and every one of its reasons is
 exact. The explanation checks all pass: additivity and counterfactual validity are 100%, and
-removing the top-attributed games hurts the score more than removing random ones for 96.8% of users.
+removing the three most-attributed games pushes a pick further down than removing three random ones
+for 96.8% of users.
 
 ## What I learned
 
@@ -78,10 +79,11 @@ removing the top-attributed games hurts the score more than removing random ones
 
 ## What's next
 
-I also tried letting small local models write the sentences, with the checker as a gate. On 60 picks
-the best of three (qwen2.5:3b) produced a fully faithful answer within two tries only 32% of the
-time: these models praise the recommended game instead of naming the liked one, and paraphrase
-quotes. They do cite the liked games in the right order, and handing them the exact shares moves
-their first citation from 57% right to 88%. So generation stays opt-in, and the checker earns its
-place. Next: a larger model, narrower outputs, a full-corpus review index, and 150 hand-labelled
-retrieval queries so retrieval quality is measured rather than assumed.
+I also let small local models write the sentences, with the checker as a gate. Left free, the best
+of three passed within two tries only 32% of the time: they praised the recommended game instead
+of naming the liked one and paraphrased quotes. So I pinned each sentence to one fact while the
+model decodes, with a pattern that forces the exact title, the listed percentage and verbatim
+quotes. llama3.2:3b then kept 99.4% of its claims and never needed the fallback. The catch: half
+its sentences just restate the fact. Faithful is not the same as useful, so the templates stay the
+default. Next: a larger model, a full-corpus review index, and 150 hand-labelled retrieval queries
+so retrieval quality is measured rather than assumed.
