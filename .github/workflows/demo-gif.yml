@@ -1,0 +1,45 @@
+# Records the README's demo GIF from the real build in a real browser (Steam art included), and
+# prints it so it can be committed to docs/design/demo.gif. On demand, or when the script changes.
+name: demo-gif
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "web/tests/e2e/gif.spec.ts"
+      - ".github/workflows/demo-gif.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Record
+        run: npm run gif
+      - name: Make the GIF
+        run: |
+          video=$(find test-results -name '*.webm' | head -1)
+          start=$(cat test-results/gif-start.txt)
+          ffmpeg -y -loglevel error -ss "$start" -i "$video" \
+            -vf "fps=12,scale=880:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" \
+            -loop 0 demo.gif
+          ls -la demo.gif
+          echo "GIF-BEGIN"
+          base64 -w 3000 demo.gif
+          echo "GIF-END"
