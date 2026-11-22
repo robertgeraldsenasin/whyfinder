@@ -1,7 +1,7 @@
 # ADR-0009: LLM: local model through Ollama, cached in CI
 
-- **Status:** Accepted (model measured 2026-11-20)
-- **Date:** 2026-11-17, amended 2026-11-20
+- **Status:** Accepted (model chosen 2026-11-23)
+- **Date:** 2026-11-17, amended 2026-11-20 and 2026-11-23
 - **Deciders:** Robert Gerald Senasin
 
 ## Context
@@ -21,32 +21,36 @@ Default to a small open instruct model through Ollama. Generations are cached un
 digest, prompt, output schema, seed); CI replays the cache and fails on a miss. A hosted model may
 be compared locally, never in CI.
 
-The model numbers each fact it may use, writes one to three sentences and gives the IDs each one
-relies on; the IDs are an enum in the per-prompt output schema and code attaches the evidence. A
-first version that asked the model to copy game IDs, shares and quotes into the claim schema kept
-30% of its claims (qwen2.5:1.5b), drifted into Chinese on the blind prompt and looped on arrays.
+**How the model is asked.** Each fact it may use is numbered (A for an attribution with its
+percentage, C for the counterfactual set, Q for a review quote). The model writes one to three
+sentences, each about one fact, and gives that fact's ID; code attaches the evidence. The per-prompt
+JSON schema pins every sentence to its fact with a pattern: the liked game's exact title, no
+percentage other than the listed one, a quote verbatim between curly quotes, a bounded length.
+Ollama enforces the schema while decoding, and the checker still verifies the result.
 
-Three CPU-sized models were run on the same 60 picks (`results/validation/rag-eval-*.json`, the
-llm workflow on GitHub's standard runner, temperature 0, seed 20261117):
+**What was measured** (60 picks, `results/validation/rag-eval-*.json`, the llm workflow on GitHub's
+standard runner, temperature 0, seed 20261117). Free sentences citing fact IDs came first; pinned
+sentences replaced them:
 
-| Model (Ollama tag, digest prefix) | Claims kept, first try | Output passes within two tries | Fallback | τ (citation vs attribution order) | Top-1 cited, with / without shares |
-| --- | --- | --- | --- | --- | --- |
-| qwen2.5:1.5b (65ec0654) | 18% | 7% | 93% | 0.96 | 98% / 37% |
-| **qwen2.5:3b** (357c53fb) | 27% | **32%** | **68%** | 0.94 | 88% / 57% |
-| llama3.2:3b (a80c4f17) | 35% | 13% | 87% | 0.95 | 98% / 33% |
+| Model (digest prefix) | Free: passes within two tries | Pinned: claims kept, first try | Pinned: passes first try / within two | Pinned: fallback | Cut off | Copies a fact line |
+| --- | --- | --- | --- | --- | --- | --- |
+| qwen2.5:1.5b (65ec0654) | 7% | 100% | 82% / 97% | 3% | 13% | 80% |
+| qwen2.5:3b (357c53fb) | 32% | 97% | 77% / 90% | 10% | 19% | 76% |
+| **llama3.2:3b** (a80c4f17) | 13% | **99.4%** | **98% / 100%** | **0%** | 8% | 53% |
 
-`qwen2.5:3b` is the default (`whyfinder rag eval --model`), as the one whose answers most often
-survive the checker. None reaches the 95% claim-support target of 06_RAG. The models follow the
-attribution order closely (τ ≈ 0.95), and giving them the shares moves the first liked game they
-cite from about a third right to nearly always right, but they write praise of the recommended game
-where the facts call for the liked game's name, paraphrase quotes, and run past 60 words.
+`llama3.2:3b` is the default (`whyfinder rag eval --model`): it meets the 95% claim-support target
+of 06_RAG, never needs the fallback on this sample, and cites liked games in attribution order
+(τ = 1.0, the true top contributor first in 100% of answers against 30% when it is not given the
+shares). Free generation failed in the ways pinning removes: praising the recommended game instead
+of naming the liked one, paraphrasing quotes, running long.
 
-So generation stays opt-in. The API serves the template sentences unless a model is configured, and
-when one is, every answer still passes the checker or is replaced.
+The checker guards faithfulness, not prose. Half of llama3.2:3b's sentences only restate a fact
+line, and 8% are cut off by the length bound mid-phrase, so a generated explanation reads no better
+than the template more often than not. Generation therefore stays opt-in: the API uses a model only
+when one is configured, and the static demo keeps the template sentences.
 
 ## Consequences
 
-CI costs $0 and is deterministic. Quality depends on the local model; the claim checker and the
-template fallback keep what users see faithful regardless. A bigger model (7B and up) or a
-narrower output (one fact per sentence, the quote inserted by code) are the next things to try; the
-evaluation and cache make the comparison one workflow run.
+CI costs $0 and is deterministic. Pinning makes even 1.5B models faithful to the facts; what they
+add over the template is wording, and on this sample not much of it. Next to try: a 7B model on a
+longer runner, and a looser length bound that ends sentences instead of cutting them.
