@@ -16,8 +16,9 @@ test set read once, the blend reaches NDCG@10 of 0.0447 and Recall@20 of 0.1194,
 ten against popularity's 0.7%. It does not beat popularity on NDCG@10 (Δ −0.0007, p = 0.78), a
 target we set before reading the test set and report as missed. Attributions sum to the score in
 100% of checks and counterfactual sets are valid in 100%. Small local language models asked to voice
-the facts kept fewer than a third of their claims, which argues for checking generated
-explanations rather than trusting them.
+the facts passed the checker within two tries at most 32% of the time when free; pinning each
+sentence to one fact during decoding raised a 3B model to 99.4% of claims kept, though half of
+its sentences then only restate the fact.
 
 ## 1. Introduction
 
@@ -40,7 +41,7 @@ check. The contributions of this project are:
 3. a grounded explanation layer: hand-written BM25, LSA and HNSW retrieval over reviews, a claim
    schema, and a deterministic checker that every sentence must pass;
 4. a measurement of how often small local language models produce sentences that survive that
-   checker.
+   checker, free and with each sentence pinned to a fact while decoding.
 
 ## 2. Model
 
@@ -148,29 +149,47 @@ with its exact share, every percentage is within a point of a cited share, every
 verbatim span of a retrieved chunk, a counterfactual cites exactly the computed set, and no other
 catalogue game is named. Template sentences built from the facts always pass.
 
-We then asked three small local models (through Ollama, temperature 0) to write the sentences from
-the same facts, citing numbered facts so that code attaches the evidence. On 60 picks, the best,
-qwen2.5:3b, produced an answer that passed the checker within two tries 32% of the time; 27% of its
-first-attempt claims passed on their own. The failures were consistent across models: sentences
-praising the recommended game where the facts concern the liked game, paraphrased quotes, and
-answers past the length limit. The models did follow the attribution order (Kendall τ ≈ 0.95), and
-giving them the shares made the first liked game they cited the true top contributor 88% of the time
-against 57% without the shares. The served system therefore uses the checked template sentences by
-default.
+We then asked three small local models (through Ollama, temperature 0, seed fixed) to write the
+sentences from the same facts, citing numbered facts so that code attaches the evidence. Left free,
+the best of them passed the checker within two tries on 32% of 60 picks. The failures were the same
+across models: sentences praising the recommended game where the facts concern the liked game,
+paraphrased quotes, and answers past the length limit.
+
+Each of those failures is a property of the string, so we moved it into decoding. The model now
+writes one sentence per fact, and the JSON schema sent with each prompt gives every fact its own
+regular expression: the liked game's exact title, the listed percentage or none, a quote copied
+between curly quotes, a bounded length. Ollama constrains generation to the schema; the checker
+still runs afterwards.
+
+| Model | Free: within two tries | Pinned: claims kept | Pinned: first try / two tries | Fallback | Cut off | Restates a fact |
+| --- | --- | --- | --- | --- | --- | --- |
+| qwen2.5:1.5b | 7% | 100% | 82% / 97% | 3% | 13% | 80% |
+| qwen2.5:3b | 32% | 97% | 77% / 90% | 10% | 19% | 76% |
+| llama3.2:3b | 13% | 99.4% | 98% / 100% | 0% | 8% | 53% |
+
+With pinning, llama3.2:3b meets the 95% claim-support target and never falls back on this sample.
+It also cites liked games in attribution order (Kendall τ = 1.0), and its first citation is the
+true top contributor in every answer when given the shares, against 30% without them. The last two
+columns are crude text proxies, and they show what the checker cannot: a sentence cut off at the
+length bound, or one that repeats the fact line almost word for word (similarity at least 0.85),
+is faithful and still no better than the template. The served system therefore keeps the template
+sentences by default and uses a model only when one is configured.
 
 ## 6. Limitations
 
 The data end in 2017 and cover English reviews. Play time is a noisy proxy for preference. The
 item cap keeps the long tail out of EASE^R, though PPR still reaches it. The retrieval layer has
-not yet been measured against labelled queries, and the generation study uses 60 picks and models
-small enough for a CPU runner.
+not yet been measured against labelled queries, and the generation study uses 60 picks, models
+small enough for a CPU runner, and text proxies in place of human judgements of fluency.
 
 ## 7. Conclusion
 
 Restricting a recommender to additive parts lets every explanation be exact and every claim be
-checked, at an accuracy that matches strong baselines on this data. The one target we missed, and
-the low pass rate of small generators, are as much a result as the targets we met: both came from
-measuring against commitments made in advance.
+checked, at an accuracy that matches strong baselines on this data. Pinning generated sentences
+to those facts makes even a 3B model faithful, but faithful is a lower bar than useful, and the
+checker alone cannot tell them apart. The one target we missed, and the gap between faithful and
+fluent, are as much a result as the targets we met: both came from measuring against commitments
+made in advance.
 
 ## References
 
