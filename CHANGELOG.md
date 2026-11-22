@@ -7,6 +7,7 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- A demo GIF in the README, recorded from the real build in CI (`npm run gif`, the demo-gif workflow).
 - Grounded generation (FR-16, FR-17, ADR-0009): a local model through Ollama cites numbered facts (the top attributions, the counterfactual set, review quotes) and code attaches the evidence; the claim checker verifies every sentence, the model gets one retry, then the template sentences take over. Generations are cached and replayed in CI. On 60 picks the best of three small models (qwen2.5:3b) passes within two tries 32% of the time, far below the 95% target, so generation stays opt-in (`results/validation/rag-eval-*.json`, `whyfinder rag eval`).
 - The v0.2.0 sealed test results in `results/` and the README, with the ADR-0006 targets (one not met: Whyfinder does not beat popularity on NDCG@10), a model card (`docs/model-card.md`) and a case study (`docs/case-study.md`).
 - A benchmark of the hand-written HNSW against hnswlib (FR-15): equal recall@10 at every efSearch (0.999 vs 0.994 on the review quotes at efSearch 64), about 20 times fewer queries per second and a 30 times slower build in pure Python (`docs/evidence/hnsw-bench.md`).
