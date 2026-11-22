@@ -3,6 +3,7 @@ import type { Explained } from '../engine/engine';
 import type { Progress, ReadyInfo } from '../engine/protocol';
 import type { ModelFile, Slice } from '../engine/types';
 import { EngineClient } from './engine-client';
+import { apiBase } from './api';
 import type { Evidence } from './evidence';
 import { allowedMask, type Filters, merge, NO_FILTERS, parseQuery } from './query';
 import { settings } from './settings.svelte';
@@ -83,6 +84,8 @@ class AppState {
   /** Ask the atlas to finish the starfall at once. */
   skipFall = $state(0);
   evidence = $state.raw<Evidence | null>(null);
+  /** A running API to ask for its own sentences (`?api=`, live mode); null in the static demo. */
+  api = $state<string | null>(null);
   /** Filters from a described query (FR-18, FR-23) and the words it could not place. */
   filters = $state.raw<Filters>(NO_FILTERS);
   unresolved = $state.raw<string[]>([]);
@@ -128,6 +131,7 @@ class AppState {
 
   async load(base: string): Promise<void> {
     settings.load();
+    this.api = apiBase(location.search);
     try {
       const [slice, model] = await Promise.all([
         fetch(`${base}data/demo-slice.json`).then((r) => r.json() as Promise<Slice>),

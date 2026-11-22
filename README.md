@@ -73,7 +73,9 @@ curl -s localhost:8000/explain -H 'content-type: application/json' \
 ```
 
 `/explain` returns the exact attributions, the counterfactual, graph paths and checked sentences,
-some quoting players' reviews of the pick. Endpoints, errors and limits:
+some quoting players' reviews of the pick. With the API running, open the demo with
+`?api=http://localhost:8000` and the last step of Under the hood shows the API's sentences for the
+same pick beside the browser's. Endpoints, errors and limits:
 [docs/spec/12_API.md](docs/spec/12_API.md); the OpenAPI document is [docs/openapi.json](docs/openapi.json).
 
 ## Results

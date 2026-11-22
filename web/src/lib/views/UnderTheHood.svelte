@@ -8,8 +8,10 @@
   import { int, ms, num, pct, rank, source } from '../format';
   import { describe as filterWords, hasFilters } from '../query';
   import { app, type SceneLine } from '../state.svelte';
+  import { ApiError, type ApiExplain, explainRemote } from '../api';
+  import { check, type Claim, facts, ground, type Ref, slips, template } from '../words';
 
-  type Stage = { id: string; title: string; short: string; planned?: boolean };
+  type Stage = { id: string; title: string; short: string };
   const STAGES: Stage[] = [
     { id: 'history', title: 'Your history becomes a vector', short: 'History to weights' },
     { id: 'ease', title: 'EASE^R: a closed-form co-play model', short: 'EASE^R' },
@@ -18,8 +20,9 @@
     { id: 'shortlist', title: 'Drop what you own, shortlist 100', short: 'Shortlist' },
     { id: 'dpp', title: 'DPP: variety without losing relevance', short: 'DPP variety' },
     { id: 'explain', title: 'Exact reasons, smallest counterfactual', short: 'Explain' },
-    { id: 'words', title: 'Grounded words (arrives in M3)', short: 'Words', planned: true },
+    { id: 'words', title: 'Grounded words, checked', short: 'Words' },
   ];
+  const WORD_STEPS = ['The facts', 'Sentences from the facts', 'The checker', 'What the checker catches', 'From a live API'];
 
   let sub = $state(0);
   let playing = $state(false);
@@ -43,6 +46,7 @@
     if (stage.id === 'push') return trace?.trace.length ?? 1;
     if (stage.id === 'dpp') return result.steps.length || 1;
     if (stage.id === 'explain') return pickE?.counterfactual.trail.length ?? 1;
+    if (stage.id === 'words') return WORD_STEPS.length;
     return 1;
   });
 
@@ -72,12 +76,12 @@
     const id = setInterval(
       () => {
         if (sub < subs - 1) sub += 1;
-        else if (app.stage < STAGES.length - 2) {
+        else if (app.stage < STAGES.length - 1) {
           app.stage += 1;
           sub = 0;
         } else playing = false;
       },
-      (stage.id === 'ease' ? 70 : stage.id === 'history' || subs === 1 ? 2200 : 650) / speed,
+      (stage.id === 'ease' ? 70 : stage.id === 'history' || stage.id === 'words' || subs === 1 ? 2200 : 650) / speed,
     );
     return () => clearInterval(id);
   });
@@ -164,6 +168,40 @@
     if (app.stale && !app.running) void app.find();
   });
 
+  // Grounded words for the selected pick: the facts, the template sentences and the checker.
+  const grounded = $derived(pickE ? ground(pickE, games, app.evidence) : null);
+  const listed = $derived(grounded ? facts(grounded.pack) : []);
+  const said = $derived(grounded ? template(grounded.pack) : []);
+  const verdict = $derived(grounded ? check(said, grounded.source) : []);
+  // A model that mixes up picks names another one; any other pick is outside the facts.
+  const stranger = $derived.by(() => {
+    if (!result || !pickE) return '';
+    const owned = new Set(result.history.map(([j]) => j));
+    const other = result.picks.find((p) => p !== pickE.pick && !owned.has(p) && games[p].title.length > 3);
+    return other === undefined ? '' : games[other].title;
+  });
+  const slipped = $derived(grounded && stranger ? slips(grounded.pack, stranger) : []);
+  const refKey = (e: Ref): string => (e.type === 'attribution' ? `a${e.game_id}` : e.type === 'review' ? `r${e.chunk_id}` : 'c');
+  const factId = $derived(new Map(listed.map((f) => [refKey(f.evidence), f.id])));
+  const cites = (c: Claim): string => c.evidence.map((e) => factId.get(refKey(e)) ?? '·').join(' ');
+
+  // Live mode: the API's own sentences for the same pick, asked once per pick and history.
+  type Remote = { key: string; state: 'idle' | 'loading' | 'done' | 'error'; data: ApiExplain | null; error: string };
+  let remote = $state.raw<Remote>({ key: '', state: 'idle', data: null, error: '' });
+  $effect(() => {
+    const base = app.api;
+    if (!base || stage.id !== 'words' || sub !== WORD_STEPS.length - 1 || !result || !pickE) return;
+    const liked = result.history.map(([j]) => String(games[j].id));
+    const gameId = String(games[pickE.pick].id);
+    const key = `${base}|${liked.join(',')}|${gameId}`;
+    if (remote.key === key) return;
+    remote = { key, state: 'loading', data: null, error: '' };
+    explainRemote(base, liked, gameId).then(
+      (data) => remote.key === key && (remote = { key, state: 'done', data, error: '' }),
+      (err: unknown) => remote.key === key && (remote = { key, state: 'error', data: null, error: err instanceof ApiError ? err.message : String(err) }),
+    );
+  });
+
   const blendMax = $derived(Math.max(...(result?.parts ?? []).map(([, a, b]) => Math.abs(a) + Math.abs(b)), 1e-12));
 </script>
 
@@ -173,10 +211,9 @@
     <ol>
       {#each STAGES as s, i (s.id)}
         <li>
-          <button class:active={app.stage === i} class:planned={s.planned} aria-current={app.stage === i ? 'step' : undefined} onclick={() => go(i)}>
+          <button class:active={app.stage === i} aria-current={app.stage === i ? 'step' : undefined} onclick={() => go(i)}>
             <span class="num mono">{i + 1}</span>
             <span>{s.short}</span>
-            {#if s.planned}<span class="chip">M3</span>{/if}
           </button>
         </li>
       {/each}
@@ -340,14 +377,65 @@
               {/each}
             </ol>
             <p class="cost micro">{pickE.counterfactual.runs} pipeline runs. Valid and irreducible (ADR-0012). Source: <a href={source('src/whyfinder/explain/counterfactual.py')}>explain/counterfactual.py</a>, <a href={source('web/src/engine/explain.ts')}>engine/explain.ts</a></p>
-          {:else if stage.id === 'words'}
-            <p>In M3 a local LLM will put these exact reasons into sentences, quoting real reviews. It may only say what the model computed:</p>
-            <ol class="plan">
-              <li>Retrieve review passages for the shared aspects: BM25 + a hand-written HNSW index, fused by RRF.</li>
-              <li>The LLM writes claims as JSON; each cites an attribution or a quoted review span.</li>
-              <li>A deterministic checker rejects absent attributions, wrong percentages and non-verbatim quotes; one retry, then a template.</li>
-            </ol>
-            <p class="cost micro">Planned for M3 (Jan 2 to 13). See docs/spec/06_RAG.md.</p>
+          {:else if stage.id === 'words' && pickE && grounded}
+            <div class="seeds" role="group" aria-label="Pick">
+              {#each result.picks as p, t (p)}
+                <button class="chip" class:link={t === app.selected} onclick={() => (app.selected = t)} aria-label={`Pick ${t + 1}: ${games[p].title}`}>{rank(t)}</button>
+              {/each}
+            </div>
+            <p class="micro step">{sub + 1} of {WORD_STEPS.length} · {WORD_STEPS[sub]}</p>
+            {#if sub === 0}
+              <p>A sentence about <strong>{games[pickE.pick].title}</strong> may use these facts and nothing else. A model is shown this list, numbered, and has to cite the numbers.</p>
+              <ol class="facts">
+                {#each listed as f (f.id)}<li><span class="mono id">{f.id}</span>{f.line}</li>{/each}
+              </ol>
+              <p class="micro">A: exact shares of the score. C: the smallest set of your games whose removal drops the pick. Q: what its players wrote about something it shares with your strongest reason{app.evidence ? '' : ' (the review export did not load, so there are no quotes)'}.</p>
+            {:else if sub === 1}
+              <p>The demo writes its sentences straight from the facts. Each one carries the facts it rests on, so code can check it.</p>
+              <ul class="said">
+                {#each said as c, k (k)}<li><span class="mono id">{cites(c)}</span>{c.text}</li>{/each}
+              </ul>
+              <p class="micro">The API serves these same sentences unless a local model is configured, and falls back to them whenever a model's answer fails.</p>
+            {:else if sub === 2}
+              <p>The checker is plain code, with no model in it. For every sentence it asks:</p>
+              <ul class="rules">
+                <li>Is each cited game among your top five, with its exact share, and named?</li>
+                <li>Is each percentage within a point of a share the sentence cites?</li>
+                <li>Is each quote copied word for word from a review of this pick?</li>
+                <li>Is a counterfactual exactly the computed set?</li>
+                <li>Does it name a game outside the pick and your history? Three sentences and sixty words at most.</li>
+              </ul>
+              <p class="micro" class:ok={verdict.length === 0}>{verdict.length === 0 ? `All ${said.length} sentences pass, so they are served.` : verdict.join('; ')}</p>
+            {:else if sub === 3}
+              <p>The same facts, written the way small models got them wrong when they were left free:</p>
+              <ul class="said slips">
+                {#each slipped as c, k (k)}
+                  <li>
+                    <span class="mono id">{cites(c)}</span>{c.text}
+                    {#each check([c], grounded.source) as r, n (n)}<span class="verdict gone">{r}</span>{/each}
+                  </li>
+                {/each}
+              </ul>
+              <p class="micro">Rejected. The model gets one retry with these reasons, then the template sentences above are served. Pinning each sentence to one fact while the model decodes made slips like these rare (ADR-0009).</p>
+            {:else if !app.api}
+              <p>A running copy of the API can have a local model write these sentences; the same checker decides what it serves. The static demo has no model, so it only asks one when you point it at an API:</p>
+              <pre class="mono cmd">docker run -p 8000:8000 ghcr.io/robertgeraldsenasin/whyfinder-api</pre>
+              <p class="micro">Then <a href="?api=http://localhost:8000#/hood">open this page with ?api=http://localhost:8000</a>. Give the container WHYFINDER_LLM_MODEL and an Ollama server for model-written sentences; without them it serves the template.</p>
+            {:else if remote.state === 'error'}
+              <p>The API at <span class="mono">{app.api}</span> did not answer for this pick.</p>
+              <p class="micro" role="status">{remote.error}</p>
+            {:else if remote.state === 'done' && remote.data}
+              {@const d = remote.data}
+              <p>{d.checker.fallback_used ? 'The API served its template sentences' : 'A model wrote these, and the checker passed them'} ({d.model_version}; {d.rank === null ? 'not among its picks' : `its pick ${d.rank}`}).</p>
+              <ul class="said">
+                {#each d.claims as c, k (k)}<li><span class="mono id">{cites(c)}</span>{c.text}</li>{/each}
+              </ul>
+              {#if d.checker.reasons.length > 0}<p class="micro">Turned down first: {d.checker.reasons.join('; ')}</p>{/if}
+              <p class="micro">Requests carry no play time, so the API weighs your games equally and its shares can differ from the ones above.</p>
+            {:else}
+              <p role="status">Asking <span class="mono">{app.api}</span> about {games[pickE.pick].title}…</p>
+            {/if}
+            <p class="cost micro">Source: <a href={source('src/whyfinder/rag/claims.py')}>rag/claims.py</a>, <a href={source('web/src/lib/words.ts')}>lib/words.ts</a>, <a href={source('docs/decisions/ADR-0009-llm-runtime.md')}>ADR-0009</a></p>
           {/if}
         </div>
       {/key}
@@ -427,10 +515,6 @@
   .rail button.active {
     color: var(--text);
     background: var(--raised);
-    border-color: var(--line);
-  }
-  .rail button.planned {
-    border-style: dashed;
     border-color: var(--line);
   }
   .num {
@@ -571,7 +655,9 @@
     background: color-mix(in srgb, var(--link) 40%, transparent);
   }
   .toplist,
-  .plan {
+  .facts,
+  .said,
+  .rules {
     margin: 0;
     padding-left: 20px;
     font-size: var(--text-sm);
@@ -579,6 +665,37 @@
   .toplist .mono {
     color: var(--muted);
     font-size: 11px;
+  }
+  .facts,
+  .said {
+    list-style: none;
+    padding-left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    line-height: 1.45;
+  }
+  .id {
+    display: inline-block;
+    min-width: 3.2em;
+    margin-right: 8px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .slips .verdict {
+    display: block;
+    margin-left: calc(3.2em + 8px);
+  }
+  .step {
+    color: var(--muted);
+  }
+  .cmd {
+    margin: 0;
+    padding: 8px 10px;
+    font-size: 11px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    border: 1px solid var(--line);
   }
   .slider {
     display: flex;

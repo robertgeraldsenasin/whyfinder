@@ -35,7 +35,7 @@
 
     { id: 'py', lane: 1, col: 2, title: 'Python core', detail: '5 algorithms + oracles', status: 'built', about: 'The source of truth. Every algorithm is hand-written and checked against an oracle: numpy’s inverse for EASE^R, power iteration for PageRank, brute-force determinants for DPP.', files: ['src/whyfinder/core/ease.py', 'src/whyfinder/graph/ppr.py', 'src/whyfinder/rerank/dpp.py', 'src/whyfinder/explain/counterfactual.py'] },
     { id: 'goldens', lane: 1, col: 4, title: 'goldens', detail: 'TS = Python ± 1e-9', status: 'built', about: '`whyfinder export model` runs the Python core on the slice and records B and Π rows, scores, picks, variety flags, attributions and counterfactual sets. Vitest fails CI if the browser engine drifts.', files: ['src/whyfinder/export/model.py', 'web/src/engine/engine.test.ts'] },
-    { id: 'gate', lane: 1, col: 6, title: 'quality gate', detail: 'bootstrap CI', status: 'planned', milestone: 'M1', about: 'Every PR that touches a model is scored against main on a validation subsample; a significant regression blocks the merge. The sealed test set is scored only at release.', files: ['docs/spec/07_EVALUATION.md'] },
+    { id: 'gate', lane: 1, col: 6, title: 'quality gate', detail: 'bootstrap CI', status: 'built', about: 'Every pull request is scored against main on a validation subsample: paired bootstrap non-inferiority on accuracy, variety and the explanation checks, Holm-corrected, posted as a comment. A deliberately worse model was submitted to prove it fails.', files: ['.github/workflows/quality-gate.yml', 'src/whyfinder/eval/gate.py', 'docs/evidence/gate-proof.md'] },
 
     { id: 'worker', lane: 2, col: 0, title: 'Web Worker', detail: ready ? `ready in ${ms(ready.timings.gram + ready.timings.ease + ready.timings.graph)}` : 'starting', status: 'live', about: 'The engine runs off the main thread, so animations never wait for maths.', files: ['web/src/engine/worker.ts'] },
     { id: 'ease', lane: 2, col: 1, title: 'EASE^R', detail: ready ? `solve ${ms(ready.timings.ease)}` : '…', status: 'live', about: 'Closed-form item-item model: one Cholesky factorisation of G + λI on your device.', files: ['web/src/engine/ease.ts'] },
@@ -45,12 +45,14 @@
     { id: 'explain', lane: 2, col: 5, title: 'explain', detail: timings ? `${app.result?.explanations.reduce((n, e) => n + e.counterfactual.runs, 0) ?? 0} re-runs` : '…', status: 'live', about: 'Exact attributions per pick, the smallest counterfactual found by re-running the whole pipeline, and "related by" paths through the graph.', files: ['web/src/engine/explain.ts'] },
     { id: 'ui', lane: 2, col: 6, title: 'Unmasked UI', detail: 'Svelte on Pages', status: 'live', about: 'Svelte + TypeScript on GitHub Pages. The sky is the stage: ten picks are dealt into it as cards, and the reasons and reviews sit on solid panels. Sound and impact effects are synthesized in the browser; every view is tested with axe.', files: ['web/src/lib/components/Atlas.svelte'] },
 
-    { id: 'ials', lane: 3, col: 1, title: 'iALS rival', detail: 'must be matched', status: 'planned', milestone: 'M1', about: 'A latent-factor model the glass-box blend has to match on NDCG@10, so explainability isn’t bought with accuracy.', files: ['docs/spec/04_ALGORITHMS.md'] },
-    { id: 'rag', lane: 3, col: 3, title: 'grounded RAG', detail: 'BM25 + HNSW', status: 'planned', milestone: 'M3', about: 'Hybrid retrieval over reviews and a local LLM that may only voice the computed reasons; a deterministic claim checker rejects anything it can’t verify.', files: ['docs/spec/06_RAG.md'] },
-    { id: 'api', lane: 3, col: 5, title: 'FastAPI', detail: '/recommend, /explain', status: 'planned', milestone: 'M4', about: 'The full 8,000-game model behind a small API with an OpenAPI contract, for queries beyond the demo slice.', files: ['docs/spec/12_API.md'] },
+    { id: 'ials', lane: 3, col: 0, title: 'iALS rival', detail: 'matched on NDCG@10', status: 'built', about: 'A latent-factor model the glass-box blend has to match, so explainability is not bought with accuracy. Tuned on validation; on the sealed test set the blend beats it. Its counterfactuals use Sherman–Morrison downdates.', files: ['src/whyfinder/core/ials.py', 'src/whyfinder/explain/ials.py', 'results/README.md'] },
+    { id: 'rag', lane: 3, col: 2, title: 'review retrieval', detail: 'BM25 + LSA + HNSW', status: 'built', about: 'Hand-written BM25 and LSA vectors on a hand-written HNSW index, fused by reciprocal rank, over 6,000 review quotes. It finds what a pick’s players say about what it shares with your games.', files: ['src/whyfinder/rag/reviews.py', 'src/whyfinder/rag/hnsw.py', 'docs/evidence/hnsw-bench.md'] },
+    { id: 'llm', lane: 3, col: 3, title: 'checked words', detail: 'checker, opt-in LLM', status: 'built', about: 'Sentences may only state numbered facts: exact shares, the counterfactual, verbatim quotes. A local model can write them with each sentence pinned to its fact while it decodes; a deterministic checker decides what is served, and this tab runs the same checker in the Words step.', files: ['src/whyfinder/rag/claims.py', 'src/whyfinder/rag/generate.py', 'web/src/lib/words.ts', 'docs/decisions/ADR-0009-llm-runtime.md'] },
+    { id: 'api', lane: 3, col: 4, title: 'FastAPI', detail: '/recommend, /explain', status: 'built', about: 'The model on the demo slice behind a small API: an OpenAPI contract tested with Schemathesis, problem+json errors and rate limits, shipped as an image on GHCR. Open this page with ?api= pointing at it and the Words step asks it too.', files: ['src/whyfinder/serve/app.py', 'docs/spec/12_API.md', 'docker/Dockerfile.api'] },
+    { id: 'release', lane: 3, col: 6, title: 'sealed release', detail: 'test set read once', status: 'built', about: 'release.yml is the only code that reads the test split. It scores every model once per release, attaches the reports and writes results/, which the README tables and the model card are generated from.', files: ['.github/workflows/release.yml', 'results/README.md', 'docs/model-card.md'] },
   ]);
 
-  const LANES = ['Offline data: Python on GitHub Actions', 'Model build: the Python core, source of truth', 'Your browser: the live engine', 'Planned'];
+  const LANES = ['Offline data: Python on GitHub Actions', 'Model build: the Python core, source of truth', 'Your browser: the live engine', 'Serving and proof: retrieval, checked words, the API, the release'];
   const COLS = 7;
   const W = 1280;
   const LANE_H = 118;
@@ -63,6 +65,7 @@
     ['slice', 'py'], ['py', 'goldens'], ['goldens', 'gate'],
     ['worker', 'ease'], ['ease', 'push'], ['push', 'blend'], ['blend', 'dpp'], ['dpp', 'explain'], ['explain', 'ui'],
     ['slice', 'worker'], ['goldens', 'dpp'],
+    ['rag', 'llm'], ['llm', 'api'],
   ];
   const byId = $derived(new Map(nodes.map((n) => [n.id, n])));
 
@@ -145,11 +148,12 @@
       {/each}
     </svg>
     <p class="legend micro">
-      <span class="sw live"></span> live in your browser <span class="sw built"></span> built and tested <span class="sw planned"></span> planned
+      <span class="sw live"></span> live in your browser <span class="sw built"></span> built and tested{#if nodes.some((n) => n.status === 'planned')}<span class="sw planned"></span> planned{/if}
     </p>
     <p class="ci">
-      Every pull request runs ruff, mypy --strict, import-linter, pytest (coverage ≥ 85%), svelte-check, the Vitest goldens
-      (the browser engine must equal the Python core) and Playwright + axe on every view.
+      Every pull request runs ruff, mypy --strict, import-linter, pytest (coverage ≥ 85%, Schemathesis against the API, the
+      cached model sentences replayed through the checker), svelte-check, the Vitest goldens (the browser engine must equal the
+      Python core), Playwright + axe on every view, and the quality gate.
     </p>
   </section>
 

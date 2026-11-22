@@ -121,6 +121,67 @@ test('under the hood replays every stage on your history', async ({ page }) => {
   }
   await expect(page.getByText(/\|Δ\| = /)).toBeVisible();
   await expect(page.getByText(/pick gone/i).first()).toBeVisible();
+
+  await page.getByRole('navigation', { name: 'Pipeline stages' }).getByRole('button').nth(7).click();
+  await expect(page.getByRole('heading', { name: 'Grounded words, checked' })).toBeVisible();
+  await expect(page.getByText(/^A1/).first()).toBeVisible();
+  const next = page.getByRole('button', { name: 'Next step' });
+  await next.click();
+  await expect(page.getByText(/is the biggest driver of this pick \(\d+%\)/)).toBeVisible();
+  await next.click();
+  await expect(page.getByText(/^All \d sentences pass/)).toBeVisible();
+  await next.click();
+  await expect(page.getByText(/^Rejected\./)).toBeVisible();
+  await expect(page.getByText(/names a game outside the pick and the history/)).toBeVisible();
+  await expect(page.getByText(/matches no cited share/)).toBeVisible();
+  await axe(page);
+});
+
+test('live mode asks a running API for its sentences about the same pick', async ({ page }) => {
+  const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'POST' };
+  const asked: { liked_game_ids: string[]; game_id: string }[] = [];
+  await page.route('http://api.test/explain', async (route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+    const body = route.request().postDataJSON() as { liked_game_ids: string[]; game_id: string };
+    asked.push(body);
+    return route.fulfill({
+      status: 200,
+      headers: cors,
+      json: {
+        game_id: body.game_id,
+        title: 'a pick',
+        rank: 2,
+        claims: [{ text: 'XCOM: Enemy Unknown counted for most of it.', evidence: [{ type: 'attribution', game_id: '200510', share: 0.5 }] }],
+        checker: { passed: true, fallback_used: false, reasons: ['first try: 70% matches no cited share'] },
+        model_version: 'blend-slice-1',
+      },
+    });
+  });
+  await page.goto('./?api=http://api.test/');
+  await expect(page.getByRole('button', { name: /Puzzles and stories/ })).toBeEnabled({ timeout: 30_000 });
+  await page.getByRole('link', { name: 'Under the hood' }).click();
+  await page.getByRole('button', { name: /Run it on FTL, Isaac and XCOM/ }).click();
+  await page.getByRole('navigation', { name: 'Pipeline stages' }).getByRole('button').nth(7).click();
+  for (let k = 0; k < 4; k++) await page.getByRole('button', { name: 'Next step' }).click();
+  await expect(page.getByText('A model wrote these, and the checker passed them', { exact: false })).toBeVisible();
+  await expect(page.getByText('XCOM: Enemy Unknown counted for most of it.')).toBeVisible();
+  await expect(page.getByText(/Turned down first: first try: 70% matches no cited share/)).toBeVisible();
+  expect(asked.at(-1)?.liked_game_ids).toHaveLength(3);
+
+  await page.unroute('http://api.test/explain');
+  await page.route('http://api.test/explain', (route) => route.abort());
+  await page.getByRole('button', { name: /^Pick 2:/ }).click();
+  await expect(page.getByText(/could not reach http:\/\/api\.test/)).toBeVisible();
+});
+
+test('without ?api= the last Words step explains how to run one', async ({ page }) => {
+  await ready(page);
+  await page.getByRole('link', { name: 'Under the hood' }).click();
+  await page.getByRole('button', { name: /Run it on FTL, Isaac and XCOM/ }).click();
+  await page.getByRole('navigation', { name: 'Pipeline stages' }).getByRole('button').nth(7).click();
+  for (let k = 0; k < 4; k++) await page.getByRole('button', { name: 'Next step' }).click();
+  await expect(page.getByText('docker run -p 8000:8000 ghcr.io/robertgeraldsenasin/whyfinder-api')).toBeVisible();
+  await expect(page.getByRole('link', { name: /open this page with \?api=/ })).toHaveAttribute('href', '?api=http://localhost:8000#/hood');
 });
 
 test('architecture replays a request with live timings', async ({ page }) => {

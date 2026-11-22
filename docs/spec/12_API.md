@@ -27,6 +27,13 @@ in JSON Schema.
 **Limits:** 30 requests/min per client IP on `/explain`, 120 on the rest (fixed one-minute windows,
 per process); request body ≤ 16 KB.
 
+**Browsers.** `whyfinder serve run` (and the image) lets the demo's origins call the API: the GitHub
+Pages site and Vite's dev and preview servers on localhost. `WHYFINDER_CORS_ORIGINS` replaces that
+list (comma-separated; empty turns cross-origin calls off). Preflights also answer Chrome's Private
+Network Access check, so the public demo can reach a copy on the visitor's own machine, and they
+never count against the rate limit. The demo's live mode (`?api=<url>`) uses this for
+`POST /explain`.
+
 **Claims and the checker.** With no model configured, the claims are template sentences
 (`fallback_used: true`): one or two from the attributions and up to two quoting a review of the pick
 that mentions an aspect it shares with your top game (06_RAG). With `WHYFINDER_LLM_MODEL` (and
