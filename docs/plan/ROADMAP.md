@@ -46,16 +46,16 @@ gantt
 - [x] `quality-gate.yml` live with PR comment (FR-20)
 - [x] Prove the gate with a deliberately worse PR and keep the record (`docs/evidence/gate-proof.md`, PR #74)
 - [x] README tables from `results/` (v0.2.0); ADR-0006 fixed from baselines
-- [ ] Demo track: EASE^R, graph + PPR push and the blend land in Python and TypeScript together, golden-matched; "Under the hood" steps 1–4 live
+- [x] Demo track: EASE^R, graph + PPR push and the blend land in Python and TypeScript together, golden-matched; "Under the hood" steps 1–4 live
 
 ## M2 · Explanations + variety (5 days) → `v0.2.0`
 
-- [ ] Exact attributions with EASE/PPR split (FR-10)
+- [x] Exact attributions with EASE/PPR split (FR-10)
 - [x] Counterfactuals: live greedy + offline exact; iALS Sherman–Morrison variant (FR-11, ADR-0012)
-- [ ] DPP re-ranking + "kept for variety" flag (FR-12)
-- [ ] Graph paths (FR-13)
+- [x] DPP re-ranking + "kept for variety" flag (FR-12, ADR-0011)
+- [x] Graph paths (FR-13)
 - [x] Explanation checks in the gate (deletion, validity, minimality gap, sanity check)
-- [ ] Demo track: attributions, counterfactuals and DPP live in the browser; Discover view with the why panel; "Under the hood" steps 5–7
+- [x] Demo track: attributions, counterfactuals and DPP live in the browser; Discover view with the why panel; "Under the hood" steps 5–7
 
 ## M3 · Grounded RAG (6 days) → `v0.3.0`
 
@@ -64,13 +64,13 @@ gantt
 - [ ] Label 150 (pick, aspect) queries with a written guide (~1 day)
 - [x] Ollama generation, claim schema, checker, fallback, cache (FR-16, FR-17, ADR-0009): pinned decoding, llama3.2:3b keeps 99.4% of claims; opt-in
 - [x] Natural-language queries and filters (FR-18, FR-23)
-- [ ] Entailment + attribution-agreement metrics; the unconstrained-LLM ablation
+- [ ] Entailment + attribution-agreement metrics; the unconstrained-LLM ablation: agreement and both ablations (no shares; free against pinned) done, entailment still to do
 
 ## M4 · API, demo finish, v1.0 (6 days) → `v1.0.0`
 
 - [x] FastAPI + OpenAPI + Schemathesis; Docker image to GHCR (FR-21)
-- [ ] Demo finish: natural-language query bar, filters, optional API mode, "Under the hood" step 8 (grounded words), final polish (FR-22, 11_DESIGN_SYSTEM)
-- [ ] `pages.yml` deploy with health check; ADR-0008
+- [x] Demo finish: natural-language query bar, filters, optional API mode (`?api=`, ADR-0008), "Under the hood" step 8 (grounded words, the checker in TypeScript on shared cases), final polish (FR-22, 11_DESIGN_SYSTEM)
+- [x] `pages.yml` deploy with health check; ADR-0008
 - [x] Sealed test-set results ✓ (v0.2.0), model card ✓, portfolio case study ✓ (`docs/case-study.md`), demo GIF ✓, paper draft ✓ (`docs/paper/whyfinder.md`)
 
 ## Definition of done

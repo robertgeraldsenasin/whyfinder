@@ -1,0 +1,638 @@
+{
+  "about": "Claim cases both sides must agree on: web/src/lib/words.ts and src/whyfinder/rag/{claims,generate}.py (check, facts, template). The reasons and sentences are Python's.",
+  "source": {
+    "pick_title": "Team Fortress 2",
+    "attributions": [
+      [
+        "620",
+        "Portal 2",
+        0.4125
+      ],
+      [
+        "550",
+        "Left 4 Dead 2",
+        0.3301
+      ],
+      [
+        "220",
+        "Half-Life 2",
+        0.1574
+      ],
+      [
+        "4000",
+        "Garry's Mod",
+        0.06
+      ],
+      [
+        "105600",
+        "Terraria",
+        0.025
+      ],
+      [
+        "570",
+        "Dota 2",
+        -0.015
+      ]
+    ],
+    "chunks": {
+      "440:0": "Best free co-op shooter ever, play it with friends and you will lose a weekend.",
+      "440:1": "The   classes are so different that every match feels new.",
+      "440:2": "100% worth it, and the Hats are a bonus."
+    },
+    "removed": [
+      "620",
+      "550"
+    ],
+    "catalogue": [
+      "Portal",
+      "Portal 2",
+      "Team Fortress 2",
+      "Left 4 Dead 2",
+      "Half-Life 2",
+      "Garry's Mod",
+      "Terraria",
+      "Dota 2",
+      "Counter-Strike: Global Offensive",
+      "FTL: Faster Than Light",
+      "Hats"
+    ]
+  },
+  "cases": [
+    {
+      "name": "the template's own sentences pass",
+      "claims": [
+        {
+          "text": "Portal 2 is the biggest driver of this pick (41%).",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        },
+        {
+          "text": "Left 4 Dead 2 adds 33%.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "550",
+              "share": 0.3301
+            }
+          ]
+        }
+      ],
+      "reasons": []
+    },
+    {
+      "name": "Portal 2 does not read as Portal",
+      "claims": [
+        {
+          "text": "Portal 2 counted for 41% of the score.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        }
+      ],
+      "reasons": []
+    },
+    {
+      "name": "a percentage a point off still passes",
+      "claims": [
+        {
+          "text": "Portal 2 counted for 42% of the score.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        }
+      ],
+      "reasons": []
+    },
+    {
+      "name": "a percentage that matches no cited share",
+      "claims": [
+        {
+          "text": "Portal 2 counted for 50% of the score.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "50% matches no cited share"
+      ]
+    },
+    {
+      "name": "a wrong share in the evidence",
+      "claims": [
+        {
+          "text": "Portal 2 counted for 41% of the score.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.5
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "wrong share for Portal 2: 0.500, not 0.412"
+      ]
+    },
+    {
+      "name": "a game outside the top five",
+      "claims": [
+        {
+          "text": "Dota 2 pulled the other way.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "570",
+              "share": -0.015
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "cites a game that is not among the top 5: 570"
+      ]
+    },
+    {
+      "name": "citing a game without naming it",
+      "claims": [
+        {
+          "text": "Team Fortress 2 is a perfect next game.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "cites Portal 2 without naming it"
+      ]
+    },
+    {
+      "name": "naming a game outside the pick and the history",
+      "claims": [
+        {
+          "text": "Portal 2 counted for 41%, like Counter-Strike: Global Offensive.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "names a game outside the pick and the history: Counter-Strike: Global Offensive"
+      ]
+    },
+    {
+      "name": "a verbatim quote passes, whitespace normalised",
+      "claims": [
+        {
+          "text": "Players say: \"The classes are so different that every match feels new.\"",
+          "evidence": [
+            {
+              "type": "review",
+              "chunk_id": "440:1",
+              "quote": "The classes are so different that every match feels new."
+            }
+          ]
+        }
+      ],
+      "reasons": []
+    },
+    {
+      "name": "a paraphrased quote",
+      "claims": [
+        {
+          "text": "Players say: \"Best free co-op shooter, play it with friends.\"",
+          "evidence": [
+            {
+              "type": "review",
+              "chunk_id": "440:0",
+              "quote": "Best free co-op shooter, play it with friends."
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "the quote is not a verbatim span of 440:0"
+      ]
+    },
+    {
+      "name": "a quote the sentence does not carry",
+      "claims": [
+        {
+          "text": "Players love the co-op.",
+          "evidence": [
+            {
+              "type": "review",
+              "chunk_id": "440:0",
+              "quote": "play it with friends"
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "the sentence does not carry its quote from 440:0"
+      ]
+    },
+    {
+      "name": "a chunk not retrieved for this pick",
+      "claims": [
+        {
+          "text": "Players say: \"Hats.\"",
+          "evidence": [
+            {
+              "type": "review",
+              "chunk_id": "620:3",
+              "quote": "Hats."
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "cites a review chunk not retrieved for this pick: 620:3"
+      ]
+    },
+    {
+      "name": "a percentage inside a quote is not checked",
+      "claims": [
+        {
+          "text": "Players say: \"100% worth it, and the Hats are a bonus.\"",
+          "evidence": [
+            {
+              "type": "review",
+              "chunk_id": "440:2",
+              "quote": "100% worth it, and the Hats are a bonus."
+            }
+          ]
+        }
+      ],
+      "reasons": []
+    },
+    {
+      "name": "a game named inside a quote is fine",
+      "claims": [
+        {
+          "text": "Players say: \"the Hats are a bonus\"",
+          "evidence": [
+            {
+              "type": "review",
+              "chunk_id": "440:2",
+              "quote": "the Hats are a bonus"
+            }
+          ]
+        }
+      ],
+      "reasons": []
+    },
+    {
+      "name": "the same game named outside a quote is not",
+      "claims": [
+        {
+          "text": "The Hats are a bonus.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "names a game outside the pick and the history: Hats",
+        "cites Portal 2 without naming it"
+      ]
+    },
+    {
+      "name": "the computed counterfactual passes",
+      "claims": [
+        {
+          "text": "Without Portal 2 and Left 4 Dead 2, Team Fortress 2 would drop out.",
+          "evidence": [
+            {
+              "type": "counterfactual",
+              "removed_game_ids": [
+                "550",
+                "620"
+              ]
+            }
+          ]
+        }
+      ],
+      "reasons": []
+    },
+    {
+      "name": "a counterfactual that is not the computed one",
+      "claims": [
+        {
+          "text": "Without Portal 2, Team Fortress 2 would drop out.",
+          "evidence": [
+            {
+              "type": "counterfactual",
+              "removed_game_ids": [
+                "620"
+              ]
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "the counterfactual set is not the computed one"
+      ]
+    },
+    {
+      "name": "a sentence with no evidence",
+      "claims": [
+        {
+          "text": "Team Fortress 2 is great.",
+          "evidence": []
+        }
+      ],
+      "reasons": [
+        "no evidence for: Team Fortress 2 is great."
+      ]
+    },
+    {
+      "name": "too many claims and too many words",
+      "claims": [
+        {
+          "text": "Portal 2 counted for 41% of the score and more and more and more and more and more and more and more and more .",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        },
+        {
+          "text": "Left 4 Dead 2 adds 33% and more and more and more and more and more and more and more and more .",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "550",
+              "share": 0.3301
+            }
+          ]
+        },
+        {
+          "text": "Half-Life 2 adds 16% and more and more and more and more and more and more and more and more .",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "220",
+              "share": 0.1574
+            }
+          ]
+        },
+        {
+          "text": "Garry's Mod adds 6%.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "4000",
+              "share": 0.06
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "more than 3 claims",
+        "73 words; the limit is 60"
+      ]
+    }
+  ],
+  "packs": [
+    {
+      "name": "two reasons and two quotes",
+      "pack": {
+        "pick_title": "Team Fortress 2",
+        "attributions": [
+          [
+            "620",
+            "Portal 2",
+            0.4125
+          ],
+          [
+            "550",
+            "Left 4 Dead 2",
+            0.3301
+          ],
+          [
+            "220",
+            "Half-Life 2",
+            0.125
+          ],
+          [
+            "570",
+            "Dota 2",
+            -0.015
+          ]
+        ],
+        "removed": [
+          [
+            "620",
+            "Portal 2"
+          ],
+          [
+            "550",
+            "Left 4 Dead 2"
+          ]
+        ],
+        "quotes": [
+          [
+            "440:0",
+            "Co-op",
+            "Best free co-op shooter ever, play it with friends and you will lose a weekend."
+          ],
+          [
+            "440:3",
+            "hats",
+            "The \"hat economy\" is wild."
+          ]
+        ]
+      },
+      "facts": [
+        [
+          "A1",
+          "Portal 2 counted for 41% of the score"
+        ],
+        [
+          "A2",
+          "Left 4 Dead 2 counted for 33% of the score"
+        ],
+        [
+          "A3",
+          "Half-Life 2 counted for 12% of the score"
+        ],
+        [
+          "C1",
+          "without Portal 2 and Left 4 Dead 2 in the list, Team Fortress 2 would drop out of the picks"
+        ],
+        [
+          "Q1",
+          "a player of Team Fortress 2, on Co-op: “Best free co-op shooter ever, play it with friends and you will lose a weekend.”"
+        ]
+      ],
+      "template": [
+        {
+          "text": "Portal 2 is the biggest driver of this pick (41%).",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        },
+        {
+          "text": "Left 4 Dead 2 adds 33%.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "550",
+              "share": 0.3301
+            }
+          ]
+        },
+        {
+          "text": "Players of Team Fortress 2 mention Co-op: \"Best free co-op shooter ever, play it with friends and you will lose a weekend.\"",
+          "evidence": [
+            {
+              "type": "review",
+              "chunk_id": "440:0",
+              "quote": "Best free co-op shooter ever, play it with friends and you will lose a weekend."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a weak second reason is left out",
+      "pack": {
+        "pick_title": "FTL: Faster Than Light",
+        "attributions": [
+          [
+            "250900",
+            "The Binding of Isaac: Rebirth",
+            0.925
+          ],
+          [
+            "200510",
+            "XCOM: Enemy Unknown",
+            0.075
+          ]
+        ],
+        "removed": [
+          [
+            "250900",
+            "The Binding of Isaac: Rebirth"
+          ]
+        ],
+        "quotes": []
+      },
+      "facts": [
+        [
+          "A1",
+          "The Binding of Isaac: Rebirth counted for 92% of the score"
+        ],
+        [
+          "A2",
+          "XCOM: Enemy Unknown counted for 8% of the score"
+        ],
+        [
+          "C1",
+          "without The Binding of Isaac: Rebirth in the list, FTL: Faster Than Light would drop out of the picks"
+        ]
+      ],
+      "template": [
+        {
+          "text": "The Binding of Isaac: Rebirth is the biggest driver of this pick (92%).",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "250900",
+              "share": 0.925
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "half a percent rounds to even",
+      "pack": {
+        "pick_title": "Terraria",
+        "attributions": [
+          [
+            "4000",
+            "Garry's Mod",
+            0.625
+          ],
+          [
+            "105600",
+            "Starbound",
+            0.125
+          ]
+        ],
+        "removed": [],
+        "quotes": []
+      },
+      "facts": [
+        [
+          "A1",
+          "Garry's Mod counted for 62% of the score"
+        ],
+        [
+          "A2",
+          "Starbound counted for 12% of the score"
+        ]
+      ],
+      "template": [
+        {
+          "text": "Garry's Mod is the biggest driver of this pick (62%).",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "4000",
+              "share": 0.625
+            }
+          ]
+        },
+        {
+          "text": "Starbound adds 12%.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "105600",
+              "share": 0.125
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

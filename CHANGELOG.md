@@ -7,6 +7,8 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Under the hood step 8, grounded words (FR-22): for the selected pick, the numbered facts, the sentences built from them, the checker's verdict, and three sentences with the slips free models made, each with the checker's reasons. The checker, facts and template are ported to TypeScript and held to the same shared cases as Python (`web/src/lib/__fixtures__/claims.json`).
+- Live mode (ADR-0008): open the demo with `?api=<url>` and step 8 also shows a running API's own sentences for the same pick. The API now allows the demo's origins by CORS, answers the Private Network Access preflight, and takes `WHYFINDER_CORS_ORIGINS`.
 - A paper draft (`docs/paper/whyfinder.md`): the model, the evaluation protocol, the sealed test results, the explanation checks and the generation study, free and pinned.
 - Generated sentences are pinned to their facts while decoding (FR-16, ADR-0009): one sentence per fact, and the per-prompt schema holds each to the liked game's exact title, the listed percentage or none, and quotes verbatim. On the 60-pick evaluation llama3.2:3b keeps 99.4% of its claims on the first try with no fallback (it was 13% within two tries before), and becomes the default model. The report adds two plain-text proxies: sentences cut off by the length bound (8%) and sentences that only restate a fact (53%).
 - A demo GIF in the README, recorded from the real build in CI (`npm run gif`, the demo-gif workflow).
