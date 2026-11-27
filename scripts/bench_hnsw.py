@@ -1,11 +1,15 @@
 """Benchmark the hand-written HNSW (src/whyfinder/rag/hnsw.py) against hnswlib (FR-15).
 
 Two datasets: the demo's review quotes as LSA vectors (5,800 indexed, 200 held out as queries) and
-10,000 random unit vectors in 32 dimensions (200 random queries). Both libraries get M = 16,
-efConstruction = 200, inner product, one thread. Reported per efSearch: recall@10 against exact
-search and queries per second; per library: build seconds.
+10,000 random unit vectors in 32 dimensions (200 random queries). With `--corpus`, a third alone:
+sentences from the full review corpus (the parse stage's review_text.parquet), sampled with the
+seed and embedded with the same LSA, to see whether the hand-written graph holds up at a size
+17 times the demo's index. Both libraries get M = 16, efConstruction = 200, inner product, one
+thread. Reported per efSearch: recall@10 against exact search and queries per second; per
+library: build seconds.
 
     uv run --with hnswlib python scripts/bench_hnsw.py --out bench.json
+    uv run --with hnswlib python scripts/bench_hnsw.py --corpus data/interim/review_text.parquet
 """
 
 from __future__ import annotations
@@ -39,6 +43,35 @@ def quotes(seed: int) -> tuple[np.ndarray, np.ndarray]:
     vectors = fit(tokens, dim=int(p["dim"]), min_df=int(p["min_df"]), seed=seed).embed(tokens)
     vectors = vectors[np.linalg.norm(vectors, axis=1) > 0]
     order = np.random.default_rng(seed).permutation(len(vectors))
+    return vectors[order[200:]], vectors[order[:200]]
+
+
+def corpus(path: Path, n: int, seed: int) -> tuple[np.ndarray, np.ndarray]:
+    """`n` + 200 distinct sentences of 6 to 40 words from the review corpus, as LSA vectors; the
+    first 200 of a seeded order are the queries."""
+    import re
+
+    import pandas as pd
+
+    texts = pd.read_parquet(path, columns=["text"])["text"].dropna().astype(str)
+    rng = np.random.default_rng(seed)
+    want = n + 200
+    seen: set[str] = set()
+    picked: list[str] = []
+    for i in rng.permutation(len(texts)):
+        for s in re.split(r"(?<=[.!?])\s+|\n+", texts.iat[int(i)]):
+            s = " ".join(s.split())
+            if 6 <= len(s.split()) <= 40 and s not in seen:
+                seen.add(s)
+                picked.append(s)
+                break
+        if len(picked) == want:
+            break
+    tokens = [tokenize(s) for s in picked]
+    p = load_params()["rag"]["lsa"]
+    vectors = fit(tokens, dim=int(p["dim"]), min_df=int(p["min_df"]), seed=seed).embed(tokens)
+    vectors = vectors[np.linalg.norm(vectors, axis=1) > 0]
+    order = rng.permutation(len(vectors))
     return vectors[order[200:]], vectors[order[:200]]
 
 
@@ -109,10 +142,19 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=Path("bench.json"))
     ap.add_argument("--seed", type=int, default=20261117)
+    ap.add_argument("--corpus", type=Path, help="review_text.parquet: run the corpus set alone")
+    ap.add_argument("--corpus-n", type=int, default=100_000)
     a = ap.parse_args()
     results: dict[str, Any] = {}
     sections = []
-    for name, make in (("Review quotes, LSA", quotes), ("Random unit vectors", random_unit)):
+    sets: tuple[tuple[str, Any], ...] = (
+        ("Review quotes, LSA", quotes),
+        ("Random unit vectors", random_unit),
+    )
+    if a.corpus is not None:
+        path, n = a.corpus, a.corpus_n
+        sets = (("Review sentences from the full corpus, LSA", lambda s: corpus(path, n, s)),)
+    for name, make in sets:
         data, queries = make(a.seed)
         mine, theirs = ours(data, queries, a.seed), reference(data, queries, a.seed)
         results[name] = {"n": len(data), "dim": data.shape[1], "whyfinder": mine, "hnswlib": theirs}
