@@ -2,8 +2,9 @@
 
 The checker proves what it can parse in a sentence: titles, shares, quotes, the counterfactual
 set. Whatever a model writes around them (why a share matters, what two games have in common)
-passes unread. Here a judge model reads each sentence against the facts it cites, plus the graph
-paths the prompt gave as context, and labels it the way natural-language inference does:
+passes unread. Here a judge model reads each sentence against every fact the model was given (so
+"the biggest reason" can follow from the shares), plus the graph paths offered as context, and
+labels it the way natural-language inference does:
 
 - **entailed**: everything the sentence states follows from those facts; rewording is fine;
 - **neutral**: it adds something the facts neither give nor contradict (an opinion of the game,
@@ -37,7 +38,9 @@ SCHEMA: Final[dict[str, Any]] = {
 }
 
 PROMPT: Final = (
-    "You check a sentence written from facts.\n\n"
+    "You check a sentence written from facts about a game recommendation. In the facts, a liked "
+    "game that counted for N% of the score supplied N% of the reasons the recommended game was "
+    "picked.\n\n"
     "Facts:\n{premise}\n\n"
     "Sentence: {sentence}\n\n"
     "Label the sentence.\n"
@@ -53,11 +56,11 @@ def sentence_case(text: str) -> str:
     return text[:1].upper() + text[1:]
 
 
-def premise(pack: Pack, claim: Claim, listed: Sequence[Fact]) -> str:
-    """What the sentence may rest on: the recommended game, the facts it cites, and the graph
-    paths the prompt offered as context."""
+def premise(pack: Pack, listed: Sequence[Fact]) -> str:
+    """What a sentence may rest on: the recommended game, every fact the model was given, and the
+    graph paths the prompt offered as context."""
     lines = [f"The recommended game is {pack.pick_title}."]
-    lines += [sentence_case(f.line) + "." for f in listed if f.evidence in claim.evidence]
+    lines += [sentence_case(f.line) + "." for f in listed]
     lines += [f"{pack.pick_title} {p}." for p in pack.paths]
     return "\n".join(lines)
 
@@ -78,8 +81,9 @@ def label(backend: Backend, premise_text: str, sentence: str, *, seed: int) -> s
 def labels(
     backend: Backend, pack: Pack, claims: Sequence[Claim], listed: Sequence[Fact], *, seed: int
 ) -> list[str]:
-    """One label per claim, each read against the facts it cites."""
-    return [label(backend, premise(pack, c, listed), c.text, seed=seed) for c in claims]
+    """One label per claim, each read against all the facts."""
+    text = premise(pack, listed)
+    return [label(backend, text, c.text, seed=seed) for c in claims]
 
 
 def shares(labels: Iterable[str]) -> dict[str, float | int | None]:

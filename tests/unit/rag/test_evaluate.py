@@ -48,7 +48,7 @@ class Script:
         self.answers = answers
 
     def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str:
-        blind = "L1 (liked)" in prompt
+        blind = "L1 (a game the player liked)" in prompt
         return self.answers[blind].pop(0)
 
 
@@ -129,8 +129,10 @@ def test_the_judge_labels_served_model_sentences_and_the_template_as_a_control()
     control = ent["template_sentences"]
     assert control["sentences"] == 2 * n_template
     assert control["neutral"] == pytest.approx(1 / (2 * n_template))
-    assert "Dead Cells counted for 50% of the score." in judge.prompts[0]
-    assert "Hollow Knight" not in judge.prompts[0].split("Sentence:")[0]
+    facts_part = judge.prompts[0].split("Sentence:")[0]
+    assert "Dead Cells counted for 50% of the score." in facts_part
+    assert "Hollow Knight counted for 30% of the score." in facts_part  # every fact, not just A1
+    assert "supplied N% of the reasons" in judge.prompts[0]
 
 
 def test_fluency_proxies() -> None:

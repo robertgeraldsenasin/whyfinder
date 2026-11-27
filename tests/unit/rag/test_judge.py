@@ -6,7 +6,7 @@ import json
 from typing import Any
 
 from tests.unit.rag.test_generate import PACK, QUOTE
-from whyfinder.rag.claims import AttributionRef, Claim, CounterfactualRef, ReviewRef
+from whyfinder.rag.claims import AttributionRef, Claim
 from whyfinder.rag.generate import facts
 from whyfinder.rag.judge import LABELS, SCHEMA, label, labels, premise, shares
 
@@ -24,20 +24,16 @@ class Says:
         return self.answers.pop(0)
 
 
-def test_the_premise_holds_only_the_cited_facts_and_the_context() -> None:
-    listed = facts(PACK)
-    claim = Claim("Dead Cells is why.", (AttributionRef("1", 0.5),))
-    text = premise(PACK, claim, listed)
-    assert text.splitlines() == [
+def test_the_premise_holds_every_fact_and_the_context() -> None:
+    assert premise(PACK, facts(PACK)).splitlines() == [
         "The recommended game is Hades.",
         "Dead Cells counted for 50% of the score.",
+        "Hollow Knight counted for 30% of the score.",
+        "Celeste counted for 20% of the score.",
+        "Without Dead Cells in the list, Hades would drop out of the picks.",
+        f"A player of Hades, on combat: \u201c{QUOTE}\u201d.",
         "Hades shares the tag Roguelite with Dead Cells.",
     ]
-    both = Claim("x", (CounterfactualRef(("1",)), ReviewRef("c_7_0", QUOTE)))
-    lines = premise(PACK, both, listed).splitlines()
-    assert lines[1] == "Without Dead Cells in the list, Hades would drop out of the picks."
-    assert lines[2] == f"A player of Hades, on combat: “{QUOTE}”."
-    assert premise(PACK, Claim("x", ()), listed).count("\n") == 1  # nothing cited
 
 
 def test_the_judge_is_asked_for_one_label_and_anything_else_is_invalid() -> None:

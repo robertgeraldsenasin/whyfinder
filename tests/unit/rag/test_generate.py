@@ -92,9 +92,10 @@ def test_the_prompt_lists_the_facts_and_the_ablation_hides_the_shares() -> None:
     for fact in (
         "Write in English",
         "Recommended game: Hades",
-        "A1 (liked) Dead Cells: 50% of the score",
-        "C1 (remove these and the pick drops out) Dead Cells",
-        f"Q1 (a player of Hades, on combat) \u201c{QUOTE}\u201d",
+        "A1 (a game the player liked) Dead Cells: 50% of the reasons for this pick",
+        "C1 (had the player not liked these, Hades would not be recommended) Dead Cells",
+        f"Q1 (a player of Hades wrote, on combat) \u201c{QUOTE}\u201d",
+        "one or two sentences of at most 25 words each",
         "Also true, may be mentioned but has no ID: "
         "Hades shares the tag Roguelite with Dead Cells.",
         "End every sentence with a full stop.",
@@ -105,7 +106,7 @@ def test_the_prompt_lists_the_facts_and_the_ablation_hides_the_shares() -> None:
     bare = prompt(PACK, with_attributions=False)
     assert "50%" not in bare
     assert QUOTE not in bare
-    assert bare.index("L1 (liked) Celeste") < bare.index("L2 (liked) Dead Cells")
+    assert bare.index("L1 (a game the player liked) Celeste") < bare.index("L2 (a game")
     again = prompt(PACK, feedback=["wrong share for Dead Cells"])
     assert again.startswith(full)
     assert "- wrong share for Dead Cells" in again
@@ -116,7 +117,7 @@ def test_the_schema_pins_each_sentence_to_its_fact() -> None:
     s = schema(listed)
     options = s["properties"]["claims"]["items"]["anyOf"]
     assert [o["properties"]["fact"]["enum"] for o in options] == [[f.id] for f in listed]
-    assert s["properties"]["claims"]["maxItems"] == 3
+    assert s["properties"]["claims"]["maxItems"] == 2  # the template may use three
     by_id = {f.id: f.pattern for f in listed}
     fits = {
         "A1": [
@@ -134,6 +135,9 @@ def test_the_schema_pins_each_sentence_to_its_fact() -> None:
             'Dead Cells, "they" say.',
             "Dead Cells is the main reason, making it",  # cut off: no full stop
             "Dead Cells " + "and more " * 12 + ".",  # past the bound
+            "Dead Cells is the main reason. {",  # JSON debris
+            "Dead Cells is the main reason [1].",
+            "Dead Cells is the main\nreason.",
         ],
         "C1": ["Take Dead Cells off your list and Hades drops out"],
         "Q1": [f'Players say "{QUOTE}"', f"\u201c{QUOTE[:-1]}\u201d"],
