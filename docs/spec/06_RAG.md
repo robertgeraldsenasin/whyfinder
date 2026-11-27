@@ -35,8 +35,8 @@ it while decoding; code attaches the evidence. Measured on 60 picks with three C
 first try and never needs the fallback, meeting the 95% target; before pinning, the best model
 passed within two tries 32% of the time. The checker guards faithfulness, not prose: half of
 llama3.2:3b's sentences only restate a fact line and 8% are cut off by the length bound, so
-generation stays opt-in. Still to come: the full-corpus DVC `index` stage, the 150 labelled retrieval queries and
-the NLI entailment score.
+generation stays opt-in. Still to come: the full-corpus DVC `index` stage, grades for the 150 retrieval queries (the
+sheet and guide are in `docs/labelling/`) and the NLI entailment score.
 
 ## One explanation, step by step
 
@@ -84,7 +84,7 @@ default; the LLM is optional and its output goes through the same validation.
 | Claim support | Checker over the CI sample | ≥ 95% before fallback |
 | Entailment | Local NLI cross-encoder scores each claim against its evidence | Reported; gated non-inferior |
 | Attribution agreement | Kendall τ between the order games are named and attribution order | τ ≥ 0.7 |
-| Retrieval | 150 hand-labelled (pick, aspect) queries: Recall@5, nDCG@5 | Gated non-inferior |
+| Retrieval | 150 hand-labelled (pick, aspect) queries, every review of the pick graded 0-2 (docs/labelling/retrieval.md): Recall@5, nDCG@5; Cohen's κ on 30 double-labelled queries | Gated non-inferior |
 | Research ablation | Same prompt without attributions: share of claims that match the model's real top-5 | Reported in the paper |
 
 **Cost and determinism:** generations are cached under hash(prompt, model digest). CI replays the cache
