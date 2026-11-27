@@ -1,11 +1,13 @@
 """Grounded generation (FR-16; ADR-0009; docs/spec/06_RAG.md steps 4 and 6).
 
 A small local model only voices facts the recommender already computed: the pick's top
-attributions, its counterfactual set and review quotes retrieved for it, each listed with an ID.
-The model writes one to three sentences, each about one fact, and gives that fact's ID. Its
-output is held by the per-prompt JSON schema: each sentence must match a pattern for its fact (the
-liked game's exact title, the exact percentage if any, a player quote verbatim between curly
-quotes), which Ollama enforces while decoding. Code attaches the evidence behind each ID.
+attributions, its counterfactual set and review quotes retrieved for it, each listed with an ID
+and shown as data rather than as a sentence the model could copy. The model writes one to three
+sentences, each about one fact, and gives that fact's ID. Its output is held by the per-prompt
+JSON schema: each sentence must match a pattern for its fact (the liked game's exact title, the
+exact percentage if any, a player quote verbatim between curly quotes, and a full stop at the end,
+so a length bound shows up as a short sentence rather than a cut one), which Ollama enforces while
+decoding. Code attaches the evidence behind each ID.
 `claims.check` then verifies every sentence against its evidence; on failure the model gets one
 retry with the checker's reasons, then the template sentences take over (faithful by
 construction). Generations are cached under hash(model, digest, prompt, schema, seed): CI replays
@@ -52,22 +54,25 @@ class Pack:
 
 
 RULES = (
-    "Write in English. Explain to a player why the game below was recommended, in one to "
-    "{claims} short sentences and {words} words in all. Each sentence is about exactly one fact "
-    "from the list and gives its ID. A sentence about a liked game names it exactly as written; "
-    "if it gives a number, it is the percentage listed. A sentence about a player quote copies "
-    "the quote word for word between \u201c and \u201d. Do not mention any game that is not in "
-    "the facts."
+    "Write in English. Tell a player why the game below was recommended to them, in one to "
+    "{claims} short sentences and {words} words in all. Each sentence uses exactly one fact from "
+    "the list and gives its ID. Say the fact in your own words, the way you would tell the "
+    "player; do not copy the fact as listed. A sentence about a liked game names it exactly as "
+    "written; if it gives a number, it is the percentage listed. A sentence about a player quote "
+    "copies the quote word for word between \u201c and \u201d. Do not mention any game that is "
+    "not in the facts. End every sentence with a full stop."
 )
 
 BLIND = (
-    "Write in English. Explain to a player why the game below was recommended, in one to "
+    "Write in English. Tell a player why the game below was recommended to them, in one to "
     "{claims} short sentences and {words} words in all. You know which games the player liked, "
     "not how much each one counted. Each sentence is about one liked game, names it exactly as "
-    "written and gives its ID. Do not mention any game that is not in the facts."
+    "written and gives its ID. Do not mention any game that is not in the facts. End every "
+    "sentence with a full stop."
 )
 
 FREE = '[^%"\\\\\u201c\u201d]'  # anything but %, straight or curly double quotes, backslash
+END = "[.!]"  # every sentence ends on its own; a bound that bites leaves a short sentence
 META = set("\\^$.|?*+()[]{}/")
 
 
@@ -76,16 +81,22 @@ def literal(text: str) -> str:
     return "".join("\\" + c if c in META else c for c in text)
 
 
+def span(most: int) -> str:
+    """Up to `most` characters of free text."""
+    return f"{FREE}{{0,{most}}}"
+
+
 @dataclass(frozen=True)
 class Fact:
     id: str
-    line: str
+    line: str  # the fact as a plain sentence: what the demo shows and the judge reads
     evidence: Evidence
     pattern: str  # what a sentence about this fact must look like
+    cue: str  # the fact as the prompt lists it, as data rather than a sentence to copy
 
 
 def about(title: str) -> str:
-    return f"^{FREE}{{0,40}}{literal(title)}{FREE}{{0,45}}$"
+    return f"^{span(50)}{literal(title)}{span(80)}{END}$"
 
 
 def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
@@ -95,7 +106,7 @@ def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
     double quotes or backslashes are left out: they cannot be pinned inside a JSON string."""
     if not with_attributions:
         return [
-            Fact(f"L{n}", title, AttributionRef(gid, 0.0), about(title))
+            Fact(f"L{n}", title, AttributionRef(gid, 0.0), about(title), f"(liked) {title}")
             for n, (gid, title) in enumerate(pack.liked, start=1)
         ]
     out: list[Fact] = []
@@ -103,20 +114,24 @@ def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
     for n, (gid, title, share) in enumerate(positive, start=1):
         pct = round(share * 100)
         line = f"{title} counted for {pct}% of the score"
-        pattern = f"^{FREE}{{0,40}}{literal(title)}{FREE}{{0,40}}({pct}%{FREE}{{0,25}})?$"
-        out.append(Fact(f"A{n}", line, AttributionRef(gid, share), pattern))
+        lead = f"({span(50)}|{span(30)}{pct}%{span(40)})"  # the share may come first
+        pattern = f"^{lead}{literal(title)}{span(60)}({pct}%{span(50)})?{END}$"
+        cue = f"(liked) {title}: {pct}% of the score"
+        out.append(Fact(f"A{n}", line, AttributionRef(gid, share), pattern, cue))
     if pack.removed:
         names = " and ".join(t for _, t in pack.removed)
         line = f"without {names} in the list, {pack.pick_title} would drop out of the picks"
-        joined = f"{FREE}{{1,20}}".join(literal(t) for _, t in pack.removed)
-        pattern = f"^{FREE}{{0,40}}{joined}{FREE}{{0,60}}$"
+        joined = f"{FREE}{{1,25}}".join(literal(t) for _, t in pack.removed)
+        pattern = f"^{span(50)}{joined}{span(80)}{END}$"
+        cue = f"(remove these and the pick drops out) {names}"
         ids = tuple(g for g, _ in pack.removed)
-        out.append(Fact("C1", line, CounterfactualRef(ids), pattern))
+        out.append(Fact("C1", line, CounterfactualRef(ids), pattern, cue))
     usable = [q for q in pack.quotes if '"' not in q[2] and "\\" not in q[2]]
     for n, (cid, aspect, text) in enumerate(usable, start=1):
         line = f"a player of {pack.pick_title}, on {aspect}: \u201c{text}\u201d"
-        pattern = f"^{FREE}{{0,45}}\u201c{literal(text)}\u201d{FREE}{{0,15}}$"
-        out.append(Fact(f"Q{n}", line, ReviewRef(cid, text), pattern))
+        pattern = f"^{span(60)}\u201c{literal(text)}\u201d({span(20)}{END})?$"
+        cue = f"(a player of {pack.pick_title}, on {aspect}) \u201c{text}\u201d"
+        out.append(Fact(f"Q{n}", line, ReviewRef(cid, text), pattern, cue))
     return out
 
 
@@ -154,12 +169,11 @@ def schema(listed: Sequence[Fact]) -> dict[str, Any]:
 def prompt(pack: Pack, *, with_attributions: bool = True, feedback: Sequence[str] = ()) -> str:
     """The prompt for a pack; `with_attributions=False` is the research ablation (06_RAG)."""
     rules = (RULES if with_attributions else BLIND).format(claims=MAX_CLAIMS, words=MAX_WORDS)
-    listed = "\n".join(
-        f"{f.id}: {f.line}" for f in facts(pack, with_attributions=with_attributions)
-    )
+    listed = "\n".join(f"{f.id} {f.cue}" for f in facts(pack, with_attributions=with_attributions))
     text = f"{rules}\n\nRecommended game: {pack.pick_title}\nFacts:\n{listed}\n"
     if with_attributions and pack.paths:
-        text += "Context (not citable): " + "; ".join(pack.paths) + ".\n"
+        also = "; ".join(f"{pack.pick_title} {p}" for p in pack.paths)
+        text += f"Also true, may be mentioned but has no ID: {also}.\n"
     text += '\nAnswer with JSON only: {"claims": [{"fact": "...", "text": "..."}]}\n'
     if feedback:
         text += "\nYour last answer was rejected:\n" + "\n".join(f"- {r}" for r in feedback)

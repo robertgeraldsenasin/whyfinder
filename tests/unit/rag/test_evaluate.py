@@ -48,7 +48,7 @@ class Script:
         self.answers = answers
 
     def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str:
-        blind = "L1:" in prompt
+        blind = "L1 (liked)" in prompt
         return self.answers[blind].pop(0)
 
 
@@ -78,6 +78,59 @@ def test_the_report_counts_support_fallbacks_agreement_and_the_ablation() -> Non
         "outside the pick and the history": 2,
         "without naming it": 2,
     }
+    assert report["entailment"] is None
+
+
+class Judge:
+    model = "judge"
+    digest = "sha256:judge"
+
+    def __init__(self, *labels: str) -> None:
+        self.labels = list(labels)
+        self.prompts: list[str] = []
+
+    def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str:
+        self.prompts.append(prompt)
+        return json.dumps({"label": self.labels.pop(0)})
+
+
+def test_the_judge_labels_served_model_sentences_and_the_template_as_a_control() -> None:
+    two = json.dumps(
+        {
+            "claims": [
+                {"fact": "A1", "text": "Dead Cells drives it (50%)."},
+                {"fact": "A2", "text": "Hollow Knight adds 30%, and it is the best game ever."},
+            ]
+        }
+    )
+    guess = json.dumps({"claims": [{"fact": "L1", "text": "Celeste, probably."}]})
+    backend = Script({False: [two, BAD, BAD], True: [guess, guess]})
+    cases = [Case(PACK, SOURCE, lambda: template(PACK)) for _ in range(2)]
+    n_template = len(template(PACK))
+    # Case 1: two model sentences, then its template; case 2 falls back: only its template.
+    judge = Judge(
+        "entailed",
+        "neutral",
+        *["entailed"] * n_template,
+        *["entailed"] * (n_template - 1),
+        "neutral",
+    )
+    report = run(cases, backend, seed=1, judge=judge)
+    ent = report["entailment"]
+    assert ent["judge"] == "judge"
+    assert ent["self_judged"] is False
+    assert ent["served_model_sentences"] == {
+        "sentences": 2,
+        "entailed": 0.5,
+        "neutral": 0.5,
+        "contradicted": 0.0,
+        "invalid": 0.0,
+    }
+    control = ent["template_sentences"]
+    assert control["sentences"] == 2 * n_template
+    assert control["neutral"] == pytest.approx(1 / (2 * n_template))
+    assert "Dead Cells counted for 50% of the score." in judge.prompts[0]
+    assert "Hollow Knight" not in judge.prompts[0].split("Sentence:")[0]
 
 
 def test_fluency_proxies() -> None:

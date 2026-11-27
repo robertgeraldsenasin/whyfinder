@@ -13,7 +13,10 @@ ablation). Reported:
   without the shares;
 - **two plain-text proxies** over the model's claims that were served: the share cut off mid-way
   by a length limit and the share that only copy a fact line back. The checker guards
-  faithfulness, not fluency; these say how much a model adds over the template.
+  faithfulness, not fluency; these say how much a model adds over the template;
+- **entailment**, with a judge model (`judge.py`): the share of served model sentences the facts
+  entail, leave neutral or contradict, next to the same judge's labels for the template sentences
+  of the same picks as a control.
 """
 
 from __future__ import annotations
@@ -27,6 +30,7 @@ from typing import Any
 
 from whyfinder.rag.claims import AttributionRef, Claim, Source, check
 from whyfinder.rag.generate import Backend, Outcome, Pack, ask, explain, facts
+from whyfinder.rag.judge import labels, shares
 
 
 @dataclass(frozen=True)
@@ -124,23 +128,33 @@ def reason_kind(reason: str) -> str:
     return "other"
 
 
-def run(cases: Sequence[Case], backend: Backend, *, seed: int) -> dict[str, Any]:
+def run(
+    cases: Sequence[Case], backend: Backend, *, seed: int, judge: Backend | None = None
+) -> dict[str, Any]:
     """The faithfulness report over `cases`. Agreement and the ablation look at the model's first
-    answer (what the model does), not at what was served after the fallback."""
+    answer (what the model does), not at what was served after the fallback. With a `judge`, the
+    served model sentences and, as a control, the template sentences are labelled for entailment."""
     outcomes: list[Outcome] = []
     first_claims = first_supported = 0
     kinds: Counter[str] = Counter()
     taus: list[float] = []
     top1 = top1_blind = 0
     served = cut = copied = 0
+    judged: list[str] = []
+    control: list[str] = []
     for case in cases:
         out = explain(case.pack, case.source, backend, case.template, seed=seed)
         outcomes.append(out)
+        listed = facts(case.pack)
         if not out.fallback_used:
-            lines = [f.line for f in facts(case.pack)]
+            lines = [f.line for f in listed]
             served += len(out.claims)
             cut += sum(1 for c in out.claims if unfinished(c.text))
             copied += sum(1 for c in out.claims if parroted(c.text, lines))
+            if judge is not None:
+                judged.extend(labels(judge, case.pack, out.claims, listed, seed=seed))
+        if judge is not None:
+            control.extend(labels(judge, case.pack, case.template(), listed, seed=seed))
         first = out.attempts[0]
         first_claims += len(first.claims)
         first_supported += sum(1 for c in first.claims if not check([c], case.source))
@@ -161,8 +175,20 @@ def run(cases: Sequence[Case], backend: Backend, *, seed: int) -> dict[str, Any]
     def share(k: int) -> float | None:
         return k / n if n else None
 
+    entailment = (
+        None
+        if judge is None
+        else {
+            "judge": judge.model,
+            "judge_digest": judge.digest,
+            "self_judged": judge.model == backend.model,
+            "served_model_sentences": shares(judged),
+            "template_sentences": shares(control),
+        }
+    )
     return {
         "cases": n,
+        "entailment": entailment,
         "model": backend.model,
         "digest": backend.digest,
         "seed": seed,

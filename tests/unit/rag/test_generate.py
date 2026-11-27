@@ -92,15 +92,20 @@ def test_the_prompt_lists_the_facts_and_the_ablation_hides_the_shares() -> None:
     for fact in (
         "Write in English",
         "Recommended game: Hades",
-        "A1: Dead Cells counted for 50%",
-        QUOTE,
-        "Roguelite",
+        "A1 (liked) Dead Cells: 50% of the score",
+        "C1 (remove these and the pick drops out) Dead Cells",
+        f"Q1 (a player of Hades, on combat) \u201c{QUOTE}\u201d",
+        "Also true, may be mentioned but has no ID: "
+        "Hades shares the tag Roguelite with Dead Cells.",
+        "End every sentence with a full stop.",
     ):
         assert fact in full
+    # Facts are listed as data, not as the sentences a model could copy back.
+    assert "counted for 50% of the score" not in full
     bare = prompt(PACK, with_attributions=False)
     assert "50%" not in bare
     assert QUOTE not in bare
-    assert bare.index("L1: Celeste") < bare.index("L2: Dead Cells")
+    assert bare.index("L1 (liked) Celeste") < bare.index("L2 (liked) Dead Cells")
     again = prompt(PACK, feedback=["wrong share for Dead Cells"])
     assert again.startswith(full)
     assert "- wrong share for Dead Cells" in again
@@ -114,12 +119,23 @@ def test_the_schema_pins_each_sentence_to_its_fact() -> None:
     assert s["properties"]["claims"]["maxItems"] == 3
     by_id = {f.id: f.pattern for f in listed}
     fits = {
-        "A1": ["Dead Cells is the main reason (50%).", "You liked Dead Cells, so here it is."],
+        "A1": [
+            "Dead Cells is the main reason (50%).",
+            "You liked Dead Cells, so here it is!",
+            "Half of this pick, 50%, comes from the hours you put into Dead Cells.",
+        ],
         "C1": ["Take Dead Cells off your list and Hades drops out."],
-        "Q1": [f"One player puts it simply: \u201c{QUOTE}\u201d."],
+        "Q1": [f"One player puts it simply: \u201c{QUOTE}\u201d.", f"\u201c{QUOTE}\u201d"],
     }
     misses = {
-        "A1": ["Hades is great.", "Dead Cells drove 90% of it.", 'Dead Cells, "they" say.'],
+        "A1": [
+            "Hades is great.",
+            "Dead Cells drove 90% of it.",
+            'Dead Cells, "they" say.',
+            "Dead Cells is the main reason, making it",  # cut off: no full stop
+            "Dead Cells " + "and more " * 12 + ".",  # past the bound
+        ],
+        "C1": ["Take Dead Cells off your list and Hades drops out"],
         "Q1": [f'Players say "{QUOTE}"', f"\u201c{QUOTE[:-1]}\u201d"],
     }
     for fid, texts in fits.items():

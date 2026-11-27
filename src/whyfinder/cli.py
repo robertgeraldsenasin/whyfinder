@@ -522,6 +522,9 @@ def rag_eval(
     ] = "replay",
     model_name: Annotated[str, typer.Option("--model", help="Ollama model.")] = "llama3.2:3b",
     url: Annotated[str, typer.Option(help="Ollama server.")] = "http://127.0.0.1:11434",
+    judge_name: Annotated[
+        str, typer.Option("--judge", help="Ollama model that labels entailment; empty to skip.")
+    ] = "qwen2.5:7b",
     cases: Annotated[int, typer.Option(help="Picks to explain.")] = 60,
     cache: Annotated[Path, typer.Option(help="Generation cache (JSON lines).")] = LLM_CACHE,
     out: Annotated[
@@ -543,17 +546,19 @@ def rag_eval(
     if mode not in ("replay", "fill"):
         raise typer.BadParameter("mode is replay or fill")
     store = Cache.load(cache)
-    if mode == "fill":
-        llm = Ollama(model_name, url=url)
-        backend = Cached(store, model_name, llm.digest, inner=llm)
-    else:
-        digests = {row["digest"] for row in store.entries.values() if row["model"] == model_name}
+
+    def through_cache(name: str) -> Cached:
+        if mode == "fill":
+            llm = Ollama(name, url=url)
+            return Cached(store, name, llm.digest, inner=llm)
+        digests = {row["digest"] for row in store.entries.values() if row["model"] == name}
         if len(digests) != 1:
-            typer.echo(
-                f"{cache} has no single digest for {model_name}; run with --mode fill", err=True
-            )
+            typer.echo(f"{cache} has no single digest for {name}; run with --mode fill", err=True)
             raise typer.Exit(1)
-        backend = Cached(store, model_name, digests.pop())
+        return Cached(store, name, digests.pop())
+
+    backend = through_cache(model_name)
+    judge = through_cache(judge_name) if judge_name else None
     p = load_params(params)
     served = ServedModel.load(slice_path, params, slice_path.parent / "reviews.json")
     seed = param(p, "seed", int)
@@ -561,7 +566,7 @@ def rag_eval(
     for history, explanation in grounding.sample(served, cases, seed=seed):
         pack, source = grounding.facts(served, history, explanation)
         sample.append(Case(pack, source, partial(template, pack)))
-    report = run(sample, backend, seed=seed)
+    report = run(sample, backend, seed=seed, judge=judge)
     if out is None:
         slug = "".join(c if c.isalnum() else "-" for c in model_name)
         out = RAG_EVAL.parent / f"rag-eval-{slug}.json"

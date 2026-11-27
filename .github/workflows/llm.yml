@@ -1,7 +1,9 @@
-# Grounded generation with a local model (ADR-0009; docs/spec/06_RAG.md). Installs Ollama, pulls a
-# small open instruct model, explains the evaluation sample through the generate-check-retry-
-# fallback path and writes the faithfulness report. The generation cache and the report are printed
-# so they can be committed; CI then replays the cache and never calls a model.
+# Grounded generation with a local model (ADR-0009; docs/spec/06_RAG.md). Installs Ollama, pulls an
+# open instruct model and the entailment judge, explains the evaluation sample through the
+# generate-check-retry-fallback path and writes the faithfulness report. The cache and the report
+# are printed so they can be committed; CI then replays the cache and never calls a model. Jobs
+# share the judge's labels for the template control, so merge the caches and replay the reports
+# locally before committing.
 name: llm
 
 on:
@@ -9,7 +11,10 @@ on:
     inputs:
       models:
         description: "Ollama models, as a JSON list"
-        default: '["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b"]'
+        default: '["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b", "llama3.1:8b", "qwen2.5:7b"]'
+      judge:
+        description: "Ollama model that labels entailment"
+        default: "qwen2.5:7b"
       cases:
         description: "Picks to explain"
         default: "60"
@@ -24,13 +29,15 @@ concurrency:
 jobs:
   fill:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    # 7-8B models on a 4-core runner take about three hours for 60 picks.
+    timeout-minutes: 355
     strategy:
       fail-fast: false
       matrix:
-        model: ${{ fromJSON(inputs.models || '["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b"]') }}
+        model: ${{ fromJSON(inputs.models || '["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b", "llama3.1:8b", "qwen2.5:7b"]') }}
     env:
       MODEL: ${{ matrix.model }}
+      JUDGE: ${{ inputs.judge || 'qwen2.5:7b' }}
       CASES: ${{ inputs.cases || '60' }}
     steps:
       - uses: actions/checkout@v7
@@ -46,9 +53,10 @@ jobs:
           if ! curl -fs localhost:11434/api/tags >/dev/null; then (ollama serve > ollama.log 2>&1 &); fi
           for i in $(seq 1 60); do curl -fs localhost:11434/api/tags >/dev/null && break; sleep 1; done
           ollama pull "$MODEL"
+          ollama pull "$JUDGE"
           ollama list
       - name: Explain the sample and measure faithfulness
-        run: uv run whyfinder rag eval --mode fill --model "$MODEL" --cases "$CASES"
+        run: uv run whyfinder rag eval --mode fill --model "$MODEL" --judge "$JUDGE" --cases "$CASES"
       - name: Report
         if: always()
         run: |
