@@ -5,6 +5,10 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A labelling kit for review retrieval (#33): 150 (pick, aspect) queries sampled the way grounding asks them, with all 12 of each pick's reviews to grade 0-2 (`data/labels/retrieval.csv`), a guide with examples from the sheet (`docs/labelling/retrieval.md`), and `whyfinder rag labels score`, which reports Cohen's kappa over 30 double-labelled queries and Recall@5 and nDCG@5 for BM25, the LSA vectors and their fusion. The grades themselves still need people.
+
 ## [1.0.0] - 2026-11-23
 
 The first complete release: the v0.2.0 model, unchanged and scored again on the sealed test set,

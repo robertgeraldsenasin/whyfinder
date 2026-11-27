@@ -51,13 +51,14 @@ class ReviewIndex:
     ef_search: int = 64
     rrf_k: int = 60
 
-    def search(
-        self, query: str, k: int = 5, *, game: int | None = None, depth: int = 100
-    ) -> list[Hit]:
-        """The k best chunks for a query, optionally within one game, fused by RRF."""
+    def rankings(
+        self, query: str, *, game: int | None = None, depth: int = 100
+    ) -> tuple[list[int], list[int]]:
+        """The BM25 and the dense ranking of chunks for a query, before fusion; within one game
+        both are exact, across the corpus the dense side comes from the HNSW graph."""
         tokens = tokenize(query)
-        if not tokens or k < 1:
-            return []
+        if not tokens:
+            return [], []
         q = self.lsa.embed([tokens])[0]
         if game is not None:
             among = self.by_game.get(game, np.zeros(0, dtype=np.int64))
@@ -67,10 +68,18 @@ class ReviewIndex:
                 sims = self.vectors[among] @ q
                 order = np.lexsort((among, -sims))
                 dense = [int(among[i]) for i in order if sims[i] > 0.0][:depth]
-        else:
-            lexical = [d for d, _ in self.bm25.top(tokens, depth)]
-            found = self.graph.search(q, depth, ef=max(self.ef_search, depth)) if q.any() else []
-            dense = [d for d, s in found if s > 0.0]
+            return lexical, dense
+        lexical = [d for d, _ in self.bm25.top(tokens, depth)]
+        found = self.graph.search(q, depth, ef=max(self.ef_search, depth)) if q.any() else []
+        return lexical, [d for d, s in found if s > 0.0]
+
+    def search(
+        self, query: str, k: int = 5, *, game: int | None = None, depth: int = 100
+    ) -> list[Hit]:
+        """The k best chunks for a query, optionally within one game, fused by RRF."""
+        if k < 1:
+            return []
+        lexical, dense = self.rankings(query, game=game, depth=depth)
         lex_rank = {d: r for r, d in enumerate(lexical, start=1)}
         dense_rank = {d: r for r, d in enumerate(dense, start=1)}
         return [

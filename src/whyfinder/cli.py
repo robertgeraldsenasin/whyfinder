@@ -578,3 +578,79 @@ def rag_eval(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text)
     typer.echo(text)
+
+
+labels_app = typer.Typer(
+    help="Hand labels for review retrieval (#33; docs/labelling/retrieval.md).",
+    no_args_is_help=True,
+)
+rag_app.add_typer(labels_app, name="labels")
+LABELS = Path("data/labels/retrieval.csv")
+LABEL_REPORT = Path("results/validation/retrieval-labels.json")
+
+
+@labels_app.command("pool")
+def labels_pool(
+    out: Annotated[Path, typer.Option(help="The label sheet to write.")] = LABELS,
+    queries: Annotated[int, typer.Option(help="Queries to sample.")] = 150,
+    force: Annotated[bool, typer.Option(help="Replace a sheet that already has grades.")] = False,
+    slice_path: SliceOption = WEB_SLICE,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Sample (pick, aspect) queries as grounding asks them and write every review of each pick
+    as a row to grade 0, 1 or 2."""
+    from whyfinder.rag.labels import missing, read, write
+    from whyfinder.serve import grounding
+    from whyfinder.serve.model import ServedModel
+
+    if out.exists() and not force:
+        rows = read(out)
+        if missing(rows)[0] < len(rows):
+            typer.echo(f"{out} already has grades; pass --force to replace it", err=True)
+            raise typer.Exit(1)
+    served = ServedModel.load(slice_path, params, slice_path.parent / "reviews.json")
+    seed = param(load_params(params), "seed", int)
+    picked = grounding.label_queries(served, queries, seed=seed)
+    rows = grounding.label_rows(served, picked)
+    write(out, rows)
+    typer.echo(f"{len(picked)} queries, {len(rows)} reviews to grade in {out}")
+
+
+@labels_app.command("score")
+def labels_score(
+    sheet: Annotated[Path, typer.Option("--labels", help="The graded label sheet.")] = LABELS,
+    out: Annotated[Path, typer.Option(help="Report path.")] = LABEL_REPORT,
+    partial: Annotated[
+        bool, typer.Option(help="Score the queries graded so far instead of failing.")
+    ] = False,
+    slice_path: SliceOption = WEB_SLICE,
+    params: ParamsOption = Path("params.yaml"),
+) -> None:
+    """Cohen's kappa over the double-labelled reviews, and Recall@5 and nDCG@5 of the BM25, dense
+    and fused rankings over the graded queries."""
+    import json
+
+    from whyfinder.rag.labels import DOUBLE, LabelError, missing, read, score
+    from whyfinder.serve import grounding
+    from whyfinder.serve.model import ServedModel
+
+    try:
+        rows = read(sheet)
+    except (LabelError, FileNotFoundError) as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1) from exc
+    blank_a, blank_b = missing(rows)
+    if (blank_a or blank_b) and not partial:
+        typer.echo(
+            f"{sheet}: {blank_a} reviews still need a grade, and {blank_b} in the first "
+            f"{DOUBLE} queries a second grade; pass --partial to score what is there",
+            err=True,
+        )
+        raise typer.Exit(1)
+    served = ServedModel.load(slice_path, params, slice_path.parent / "reviews.json")
+    report = score(rows, grounding.label_rankings(served, rows))
+    report["complete"] = not (blank_a or blank_b)
+    text = json.dumps(report, indent=2, sort_keys=True) + "\n"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text)
+    typer.echo(text)
