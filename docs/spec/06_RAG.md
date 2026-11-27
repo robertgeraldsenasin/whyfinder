@@ -3,7 +3,11 @@
 The LLM only **voices** reasons the model already computed; it never decides why. Its output is a
 list of claims, each tied to evidence, and a deterministic checker rejects any claim it can't verify.
 
-## Corpus and index (DVC stage `index`)
+## Corpus and index
+
+The plan below was for an API serving the full model. Since ADR-0019 the API serves the demo slice
+and the corpus is its review export (see "What runs today"); ADR-0010 records why the full-corpus
+stage was dropped and how the graph was measured at scale instead.
 
 1. **Sample:** per game, up to R = 20 English reviews from the train period (so evaluation never
    quotes the future), preferring longer reviews; record the sampling seed.

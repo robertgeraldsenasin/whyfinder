@@ -28,8 +28,28 @@ Build: ours 30.5 s, hnswlib 0.89 s.
 | 64 | 0.960 | 0.960 | 1,135 | 27,305 |
 | 128 | 0.993 | 0.994 | 632 | 15,551 |
 
+### Review sentences from the full corpus (99,693 vectors, 128 dimensions, 200 queries)
+
+From the scale job (`bench.yml`, dispatch only, run 46074919073 on PR #93): 100,200 distinct
+sentences of 6 to 40 words, sampled with the seed from every review the parse stage reads,
+embedded with the same LSA settings; 507 came out as zero vectors and were dropped.
+
+Build: ours 307.3 s, hnswlib 11.23 s.
+
+| efSearch | recall@10, ours | recall@10, hnswlib | QPS, ours | QPS, hnswlib |
+| --- | --- | --- | --- | --- |
+| 16 | 0.842 | 0.847 | 3,071 | 49,356 |
+| 32 | 0.927 | 0.913 | 1,959 | 20,732 |
+| 64 | 0.963 | 0.957 | 1,325 | 13,722 |
+| 128 | 0.985 | 0.978 | 806 | 8,350 |
+
 **Reading it.** The graphs are equally good: at every efSearch the two recalls are within a point
 of each other, and at the served setting (efSearch = 64) ours reaches 0.999 on the quotes and 0.960
 on the harder random set, both above the 0.95 bar. The cost is speed: pure Python builds about 30
 times slower and answers about 20 times fewer queries per second than C++. For the API that is
 still about 1 ms a query, and the 20 s build happens once at start-up.
+
+At 17 times the demo's size the picture holds. Recall at efSearch = 64 is 0.963 against
+hnswlib's 0.957, still above the bar, and the gap in speed stays where it was: a build 27 times
+slower (five minutes instead of eleven seconds) and about ten times fewer queries per second. The
+graph scales; the interpreter is the cost.
