@@ -44,11 +44,11 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: Install
-        run: uv sync --frozen --group dev
+        run: uv sync --frozen --group pipeline
       - name: Review text from the raw corpus
         run: |
           uv run whyfinder data fetch
-          uv run dvc repro parse
+          uv run whyfinder data parse --workers 4
       - name: Benchmark
         run: |
           uv run --frozen --with hnswlib python scripts/bench_hnsw.py \
