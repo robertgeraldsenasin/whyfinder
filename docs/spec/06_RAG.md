@@ -39,8 +39,8 @@ it while decoding; code attaches the evidence. Measured on 60 picks with three C
 first try and never needs the fallback, meeting the 95% target; before pinning, the best model
 passed within two tries 32% of the time. The checker guards faithfulness, not prose: half of
 llama3.2:3b's sentences only restate a fact line and 8% are cut off by the length bound, so
-generation stays opt-in. Still to come: the full-corpus DVC `index` stage, grades for the 150 retrieval queries (the
-sheet and guide are in `docs/labelling/`) and the NLI entailment score.
+generation stays opt-in. Still to come: grades for the 150 retrieval queries (the sheet and guide are in
+`docs/labelling/`) and the NLI entailment score.
 
 ## One explanation, step by step
 

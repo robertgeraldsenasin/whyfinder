@@ -59,7 +59,7 @@ gantt
 
 ## M3 · Grounded RAG (6 days) → `v0.3.0`
 
-- [x] Review sample, chunking, BM25 (FR-14): over the demo's review export; the full-corpus DVC `index` stage is still to do
+- [x] Review sample, chunking, BM25 (FR-14): over the demo's review export; the full-corpus DVC `index` stage was dropped with ADR-0019 (ADR-0010), and the graph measured at 100,000 sentences instead
 - [x] Embeddings + hand-written HNSW + RRF (FR-15, ADR-0010): LSA vectors; benchmarked against hnswlib (`docs/evidence/hnsw-bench.md`)
 - [ ] Label 150 (pick, aspect) queries with a written guide (~1 day): the guide, the sheet (`data/labels/retrieval.csv`, 1,800 reviews) and `whyfinder rag labels score` are in; the grades are not
 - [x] Ollama generation, claim schema, checker, fallback, cache (FR-16, FR-17, ADR-0009): pinned decoding, llama3.2:3b keeps 99.4% of claims; opt-in
