@@ -31,3 +31,27 @@ jobs:
           uv run --frozen --with hnswlib python scripts/bench_hnsw.py --out bench.json | tee bench.md
           { echo '## HNSW: Whyfinder vs hnswlib'; echo; cat bench.md; } >> "$GITHUB_STEP_SUMMARY"
           cat bench.json
+
+  # Dispatch only: the hand-written graph on 100,000 sentences from the full review corpus.
+  scale:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install
+        run: uv sync --frozen --group pipeline
+      - name: Review text from the raw corpus
+        run: |
+          uv run whyfinder data fetch
+          uv run whyfinder data parse --workers 4
+      - name: Benchmark
+        run: |
+          uv run --frozen --with hnswlib python scripts/bench_hnsw.py \
+            --corpus data/interim/review_text.parquet --corpus-n 100000 --out scale.json | tee scale.md
+          { echo '## HNSW at scale: Whyfinder vs hnswlib'; echo; cat scale.md; } >> "$GITHUB_STEP_SUMMARY"
+          cat scale.json

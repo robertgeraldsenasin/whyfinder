@@ -3,7 +3,11 @@
 The LLM only **voices** reasons the model already computed; it never decides why. Its output is a
 list of claims, each tied to evidence, and a deterministic checker rejects any claim it can't verify.
 
-## Corpus and index (DVC stage `index`)
+## Corpus and index
+
+The plan below was for an API serving the full model. Since ADR-0019 the API serves the demo slice
+and the corpus is its review export (see "What runs today"); ADR-0010 records why the full-corpus
+stage was dropped and how the graph was measured at scale instead.
 
 1. **Sample:** per game, up to R = 20 English reviews from the train period (so evaluation never
    quotes the future), preferring longer reviews; record the sampling seed.
@@ -35,8 +39,8 @@ it while decoding; code attaches the evidence. Measured on 60 picks with three C
 first try and never needs the fallback, meeting the 95% target; before pinning, the best model
 passed within two tries 32% of the time. The checker guards faithfulness, not prose: half of
 llama3.2:3b's sentences only restate a fact line and 8% are cut off by the length bound, so
-generation stays opt-in. Still to come: the full-corpus DVC `index` stage, grades for the 150 retrieval queries (the
-sheet and guide are in `docs/labelling/`) and the NLI entailment score.
+generation stays opt-in. Still to come: grades for the 150 retrieval queries (the sheet and guide are in
+`docs/labelling/`) and the NLI entailment score.
 
 ## One explanation, step by step
 

@@ -7,7 +7,12 @@ and [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- The HNSW benchmark at scale (FR-15): on 99,693 sentences from the full review corpus the hand-written graph reaches recall@10 of 0.963 at efSearch 64 against hnswlib's 0.957, building in 307 s against 11 s (`docs/evidence/hnsw-bench.md`; `bench.yml`, dispatch only).
 - A labelling kit for review retrieval (#33): 150 (pick, aspect) queries sampled the way grounding asks them, with all 12 of each pick's reviews to grade 0-2 (`data/labels/retrieval.csv`), a guide with examples from the sheet (`docs/labelling/retrieval.md`), and `whyfinder rag labels score`, which reports Cohen's kappa over 30 double-labelled queries and Recall@5 and nDCG@5 for BM25, the LSA vectors and their fusion. The grades themselves still need people.
+
+### Changed
+
+- The full-corpus review index is dropped: the API serves the demo slice (ADR-0019), whose review export the served index already covers. ADR-0010 records the decision.
 
 ## [1.0.0] - 2026-11-23
 
