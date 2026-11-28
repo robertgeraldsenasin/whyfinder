@@ -1,7 +1,7 @@
 {
   "name": "whyfinder-web",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "Star-atlas demo for Whyfinder: the glass-box engine running live in the browser (ADR-0015).",
   "scripts": {

@@ -22,7 +22,7 @@ way.
   <img src="docs/design/demo.gif" width="860" alt="A recording of the demo: typing 'like Portal 2, co-op, under $20', ten picks dealt as cards into the sky, then the second pick, Team Fortress 2, opened with its exact shares and the games behind it">
 </p>
 
-> **Status:** [v1.0.0](https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v1.0.0) is out:
+> **Status:** [v1.1.0](https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v1.1.0) is out:
 > the glass-box recommender with exact explanations and their checks, the quality gate, review
 > retrieval, checked sentences (model-written ones opt-in, [ADR-0009](docs/decisions/ADR-0009-llm-runtime.md)),
 > a REST API and the demo's live mode, scored once on a sealed test set (below;

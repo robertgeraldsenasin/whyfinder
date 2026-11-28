@@ -1,4 +1,4 @@
-# Model card: Whyfinder v1.0.0
+# Model card: Whyfinder v1.1.0
 
 Format after Mitchell et al., FAT* 2019. Every number below comes from `results/` (the sealed test
 set, scored by `release.yml` at each release; the ranking model is unchanged since v0.2.0) or from
