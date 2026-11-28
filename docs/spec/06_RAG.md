@@ -86,7 +86,7 @@ default; the LLM is optional and its output goes through the same validation.
 | Measure | How | Pass mark (proposed) |
 | --- | --- | --- |
 | Claim support | Checker over the CI sample | ≥ 95% before fallback |
-| Entailment | Local NLI cross-encoder scores each claim against its evidence | Reported; gated non-inferior |
+| Entailment | A local instruct model (`rag/judge.py`) labels each served sentence against all the facts; the template sentences are labelled too, as the judge's error rate. An NLI cross-encoder was tried first and could not read these facts (ADR-0009) | Reported next to the template control |
 | Attribution agreement | Kendall τ between the order games are named and attribution order | τ ≥ 0.7 |
 | Retrieval | 150 hand-labelled (pick, aspect) queries, every review of the pick graded 0-2 (docs/labelling/retrieval.md): Recall@5, nDCG@5; Cohen's κ on 30 double-labelled queries | Gated non-inferior |
 | Research ablation | Same prompt without attributions: share of claims that match the model's real top-5 | Reported in the paper |

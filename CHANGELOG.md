@@ -14,6 +14,10 @@ and [Semantic Versioning](https://semver.org/).
 
 - The full-corpus review index is dropped: the API serves the demo slice (ADR-0019), whose review export the served index already covers. ADR-0010 records the decision.
 
+### Fixed
+
+- The claim checker missed an outside game named without its trademark sign ("Call of Duty: Black Ops" for "Call of Duty®: Black Ops"), and flagged a liked game written that way as not named. Both checkers (Python and the browser twin) now compare titles with and without ® ™ ©, and the shared cases cover both directions.
+
 ## [1.0.0] - 2026-11-23
 
 The first complete release: the v0.2.0 model, unchanged and scored again on the sealed test set,
