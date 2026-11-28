@@ -5,6 +5,13 @@ and [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-28
+
+Mostly measurement. Model-written sentences get a second round and a judge that reads them, the
+retrieval labels get everything except the grades, and the HNSW graph is tested at 17 times the
+demo's size. One checker gap is closed. The ranking model is unchanged, so the sealed test numbers
+stand.
+
 ### Added
 
 - An entailment judge for model-written sentences (06_RAG, ADR-0009): qwen2.5:7b labels each served sentence entailed, neutral or contradicted against all the facts, and labels the template sentences of the same picks as a control for its own error. Judgments are cached and replayed in CI like generations. An NLI cross-encoder was tried first and dropped: it called 91% of the template sentences neutral.
@@ -20,6 +27,12 @@ and [Semantic Versioning](https://semver.org/).
 
 - When Ollama stops a model stuck repeating a token, that answer now fails like any other (retry, then the template) instead of ending the evaluation, and Ollama's own error text is reported.
 - The claim checker missed an outside game named without its trademark sign ("Call of Duty: Black Ops" for "Call of Duty®: Black Ops"), and flagged a liked game written that way as not named. Both checkers (Python and the browser twin) now compare titles with and without ® ™ ©, and the shared cases cover both directions.
+
+### Known limitations
+
+- Whyfinder still does not beat popularity on NDCG@10 (0.0447 against 0.0454), the one ADR-0006 target missed.
+- The retrieval grades for #33 still need people; until then retrieval quality is not measured against labels.
+- Model-written sentences contradict the facts in 8% to 20% of cases by the judge's reading, against 4% for the template, so they stay opt-in. The judge itself calls a third of the faithful template sentences something other than entailed; only its larger gaps carry weight.
 
 ## [1.0.0] - 2026-11-23
 
@@ -127,7 +140,8 @@ M0 Foundation: the repository, the data pipeline and its first full run, and the
 
 - HTML entities (including doubly escaped ones) in game titles, developers, publishers and tags.
 
-[Unreleased]: https://github.com/robertgeraldsenasin/whyfinder/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/robertgeraldsenasin/whyfinder/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/robertgeraldsenasin/whyfinder/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/robertgeraldsenasin/whyfinder/compare/v0.2.0...v1.0.0
 [0.2.0]: https://github.com/robertgeraldsenasin/whyfinder/compare/v0.0.1...v0.2.0
 [0.0.1]: https://github.com/robertgeraldsenasin/whyfinder/releases/tag/v0.0.1
