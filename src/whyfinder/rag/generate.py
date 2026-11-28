@@ -223,6 +223,8 @@ def read(raw: str, listed: Sequence[Fact]) -> list[Claim]:
         doc = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise SchemaError(f"not JSON: {exc.msg}") from exc
+    if isinstance(doc, dict) and set(doc) == {"error"}:
+        raise SchemaError(f"the model was stopped: {doc['error']}")
     items = doc.get("claims") if isinstance(doc, dict) else None
     if not isinstance(items, list) or set(doc) != {"claims"}:
         raise SchemaError('the answer must be {"claims": [...]}')
@@ -248,6 +250,9 @@ class Backend(Protocol):
     def digest(self) -> str: ...
 
     def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str: ...
+
+
+ABORTED = "prediction aborted"  # Ollama's words when it stops a looping model
 
 
 class CacheMissError(RuntimeError):
@@ -295,6 +300,10 @@ class Ollama:
         return self._digest
 
     def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str:
+        """The model's answer. When Ollama aborts the prediction itself (a model stuck repeating a
+        token), that is this answer failing, not the server: the abort comes back as the answer,
+        `{"error": ...}`, which the claim schema rejects, so the usual retry and fallback apply and
+        the cache replays it."""
         body = {
             "model": self.model,
             "prompt": prompt,
@@ -302,7 +311,12 @@ class Ollama:
             "stream": False,
             "options": {"temperature": 0, "seed": seed, "num_predict": 400},
         }
-        return str(self._post("/api/generate", body)["response"])
+        try:
+            return str(self._post("/api/generate", body)["response"])
+        except LlmUnavailableError as exc:
+            if ABORTED not in str(exc):
+                raise
+            return json.dumps({"error": ABORTED})
 
 
 @dataclass

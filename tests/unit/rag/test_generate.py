@@ -279,6 +279,9 @@ def server() -> Iterator[tuple[str, list[dict[str, Any]]]]:
             if body.get("model") == "picky":
                 self.reply({"error": "failed to load model vocabulary required for format"}, 400)
                 return
+            if body.get("model") == "loops":
+                self.reply({"error": "prediction aborted, token repeat limit reached"}, 500)
+                return
             self.reply({"response": GOOD})
 
     httpd = HTTPServer(("127.0.0.1", 0), Handler)
@@ -308,6 +311,11 @@ def test_ollama_asks_for_schema_constrained_deterministic_output(
     # Ollama's own reason for refusing a request reaches the error, not just the status line.
     with pytest.raises(LlmUnavailableError, match=r"400.*failed to load model vocabulary"):
         Ollama("picky", url=url).complete("hello", seed=7, schema={})
+    # A model stuck repeating itself is a failed answer, not a failed server.
+    stopped = Ollama("loops", url=url).complete("hello", seed=7, schema={})
+    assert json.loads(stopped) == {"error": "prediction aborted"}
+    with pytest.raises(SchemaError, match="the model was stopped: prediction aborted"):
+        read(stopped, facts(PACK))
 
 
 def test_ollama_reports_an_unreachable_server() -> None:
