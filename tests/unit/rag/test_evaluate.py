@@ -48,7 +48,7 @@ class Script:
         self.answers = answers
 
     def complete(self, prompt: str, *, seed: int, schema: dict[str, Any]) -> str:
-        blind = "L1 (a game the player liked)" in prompt
+        blind = "L1:" in prompt
         return self.answers[blind].pop(0)
 
 
@@ -78,7 +78,8 @@ def test_the_report_counts_support_fallbacks_agreement_and_the_ablation() -> Non
         "outside the pick and the history": 2,
         "without naming it": 2,
     }
-    assert report["entailment"] is None
+    assert report["entailment"] == {}
+    assert report["served_adds_nothing"] == 1.0  # "drives", "adds", "carries": one word each
 
 
 class Judge:
@@ -115,9 +116,9 @@ def test_the_judge_labels_served_model_sentences_and_the_template_as_a_control()
         *["entailed"] * (n_template - 1),
         "neutral",
     )
-    report = run(cases, backend, seed=1, judge=judge)
-    ent = report["entailment"]
-    assert ent["judge"] == "judge"
+    report = run(cases, backend, seed=1, judges=[judge])
+    ent = report["entailment"]["judge"]
+    assert ent["digest"] == "sha256:judge"
     assert ent["self_judged"] is False
     assert ent["served_model_sentences"] == {
         "sentences": 2,
@@ -130,9 +131,28 @@ def test_the_judge_labels_served_model_sentences_and_the_template_as_a_control()
     assert control["sentences"] == 2 * n_template
     assert control["neutral"] == pytest.approx(1 / (2 * n_template))
     facts_part = judge.prompts[0].split("Sentence:")[0]
-    assert "Dead Cells counted for 50% of the score." in facts_part
-    assert "Hollow Knight counted for 30% of the score." in facts_part  # every fact, not just A1
-    assert "supplied N% of the reasons" in judge.prompts[0]
+    for line in (
+        "The biggest reason for recommending Hades is that the player liked Dead Cells.",
+        "50% of the reasons for recommending Hades came from the player liking Dead Cells.",
+        "30% of the reasons for recommending Hades came from the player liking Hollow Knight.",
+    ):
+        assert line in facts_part
+
+
+def test_a_sentence_that_only_rewords_its_fact_adds_nothing() -> None:
+    from whyfinder.rag.evaluate import adds_nothing, known_text
+    from whyfinder.rag.generate import facts
+
+    a1 = facts(PACK)[0]
+    known = known_text(PACK, a1)
+    assert "Dead Cells, 50%" in known
+    assert adds_nothing("Dead Cells supplied 50% of the reasons for Hades.", known)
+    assert adds_nothing("You liked Dead Cells, which is 50% of why Hades was picked.", known)
+    assert not adds_nothing(
+        "Dead Cells gives half the reasons: both are fast roguelites with tight combat.", known
+    )
+    assert adds_nothing("Dead Cells, quickly.", known)  # one new word is allowed
+    assert not adds_nothing("Dead Cells, quickly and brutally.", known)
 
 
 def test_fluency_proxies() -> None:

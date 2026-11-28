@@ -24,16 +24,27 @@ class Says:
         return self.answers.pop(0)
 
 
-def test_the_premise_holds_every_fact_and_the_context() -> None:
+def test_the_premise_states_every_fact_plainly_with_the_context() -> None:
     assert premise(PACK, facts(PACK)).splitlines() == [
         "The recommended game is Hades.",
-        "Dead Cells counted for 50% of the score.",
-        "Hollow Knight counted for 30% of the score.",
-        "Celeste counted for 20% of the score.",
-        "Without Dead Cells in the list, Hades would drop out of the picks.",
+        "The biggest reason for recommending Hades is that the player liked Dead Cells.",
+        "50% of the reasons for recommending Hades came from the player liking Dead Cells.",
+        "30% of the reasons for recommending Hades came from the player liking Hollow Knight.",
+        "20% of the reasons for recommending Hades came from the player liking Celeste.",
+        "Had the player not liked Dead Cells, Hades would not have been recommended.",
         f"A player of Hades, on combat: \u201c{QUOTE}\u201d.",
         "Hades shares the tag Roguelite with Dead Cells.",
     ]
+
+
+def test_an_nli_judge_gets_the_pair_not_the_prompt() -> None:
+    class Nli(Says):
+        model = "nli:some/cross-encoder"
+
+    judge = Nli(json.dumps({"label": "entailed"}))
+    assert label(judge, "Facts here.", "A sentence.", seed=3) == "entailed"
+    pair, _, _ = judge.calls[0]
+    assert json.loads(pair) == ["Facts here.", "A sentence."]
 
 
 def test_the_judge_is_asked_for_one_label_and_anything_else_is_invalid() -> None:
@@ -56,7 +67,7 @@ def test_labels_and_shares() -> None:
     ]
     got = labels(judge, PACK, claims, facts(PACK), seed=1)
     assert got == ["entailed", "contradicted"]
-    assert "Hollow Knight counted for 30%" in judge.calls[1][0]
+    assert "30% of the reasons for recommending Hades" in judge.calls[1][0]
     assert shares(["entailed", "entailed", "neutral", "invalid"]) == {
         "sentences": 4,
         "entailed": 0.5,

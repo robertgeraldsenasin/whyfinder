@@ -92,9 +92,11 @@ def test_the_prompt_lists_the_facts_and_the_ablation_hides_the_shares() -> None:
     for fact in (
         "Write in English",
         "Recommended game: Hades",
-        "A1 (a game the player liked) Dead Cells: 50% of the reasons for this pick",
-        "C1 (had the player not liked these, Hades would not be recommended) Dead Cells",
-        f"Q1 (a player of Hades wrote, on combat) \u201c{QUOTE}\u201d",
+        "Games the player liked, with the share of the reasons for this pick each supplied:\n"
+        "A1: Dead Cells, 50%\nA2: Hollow Knight, 30%\nA3: Celeste, 20%\n",
+        "Had the player not liked these games, Hades would not have been recommended:\n"
+        "C1: Dead Cells\n",
+        f"What players of Hades wrote:\nQ1: on combat, \u201c{QUOTE}\u201d\n",
         "one or two sentences of at most 25 words each",
         "Also true, may be mentioned but has no ID: "
         "Hades shares the tag Roguelite with Dead Cells.",
@@ -106,7 +108,7 @@ def test_the_prompt_lists_the_facts_and_the_ablation_hides_the_shares() -> None:
     bare = prompt(PACK, with_attributions=False)
     assert "50%" not in bare
     assert QUOTE not in bare
-    assert bare.index("L1 (a game the player liked) Celeste") < bare.index("L2 (a game")
+    assert "Games the player liked:\nL1: Celeste\nL2: Dead Cells\nL3: Hollow Knight\n" in bare
     again = prompt(PACK, feedback=["wrong share for Dead Cells"])
     assert again.startswith(full)
     assert "- wrong share for Dead Cells" in again

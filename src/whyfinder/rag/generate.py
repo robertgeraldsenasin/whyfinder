@@ -55,7 +55,7 @@ class Pack:
 
 RULES = (
     "Write in English. Tell a player why the game below was recommended to them, in one or two "
-    "sentences of at most 25 words each. Each sentence uses exactly one fact from the list and "
+    "sentences of at most 25 words each. Each sentence uses exactly one fact from the lists and "
     "gives its ID. Use your own wording, but say only what the fact says: no opinions of the "
     "games and no reasons that are not listed. A sentence about a liked game names it exactly as "
     "written; if it gives a number, it is the percentage listed. A sentence about a player quote "
@@ -95,7 +95,7 @@ class Fact:
     line: str  # the fact as a plain sentence: what the demo shows and the judge reads
     evidence: Evidence
     pattern: str  # what a sentence about this fact must look like
-    cue: str  # the fact as the prompt lists it, as data rather than a sentence to copy
+    cue: str  # the fact as the prompt lists it under its heading: data, not a sentence to copy
 
 
 # Room around the pinned text. The lead is long enough for an opening like "You might enjoy <the
@@ -115,13 +115,7 @@ def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
     double quotes or backslashes are left out: they cannot be pinned inside a JSON string."""
     if not with_attributions:
         return [
-            Fact(
-                f"L{n}",
-                title,
-                AttributionRef(gid, 0.0),
-                about(title),
-                f"(a game the player liked) {title}",
-            )
+            Fact(f"L{n}", title, AttributionRef(gid, 0.0), about(title), title)
             for n, (gid, title) in enumerate(pack.liked, start=1)
         ]
     out: list[Fact] = []
@@ -129,25 +123,23 @@ def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
     for n, (gid, title, share) in enumerate(positive, start=1):
         pct = round(share * 100)
         line = f"{title} counted for {pct}% of the score"
-        lead = f"({span(LEAD)}|{span(AFTER)}{pct}%{span(LEAD - AFTER)})"  # the share may come first
+        lead = f"({span(LEAD)}|{span(LEAD)}{pct}%{span(45)})"  # the share may come first
         pattern = f"^{lead}{literal(title)}{span(TAIL)}({pct}%{span(AFTER)})?{END}$"
-        cue = f"(a game the player liked) {title}: {pct}% of the reasons for this pick"
+        cue = f"{title}, {pct}%"
         out.append(Fact(f"A{n}", line, AttributionRef(gid, share), pattern, cue))
     if pack.removed:
         names = " and ".join(t for _, t in pack.removed)
         line = f"without {names} in the list, {pack.pick_title} would drop out of the picks"
         joined = f"{FREE}{{1,25}}".join(literal(t) for _, t in pack.removed)
         pattern = f"^{span(LEAD)}{joined}{span(TAIL)}{END}$"
-        cue = (
-            f"(had the player not liked these, {pack.pick_title} would not be recommended) {names}"
-        )
+        cue = names
         ids = tuple(g for g, _ in pack.removed)
         out.append(Fact("C1", line, CounterfactualRef(ids), pattern, cue))
     usable = [q for q in pack.quotes if '"' not in q[2] and "\\" not in q[2]]
     for n, (cid, aspect, text) in enumerate(usable, start=1):
         line = f"a player of {pack.pick_title}, on {aspect}: \u201c{text}\u201d"
         pattern = f"^{span(LEAD - 15)}\u201c{literal(text)}\u201d({span(15)}{END})?$"
-        cue = f"(a player of {pack.pick_title} wrote, on {aspect}) \u201c{text}\u201d"
+        cue = f"on {aspect}, \u201c{text}\u201d"
         out.append(Fact(f"Q{n}", line, ReviewRef(cid, text), pattern, cue))
     return out
 
@@ -183,11 +175,27 @@ def schema(listed: Sequence[Fact]) -> dict[str, Any]:
     }
 
 
+def headings(pick: str) -> dict[str, str]:
+    """What each kind of fact means, said once above its list instead of on every line."""
+    return {
+        "A": "Games the player liked, with the share of the reasons for this pick each supplied:",
+        "C": f"Had the player not liked these games, {pick} would not have been recommended:",
+        "Q": f"What players of {pick} wrote:",
+        "L": "Games the player liked:",
+    }
+
+
 def prompt(pack: Pack, *, with_attributions: bool = True, feedback: Sequence[str] = ()) -> str:
     """The prompt for a pack; `with_attributions=False` is the research ablation (06_RAG)."""
     rules = RULES if with_attributions else BLIND
-    listed = "\n".join(f"{f.id} {f.cue}" for f in facts(pack, with_attributions=with_attributions))
-    text = f"{rules}\n\nRecommended game: {pack.pick_title}\nFacts:\n{listed}\n"
+    heads = headings(pack.pick_title)
+    lines: list[str] = []
+    for f in facts(pack, with_attributions=with_attributions):
+        if heads[f.id[0]] not in lines:
+            lines.append(heads[f.id[0]])
+        lines.append(f"{f.id}: {f.cue}")
+    listed = "\n".join(lines)
+    text = f"{rules}\n\nRecommended game: {pack.pick_title}\n{listed}\n"
     if with_attributions and pack.paths:
         also = "; ".join(f"{pack.pick_title} {p}" for p in pack.paths)
         text += f"Also true, may be mentioned but has no ID: {also}.\n"

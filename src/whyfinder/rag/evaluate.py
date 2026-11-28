@@ -11,16 +11,18 @@ ablation). Reported:
   attribution order (pass mark 0.7), over first answers citing at least two;
 - **ablation**: how often the first liked game cited is the real top contributor, with the facts and
   without the shares;
-- **two plain-text proxies** over the model's claims that were served: the share cut off mid-way
-  by a length limit and the share that only copy a fact line back. The checker guards
-  faithfulness, not fluency; these say how much a model adds over the template;
-- **entailment**, with a judge model (`judge.py`): the share of served model sentences the facts
-  entail, leave neutral or contradict, next to the same judge's labels for the template sentences
-  of the same picks as a control.
+- **three plain-text proxies** over the model's claims that were served: the share cut off
+  mid-way by a length limit, the share that copy a fact line back nearly word for word, and the
+  share that add at most one content word to their fact (a restatement in other words). The
+  checker guards faithfulness, not fluency; these say how much a model adds over the template;
+- **entailment**, per judge (`judge.py`): the share of served model sentences the facts entail,
+  leave neutral or contradict, next to the same judge's labels for the template sentences of the
+  same picks as a control.
 """
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -29,7 +31,7 @@ from itertools import combinations
 from typing import Any
 
 from whyfinder.rag.claims import AttributionRef, Claim, Source, check
-from whyfinder.rag.generate import Backend, Outcome, Pack, ask, explain, facts
+from whyfinder.rag.generate import Backend, Fact, Outcome, Pack, ask, explain, facts, headings
 from whyfinder.rag.judge import labels, shares
 
 
@@ -106,6 +108,36 @@ def parroted(text: str, lines: Sequence[str], at: float = 0.85) -> bool:
     return any(SequenceMatcher(None, norm, line.lower()).ratio() >= at for line in lines)
 
 
+def _words(text: str) -> frozenset[str]:
+    return frozenset(text.split())
+
+
+FILLER = _words(
+    """
+    a an and are as at be because been but by can could did do does for from had has have here
+    how if in into is it it's its just may might more most much no not of on one or since so
+    that the their them then there these they this those through to too very was were what when
+    which while who why will with would you you'd you'll you're you've your also
+    game games player players play played liked like likes love loved enjoy enjoyed recommend
+    recommended recommending recommendation pick picked reason reasons share score percent
+    """
+)
+WORD = re.compile(r"[a-z0-9']+")
+
+
+def adds_nothing(text: str, known: str, at: int = 1) -> bool:
+    """The sentence says its fact over in other words: at most `at` content words that are in
+    neither the fact as listed, its heading, nor the recommended game's title."""
+    seen = set(WORD.findall(known.lower()))
+    new = {w for w in WORD.findall(text.lower()) if w not in seen and w not in FILLER}
+    return len(new) <= at
+
+
+def known_text(pack: Pack, fact: Fact) -> str:
+    """Everything a sentence about `fact` could repeat without adding anything."""
+    return " ".join((fact.cue, fact.line, pack.pick_title, headings(pack.pick_title)[fact.id[0]]))
+
+
 def reason_kind(reason: str) -> str:
     for kind in (
         "claim schema",
@@ -129,19 +161,19 @@ def reason_kind(reason: str) -> str:
 
 
 def run(
-    cases: Sequence[Case], backend: Backend, *, seed: int, judge: Backend | None = None
+    cases: Sequence[Case], backend: Backend, *, seed: int, judges: Sequence[Backend] = ()
 ) -> dict[str, Any]:
     """The faithfulness report over `cases`. Agreement and the ablation look at the model's first
-    answer (what the model does), not at what was served after the fallback. With a `judge`, the
-    served model sentences and, as a control, the template sentences are labelled for entailment."""
+    answer (what the model does), not at what was served after the fallback. Each judge labels the
+    served model sentences and, as a control, the template sentences for entailment."""
     outcomes: list[Outcome] = []
     first_claims = first_supported = 0
     kinds: Counter[str] = Counter()
     taus: list[float] = []
     top1 = top1_blind = 0
-    served = cut = copied = 0
-    judged: list[str] = []
-    control: list[str] = []
+    served = cut = copied = restated = 0
+    judged: dict[str, list[str]] = {j.model: [] for j in judges}
+    control: dict[str, list[str]] = {j.model: [] for j in judges}
     for case in cases:
         out = explain(case.pack, case.source, backend, case.template, seed=seed)
         outcomes.append(out)
@@ -151,10 +183,16 @@ def run(
             served += len(out.claims)
             cut += sum(1 for c in out.claims if unfinished(c.text))
             copied += sum(1 for c in out.claims if parroted(c.text, lines))
-            if judge is not None:
-                judged.extend(labels(judge, case.pack, out.claims, listed, seed=seed))
-        if judge is not None:
-            control.extend(labels(judge, case.pack, case.template(), listed, seed=seed))
+            by_evidence = {f.evidence: f for f in listed}
+            restated += sum(
+                1
+                for c in out.claims
+                if adds_nothing(c.text, known_text(case.pack, by_evidence[c.evidence[0]]))
+            )
+            for j in judges:
+                judged[j.model].extend(labels(j, case.pack, out.claims, listed, seed=seed))
+        for j in judges:
+            control[j.model].extend(labels(j, case.pack, case.template(), listed, seed=seed))
         first = out.attempts[0]
         first_claims += len(first.claims)
         first_supported += sum(1 for c in first.claims if not check([c], case.source))
@@ -175,17 +213,15 @@ def run(
     def share(k: int) -> float | None:
         return k / n if n else None
 
-    entailment = (
-        None
-        if judge is None
-        else {
-            "judge": judge.model,
-            "judge_digest": judge.digest,
-            "self_judged": judge.model == backend.model,
-            "served_model_sentences": shares(judged),
-            "template_sentences": shares(control),
+    entailment = {
+        j.model: {
+            "digest": j.digest,
+            "self_judged": j.model == backend.model,
+            "served_model_sentences": shares(judged[j.model]),
+            "template_sentences": shares(control[j.model]),
         }
-    )
+        for j in judges
+    }
     return {
         "cases": n,
         "entailment": entailment,
@@ -204,4 +240,5 @@ def run(
         "served_model_claims": served,
         "served_unfinished": cut / served if served else None,
         "served_parroted": copied / served if served else None,
+        "served_adds_nothing": restated / served if served else None,
     }

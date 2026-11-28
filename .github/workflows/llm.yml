@@ -12,9 +12,9 @@ on:
       models:
         description: "Ollama models, as a JSON list"
         default: '["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b", "llama3.1:8b", "qwen2.5:7b"]'
-      judge:
-        description: "Ollama model that labels entailment"
-        default: "qwen2.5:7b"
+      judges:
+        description: "Entailment judges: Ollama models, or nli:<Hugging Face id> for a cross-encoder"
+        default: "qwen2.5:7b,nli:cross-encoder/nli-deberta-v3-base"
       cases:
         description: "Picks to explain"
         default: "60"
@@ -37,7 +37,7 @@ jobs:
         model: ${{ fromJSON(inputs.models || '["qwen2.5:1.5b", "qwen2.5:3b", "llama3.2:3b", "llama3.1:8b", "qwen2.5:7b"]') }}
     env:
       MODEL: ${{ matrix.model }}
-      JUDGE: ${{ inputs.judge || 'qwen2.5:7b' }}
+      JUDGES: ${{ inputs.judges || 'qwen2.5:7b,nli:cross-encoder/nli-deberta-v3-base' }}
       CASES: ${{ inputs.cases || '60' }}
     steps:
       - uses: actions/checkout@v7
@@ -46,17 +46,23 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: Install
-        run: uv sync --frozen --group dev
+        run: |
+          uv sync --frozen --group dev
+          # The cross-encoder judge's libraries, for this job only: never in the lock or the image.
+          uv pip install --index-url https://download.pytorch.org/whl/cpu torch
+          uv pip install transformers sentencepiece protobuf
       - name: Ollama and the model
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           if ! curl -fs localhost:11434/api/tags >/dev/null; then (ollama serve > ollama.log 2>&1 &); fi
           for i in $(seq 1 60); do curl -fs localhost:11434/api/tags >/dev/null && break; sleep 1; done
           ollama pull "$MODEL"
-          ollama pull "$JUDGE"
+          for judge in ${JUDGES//,/ }; do
+            case "$judge" in nli:*) ;; *) ollama pull "$judge" ;; esac
+          done
           ollama list
       - name: Explain the sample and measure faithfulness
-        run: uv run whyfinder rag eval --mode fill --model "$MODEL" --judge "$JUDGE" --cases "$CASES"
+        run: uv run --no-sync whyfinder rag eval --mode fill --model "$MODEL" --judges "$JUDGES" --cases "$CASES"
       - name: Report
         if: always()
         run: |

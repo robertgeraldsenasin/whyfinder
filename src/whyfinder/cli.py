@@ -522,9 +522,14 @@ def rag_eval(
     ] = "replay",
     model_name: Annotated[str, typer.Option("--model", help="Ollama model.")] = "llama3.2:3b",
     url: Annotated[str, typer.Option(help="Ollama server.")] = "http://127.0.0.1:11434",
-    judge_name: Annotated[
-        str, typer.Option("--judge", help="Ollama model that labels entailment; empty to skip.")
-    ] = "qwen2.5:7b",
+    judge_names: Annotated[
+        str,
+        typer.Option(
+            "--judges",
+            help="Entailment judges, comma-separated: Ollama models, or nli:<Hugging Face id> "
+            "for a cross-encoder; empty to skip.",
+        ),
+    ] = "qwen2.5:7b,nli:cross-encoder/nli-deberta-v3-base",
     cases: Annotated[int, typer.Option(help="Picks to explain.")] = 60,
     cache: Annotated[Path, typer.Option(help="Generation cache (JSON lines).")] = LLM_CACHE,
     out: Annotated[
@@ -549,6 +554,11 @@ def rag_eval(
 
     def through_cache(name: str) -> Cached:
         if mode == "fill":
+            if name.startswith("nli:"):
+                from whyfinder.rag.nli import CrossEncoder
+
+                nli = CrossEncoder(name)
+                return Cached(store, name, nli.digest, inner=nli)
             llm = Ollama(name, url=url)
             return Cached(store, name, llm.digest, inner=llm)
         digests = {row["digest"] for row in store.entries.values() if row["model"] == name}
@@ -558,7 +568,7 @@ def rag_eval(
         return Cached(store, name, digests.pop())
 
     backend = through_cache(model_name)
-    judge = through_cache(judge_name) if judge_name else None
+    judges = [through_cache(n.strip()) for n in judge_names.split(",") if n.strip()]
     p = load_params(params)
     served = ServedModel.load(slice_path, params, slice_path.parent / "reviews.json")
     seed = param(p, "seed", int)
@@ -566,7 +576,7 @@ def rag_eval(
     for history, explanation in grounding.sample(served, cases, seed=seed):
         pack, source = grounding.facts(served, history, explanation)
         sample.append(Case(pack, source, partial(template, pack)))
-    report = run(sample, backend, seed=seed, judge=judge)
+    report = run(sample, backend, seed=seed, judges=judges)
     if out is None:
         slug = "".join(c if c.isalnum() else "-" for c in model_name)
         out = RAG_EVAL.parent / f"rag-eval-{slug}.json"

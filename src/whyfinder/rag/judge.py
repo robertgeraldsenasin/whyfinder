@@ -15,6 +15,10 @@ The template sentences go through the same judge as a control. They are entailed
 so whatever share the judge labels otherwise is its own error, and the model's numbers should be
 read next to it. A judge grading its own sentences is flagged. Judgments are cached under the same
 key as generations and replayed in CI.
+
+Two kinds of judge: an instruct model through Ollama, asked with `PROMPT` and held to `SCHEMA`;
+or an NLI cross-encoder (a model name starting `nli:`, see `nli.py`), handed the premise and the
+sentence as a pair, as it was trained.
 """
 
 from __future__ import annotations
@@ -24,11 +28,12 @@ from collections import Counter
 from collections.abc import Iterable, Sequence
 from typing import Any, Final
 
-from whyfinder.rag.claims import Claim
+from whyfinder.rag.claims import AttributionRef, Claim, ReviewRef
 from whyfinder.rag.generate import Backend, Fact, Pack
 
 LABELS: Final = ("entailed", "neutral", "contradicted")
 JUDGE_MODEL: Final = "qwen2.5:7b"
+NLI: Final = "nli:"  # prefix of cross-encoder judges
 
 SCHEMA: Final[dict[str, Any]] = {
     "type": "object",
@@ -38,9 +43,7 @@ SCHEMA: Final[dict[str, Any]] = {
 }
 
 PROMPT: Final = (
-    "You check a sentence written from facts about a game recommendation. In the facts, a liked "
-    "game that counted for N% of the score supplied N% of the reasons the recommended game was "
-    "picked.\n\n"
+    "You check a sentence written from facts about a game recommendation.\n\n"
     "Facts:\n{premise}\n\n"
     "Sentence: {sentence}\n\n"
     "Label the sentence.\n"
@@ -56,20 +59,41 @@ def sentence_case(text: str) -> str:
     return text[:1].upper() + text[1:]
 
 
+def statement(pick: str, f: Fact) -> str:
+    """One fact as a plain sentence a judge can read without the prompt's headings."""
+    e = f.evidence
+    if isinstance(e, AttributionRef):
+        title = f.cue.rsplit(", ", 1)[0]
+        pct = round(e.share * 100)
+        return f"{pct}% of the reasons for recommending {pick} came from the player liking {title}."
+    if isinstance(e, ReviewRef):
+        return sentence_case(f.line) + "."
+    return f"Had the player not liked {f.cue}, {pick} would not have been recommended."
+
+
 def premise(pack: Pack, listed: Sequence[Fact]) -> str:
-    """What a sentence may rest on: the recommended game, every fact the model was given, and the
-    graph paths the prompt offered as context."""
-    lines = [f"The recommended game is {pack.pick_title}."]
-    lines += [sentence_case(f.line) + "." for f in listed]
-    lines += [f"{pack.pick_title} {p}." for p in pack.paths]
+    """What a sentence may rest on: the recommended game, every fact the model was given (so
+    "the biggest reason" can be checked), and the graph paths the prompt offered as context."""
+    pick = pack.pick_title
+    lines = [f"The recommended game is {pick}."]
+    shares = [f for f in listed if isinstance(f.evidence, AttributionRef)]
+    if shares:
+        top = shares[0].cue.rsplit(", ", 1)[0]
+        lines.append(f"The biggest reason for recommending {pick} is that the player liked {top}.")
+    lines += [statement(pick, f) for f in listed]
+    lines += [f"{pick} {p}." for p in pack.paths]
     return "\n".join(lines)
 
 
 def label(backend: Backend, premise_text: str, sentence: str, *, seed: int) -> str:
     """The judge's label, or "invalid" when its answer is not one of the labels."""
-    raw = backend.complete(
-        PROMPT.format(premise=premise_text, sentence=sentence), seed=seed, schema=SCHEMA
-    )
+    if backend.model.startswith(NLI):
+        pair = json.dumps([premise_text, sentence], ensure_ascii=False)
+        raw = backend.complete(pair, seed=seed, schema=SCHEMA)
+    else:
+        raw = backend.complete(
+            PROMPT.format(premise=premise_text, sentence=sentence), seed=seed, schema=SCHEMA
+        )
     try:
         doc = json.loads(raw)
     except json.JSONDecodeError:
