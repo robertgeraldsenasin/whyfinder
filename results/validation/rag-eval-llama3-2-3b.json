@@ -1,20 +1,42 @@
 {
-  "attribution_agreement_outputs": 40,
+  "attribution_agreement_outputs": 27,
   "attribution_agreement_tau": 1.0,
   "cases": 60,
-  "claim_support_before_fallback": 0.9940119760479041,
+  "claim_support_before_fallback": 0.9833333333333333,
   "digest": "a80c4f17acd55265feec403c7aef86be0c25983ab279d83f3bcd3abbcb5b8b72",
-  "fallback_rate": 0.0,
-  "first_try_pass_rate": 0.9833333333333333,
+  "entailment": {
+    "qwen2.5:7b": {
+      "digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+      "self_judged": false,
+      "served_model_sentences": {
+        "contradicted": 0.1792452830188679,
+        "entailed": 0.37735849056603776,
+        "invalid": 0.0,
+        "neutral": 0.44339622641509435,
+        "sentences": 106
+      },
+      "template_sentences": {
+        "contradicted": 0.040268456375838924,
+        "entailed": 0.6442953020134228,
+        "invalid": 0.0,
+        "neutral": 0.31543624161073824,
+        "sentences": 149
+      }
+    }
+  },
+  "fallback_rate": 0.11666666666666667,
+  "first_try_pass_rate": 0.7833333333333333,
   "first_try_rejections": {
-    "outside the pick and the history": 1
+    "carry its quote": 2,
+    "the limit is": 11
   },
   "model": "llama3.2:3b",
-  "pass_within_two_tries": 1.0,
+  "pass_within_two_tries": 0.8833333333333333,
   "seed": 20261117,
-  "served_model_claims": 167,
-  "served_parroted": 0.5269461077844312,
-  "served_unfinished": 0.08383233532934131,
+  "served_adds_nothing": 0.5283018867924528,
+  "served_model_claims": 106,
+  "served_parroted": 0.0,
+  "served_unfinished": 0.03773584905660377,
   "top1_cited_with_attributions": 1.0,
   "top1_cited_without_attributions": 0.3
 }

@@ -1,0 +1,43 @@
+{
+  "attribution_agreement_outputs": 0,
+  "attribution_agreement_tau": null,
+  "cases": 60,
+  "claim_support_before_fallback": 0.9318181818181818,
+  "digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+  "entailment": {
+    "qwen2.5:7b": {
+      "digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+      "self_judged": true,
+      "served_model_sentences": {
+        "contradicted": 0.10588235294117647,
+        "entailed": 0.4235294117647059,
+        "invalid": 0.0,
+        "neutral": 0.47058823529411764,
+        "sentences": 85
+      },
+      "template_sentences": {
+        "contradicted": 0.040268456375838924,
+        "entailed": 0.6442953020134228,
+        "invalid": 0.0,
+        "neutral": 0.31543624161073824,
+        "sentences": 149
+      }
+    }
+  },
+  "fallback_rate": 0.03333333333333333,
+  "first_try_pass_rate": 0.8666666666666667,
+  "first_try_rejections": {
+    "matches no cited share": 2,
+    "outside the pick and the history": 3,
+    "the limit is": 4
+  },
+  "model": "qwen2.5:7b",
+  "pass_within_two_tries": 0.9666666666666667,
+  "seed": 20261117,
+  "served_adds_nothing": 0.6588235294117647,
+  "served_model_claims": 85,
+  "served_parroted": 0.17647058823529413,
+  "served_unfinished": 0.023529411764705882,
+  "top1_cited_with_attributions": 0.15,
+  "top1_cited_without_attributions": 0.7333333333333333
+}

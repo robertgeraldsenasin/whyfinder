@@ -18,7 +18,9 @@ target we set before reading the test set and report as missed. Attributions sum
 100% of checks and counterfactual sets are valid in 100%. Small local language models asked to voice
 the facts passed the checker within two tries at most 32% of the time when free; pinning each
 sentence to one fact during decoding raised a 3B model to 99.4% of claims kept, though half of
-its sentences then only restate the fact.
+its sentences then only restate the fact. Freeing the wording again ends the copying, but a judge
+model, calibrated on the template sentences, finds 8% to 20% of the freed sentences contradict the
+facts, against 4% of the template's.
 
 ## 1. Introduction
 
@@ -140,7 +142,8 @@ IDF) and dense vectors from latent semantic analysis (TF-IDF and a randomized SV
 2011) are fused by reciprocal rank fusion (Cormack et al. 2009). The dense side runs on a
 hand-written HNSW (Malkov and Yashunin 2020) whose recall@10 matches hnswlib's within a point at
 every efSearch we tried (0.999 against 0.994 at efSearch 64 on the quote vectors), at about one
-twentieth of its query rate.
+twentieth of its query rate. On 99,693 sentences from the full review corpus it still reaches 0.963
+against hnswlib's 0.957, building in five minutes against eleven seconds.
 
 For each pick we gather the facts: the top five attributions, the counterfactual set, two graph
 paths, the variety flag, and quotes from the pick's reviews that mention an aspect it shares with
@@ -175,19 +178,55 @@ length bound, or one that repeats the fact line almost word for word (similarity
 is faithful and still no better than the template. The served system therefore keeps the template
 sentences by default and uses a model only when one is configured.
 
+**A second round.** We then tried to buy the wording back. Facts went into the prompt as data rows
+under a heading per kind ("A1: Portal Stories: Mel, 62%"), leaving nothing to copy. The length
+bounds came off, because every bound a model reached produced a word cut in half or a title spliced
+into one; length was left to the checker's 60-word limit and its retry. Titles became matchable
+without trademark signs, which also closed a gap in the checker: a game named without its ® had
+passed unseen.
+
+To read what the freed words say, a judge model (qwen2.5:7b, in the manner of Zheng et al. 2023)
+labels each served sentence entailed, neutral or contradicted against all the facts. The template
+sentences of the same picks are labelled as a control: they are faithful by construction, so the
+judge's labels on them measure its own error. An NLI cross-encoder (DeBERTa-v3, He et al. 2023,
+trained on MNLI, Williams et al. 2018) was tried first and labelled 91% of the template sentences
+neutral, so it could not serve.
+
+| Model | Claims kept | Passes first / two tries | Fallback | Cut off | Copies a line | Judge: entailed / neutral / contradicted |
+| --- | --- | --- | --- | --- | --- | --- |
+| qwen2.5:1.5b | 96.9% | 95% / 100% | 0% | 12% | 3% | 34% / 58% / 8% |
+| qwen2.5:3b | 99.1% | 87% / 92% | 8% | 2% | 0% | 63% / 17% / 20% |
+| llama3.2:3b | 98.3% | 78% / 88% | 12% | 4% | 0% | 38% / 44% / 18% |
+| llama3.1:8b | 99.1% | 48% / 70% | 30% | 2% | 0% | 65% / 25% / 10% |
+| qwen2.5:7b (judging itself) | 93.2% | 87% / 97% | 3% | 2% | 18% | 42% / 47% / 11% |
+| Template sentences (control) | 100% | n/a | n/a | n/a | n/a | 64% / 32% / 4% |
+
+Copying fell to 3% or less for every model but qwen2.5:7b (18%), and cut-offs to 4% or less from
+3B up. The cost moved elsewhere. The judge finds 8% to 20% of model sentences contradicted, against
+4% for the template, and the ones we read were real misreadings: the counterfactual taken for a
+dislike ("You didn't like I am Bread, which was a reason why Surgeon Simulator was recommended"),
+or a share of the reasons retold as a share of players. With room to write, the 8B model also ran
+past the word limit and fell back on 30% of picks. When it did speak, its sentences were entailed
+as often as the template's, which makes it the default model; the template stays the default
+explanation.
+
 ## 6. Limitations
 
 The data end in 2017 and cover English reviews. Play time is a noisy proxy for preference. The
 item cap keeps the long tail out of EASE^R, though PPR still reaches it. The retrieval layer has
-not yet been measured against labelled queries, and the generation study uses 60 picks, models
-small enough for a CPU runner, and text proxies in place of human judgements of fluency.
+not yet been measured against labelled queries (the sheet and guide are ready). The generation
+study uses 60 picks, models small enough for a CPU runner, and text proxies in place of human
+judgements of fluency. Its judge calls a third of the faithful template sentences something other
+than entailed, so only large gaps in its labels mean much; the contradictions are the clearest of
+them.
 
 ## 7. Conclusion
 
 Restricting a recommender to additive parts lets every explanation be exact and every claim be
 checked, at an accuracy that matches strong baselines on this data. Pinning generated sentences
-to those facts makes even a 3B model faithful, but faithful is a lower bar than useful, and the
-checker alone cannot tell them apart. The one target we missed, and the gap between faithful and
+to those facts makes even a 3B model faithful to what a checker can parse; loosening the pins to
+get better wording lets the same models misread the facts one sentence in five. The checker alone
+cannot see that, and a judge with a control can. The one target we missed, and the gap between faithful and
 fluent, are as much a result as the targets we met: both came from measuring against commitments
 made in advance.
 
@@ -200,6 +239,7 @@ made in advance.
 - Ferrari Dacrema, M., Cremonesi, P., Jannach, D. Are we really making much progress? A worrying analysis of recent neural recommendation approaches. RecSys 2019.
 - Ghazimatin, A., Balalau, O., Saha Roy, R., Weikum, G. PRINCE: Provider-side interpretability with counterfactual explanations in recommender systems. WSDM 2020.
 - Halko, N., Martinsson, P.-G., Tropp, J. Finding structure with randomness. SIAM Review 2011.
+- He, P., Gao, J., Chen, W. DeBERTaV3: Improving DeBERTa using ELECTRA-style pre-training with gradient-disentangled embedding sharing. ICLR 2023.
 - Holm, S. A simple sequentially rejective multiple test procedure. Scandinavian Journal of Statistics 1979.
 - Hu, Y., Koren, Y., Volinsky, C. Collaborative filtering for implicit feedback datasets. ICDM 2008.
 - Ji, Y., Sun, A., Zhang, J., Li, C. A critical study on data leakage in recommender system offline evaluation. ACM TOIS 2023.
@@ -210,3 +250,5 @@ made in advance.
 - Rendle, S., Krichene, W., Zhang, L., Koren, Y. Revisiting the performance of iALS on item recommendation benchmarks. RecSys 2022.
 - Steck, H. Embarrassingly shallow autoencoders for sparse data. WWW 2019.
 - Wan, M., McAuley, J. Item recommendation on monotonic behavior chains. RecSys 2018.
+- Williams, A., Nangia, N., Bowman, S. A broad-coverage challenge corpus for sentence understanding through inference. NAACL 2018.
+- Zheng, L. et al. Judging LLM-as-a-judge with MT-Bench and Chatbot Arena. NeurIPS 2023.

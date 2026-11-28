@@ -84,6 +84,15 @@ of three passed within two tries only 32% of the time: they praised the recommen
 of naming the liked one and paraphrased quotes. So I pinned each sentence to one fact while the
 model decodes, with a pattern that forces the exact title, the listed percentage and verbatim
 quotes. llama3.2:3b then kept 99.4% of its claims and never needed the fallback. The catch: half
-its sentences just restate the fact. Faithful is not the same as useful, so the templates stay the
-default. Next: a larger model, a full-corpus review index, and 150 hand-labelled retrieval queries
-so retrieval quality is measured rather than assumed.
+its sentences just restated the fact.
+
+The second round tried to buy fluency back. Facts went into the prompt as data rows, so there was
+nothing to copy, and the length bounds came off, because every bound a model hit came out as a
+word sliced in half. Copying all but disappeared for four of the five models. To see what the freed-up words actually said, I added a
+judge model, with the template sentences as its control: it calls 4% of those contradicted, and
+they are right by construction, so that is the judge's own error. Against that, the models
+contradicted the facts in 8% to 20% of their sentences: "You didn't like I am Bread", for a game
+the player did like. The best, llama3.1:8b, matched the template on entailment when it spoke. The checker
+also had a gap I only found because of trademark signs: a game named without its ® slipped past.
+That's fixed. The templates stay the default. Next: 150 hand-labelled retrieval queries, so
+retrieval quality is measured rather than assumed; the sheet and the guide are ready.

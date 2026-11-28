@@ -64,11 +64,14 @@ popularity signal.
 ## Retrieval and generated words
 
 Review retrieval (BM25, LSA vectors in a hand-written HNSW, RRF) runs over 6,000 review quotes from
-the train period. HNSW recall@10 against exact search is 0.999 at efSearch 64 on those vectors
-(`docs/evidence/hnsw-bench.md`). By default explanations are template sentences built from the exact
-attributions plus verbatim quotes, every one checked. A local model can write them instead
-(ADR-0009): with each sentence pinned to its fact during decoding, llama3.2:3b keeps 99.4% of its
-claims, but half of its sentences only restate a fact, so model-written sentences stay opt-in.
+the train period. HNSW recall@10 against exact search is 0.999 at efSearch 64 on those vectors,
+and 0.963 on 99,693 sentences from the full corpus (`docs/evidence/hnsw-bench.md`). By default
+explanations are template sentences built from the exact attributions plus verbatim quotes, every
+one checked. A local model can write them instead (ADR-0009), with each sentence pinned to its fact
+during decoding. A judge model reads the result: the default, llama3.1:8b, is entailed as often as
+the template when it speaks, but contradicts the facts in 10% of its sentences against the
+template's 4%, and 30% of its answers run long and fall back. So model-written sentences stay
+opt-in.
 
 ## Limitations
 

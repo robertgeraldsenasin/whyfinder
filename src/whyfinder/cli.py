@@ -520,7 +520,7 @@ def rag_eval(
     mode: Annotated[
         str, typer.Option(help="replay: answers from the cache only (CI); fill: ask the model.")
     ] = "replay",
-    model_name: Annotated[str, typer.Option("--model", help="Ollama model.")] = "llama3.2:3b",
+    model_name: Annotated[str, typer.Option("--model", help="Ollama model.")] = "llama3.1:8b",
     url: Annotated[str, typer.Option(help="Ollama server.")] = "http://127.0.0.1:11434",
     judge_names: Annotated[
         str,
