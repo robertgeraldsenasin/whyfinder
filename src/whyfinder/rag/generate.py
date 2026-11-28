@@ -105,10 +105,11 @@ class Fact:
     cue: str  # the fact as the prompt lists it under its heading: data, not a sentence to copy
 
 
-# Room around the pinned text. The lead is long enough for an opening like "You might enjoy <the
-# pick> because", which a shorter lead cut mid-word to force the title in; the rest is short enough
-# that two sentences stay near the word limit.
-LEAD, TAIL, AFTER = 75, 55, 30
+# Room around the pinned text. Every bound a model wants to pass turns into a spliced or truncated
+# word (a 50-character lead forced titles in mid-word; a 55-character tail cut "AdVenture
+# Capitalis."), so the bounds are generous and the length is left to the checker's word limit,
+# with its retry.
+LEAD, TAIL, AFTER = 140, 140, 90
 
 
 def about(title: str) -> str:
@@ -130,7 +131,7 @@ def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
     for n, (gid, title, share) in enumerate(positive, start=1):
         pct = round(share * 100)
         line = f"{title} counted for {pct}% of the score"
-        lead = f"({span(LEAD)}|{span(LEAD)}{pct}%{span(45)})"  # the share may come first
+        lead = f"({span(LEAD)}|{span(LEAD)}{pct}%{span(AFTER)})"  # the share may come first
         pattern = f"^{lead}{pinned(title)}{span(TAIL)}({pct}%{span(AFTER)})?{END}$"
         cue = f"{title}, {pct}%"
         out.append(Fact(f"A{n}", line, AttributionRef(gid, share), pattern, cue))
@@ -145,7 +146,7 @@ def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
     usable = [q for q in pack.quotes if '"' not in q[2] and "\\" not in q[2]]
     for n, (cid, aspect, text) in enumerate(usable, start=1):
         line = f"a player of {pack.pick_title}, on {aspect}: \u201c{text}\u201d"
-        pattern = f"^{span(LEAD - 15)}\u201c{literal(text)}\u201d({span(15)}{END})?$"
+        pattern = f"^{span(LEAD)}\u201c{literal(text)}\u201d({span(AFTER)}{END})?$"
         cue = f"on {aspect}, \u201c{text}\u201d"
         out.append(Fact(f"Q{n}", line, ReviewRef(cid, text), pattern, cue))
     return out

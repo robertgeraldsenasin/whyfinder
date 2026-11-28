@@ -526,10 +526,9 @@ def rag_eval(
         str,
         typer.Option(
             "--judges",
-            help="Entailment judges, comma-separated: Ollama models, or nli:<Hugging Face id> "
-            "for a cross-encoder; empty to skip.",
+            help="Ollama models that label entailment, comma-separated; empty to skip.",
         ),
-    ] = "qwen2.5:7b,nli:cross-encoder/nli-deberta-v3-base",
+    ] = "qwen2.5:7b",
     cases: Annotated[int, typer.Option(help="Picks to explain.")] = 60,
     cache: Annotated[Path, typer.Option(help="Generation cache (JSON lines).")] = LLM_CACHE,
     out: Annotated[
@@ -554,11 +553,6 @@ def rag_eval(
 
     def through_cache(name: str) -> Cached:
         if mode == "fill":
-            if name.startswith("nli:"):
-                from whyfinder.rag.nli import CrossEncoder
-
-                nli = CrossEncoder(name)
-                return Cached(store, name, nli.digest, inner=nli)
             llm = Ollama(name, url=url)
             return Cached(store, name, llm.digest, inner=llm)
         digests = {row["digest"] for row in store.entries.values() if row["model"] == name}

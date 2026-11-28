@@ -37,16 +37,6 @@ def test_the_premise_states_every_fact_plainly_with_the_context() -> None:
     ]
 
 
-def test_an_nli_judge_gets_the_pair_not_the_prompt() -> None:
-    class Nli(Says):
-        model = "nli:some/cross-encoder"
-
-    judge = Nli(json.dumps({"label": "entailed"}))
-    assert label(judge, "Facts here.", "A sentence.", seed=3) == "entailed"
-    pair, _, _ = judge.calls[0]
-    assert json.loads(pair) == ["Facts here.", "A sentence."]
-
-
 def test_the_judge_is_asked_for_one_label_and_anything_else_is_invalid() -> None:
     judge = Says(json.dumps({"label": "neutral"}), "not json", '{"label": "maybe"}', "[1]")
     assert label(judge, "Facts.", "A sentence.", seed=7) == "neutral"

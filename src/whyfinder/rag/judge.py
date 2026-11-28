@@ -16,9 +16,9 @@ so whatever share the judge labels otherwise is its own error, and the model's n
 read next to it. A judge grading its own sentences is flagged. Judgments are cached under the same
 key as generations and replayed in CI.
 
-Two kinds of judge: an instruct model through Ollama, asked with `PROMPT` and held to `SCHEMA`;
-or an NLI cross-encoder (a model name starting `nli:`, see `nli.py`), handed the premise and the
-sentence as a pair, as it was trained.
+06_RAG first named an NLI cross-encoder for this. One was tried (DeBERTa-v3 trained on MNLI, run
+46086701897): it labelled 91% of the template sentences neutral, so it cannot read facts of this
+kind, and an instruct model is used instead (ADR-0009).
 """
 
 from __future__ import annotations
@@ -33,7 +33,6 @@ from whyfinder.rag.generate import Backend, Fact, Pack
 
 LABELS: Final = ("entailed", "neutral", "contradicted")
 JUDGE_MODEL: Final = "qwen2.5:7b"
-NLI: Final = "nli:"  # prefix of cross-encoder judges
 
 SCHEMA: Final[dict[str, Any]] = {
     "type": "object",
@@ -87,13 +86,9 @@ def premise(pack: Pack, listed: Sequence[Fact]) -> str:
 
 def label(backend: Backend, premise_text: str, sentence: str, *, seed: int) -> str:
     """The judge's label, or "invalid" when its answer is not one of the labels."""
-    if backend.model.startswith(NLI):
-        pair = json.dumps([premise_text, sentence], ensure_ascii=False)
-        raw = backend.complete(pair, seed=seed, schema=SCHEMA)
-    else:
-        raw = backend.complete(
-            PROMPT.format(premise=premise_text, sentence=sentence), seed=seed, schema=SCHEMA
-        )
+    raw = backend.complete(
+        PROMPT.format(premise=premise_text, sentence=sentence), seed=seed, schema=SCHEMA
+    )
     try:
         doc = json.loads(raw)
     except json.JSONDecodeError:

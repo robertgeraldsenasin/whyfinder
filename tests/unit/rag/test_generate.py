@@ -137,7 +137,7 @@ def test_the_schema_pins_each_sentence_to_its_fact() -> None:
             "Dead Cells drove 90% of it.",
             'Dead Cells, "they" say.',
             "Dead Cells is the main reason, making it",  # cut off: no full stop
-            "Dead Cells " + "and more " * 12 + ".",  # past the bound
+            "Dead Cells " + "and more " * 20 + ".",  # past the bound
             "Dead Cells is the main reason. {",  # JSON debris
             "Dead Cells is the main reason [1].",
             "Dead Cells is the main\nreason.",
