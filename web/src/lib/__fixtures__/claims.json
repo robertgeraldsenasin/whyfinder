@@ -20,7 +20,7 @@
       ],
       [
         "4000",
-        "Garry's Mod",
+        "Garry's Mod™",
         0.06
       ],
       [
@@ -49,12 +49,13 @@
       "Team Fortress 2",
       "Left 4 Dead 2",
       "Half-Life 2",
-      "Garry's Mod",
+      "Garry's Mod™",
       "Terraria",
       "Dota 2",
       "Counter-Strike: Global Offensive",
       "FTL: Faster Than Light",
-      "Hats"
+      "Hats",
+      "Call of Duty®: Black Ops"
     ]
   },
   "cases": [
@@ -204,6 +205,40 @@
       ],
       "reasons": [
         "names a game outside the pick and the history: Counter-Strike: Global Offensive"
+      ]
+    },
+    {
+      "name": "a title written without its trademark sign still names it",
+      "claims": [
+        {
+          "text": "Garry's Mod counted for 6% of the score.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "4000",
+              "share": 0.06
+            }
+          ]
+        }
+      ],
+      "reasons": []
+    },
+    {
+      "name": "an outside game written without its trademark sign is caught",
+      "claims": [
+        {
+          "text": "Portal 2 counted for 41%, unlike Call of Duty: Black Ops.",
+          "evidence": [
+            {
+              "type": "attribution",
+              "game_id": "620",
+              "share": 0.4125
+            }
+          ]
+        }
+      ],
+      "reasons": [
+        "names a game outside the pick and the history: Call of Duty®: Black Ops"
       ]
     },
     {

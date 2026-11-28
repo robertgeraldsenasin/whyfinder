@@ -29,6 +29,7 @@ from whyfinder.rag.generate import (
     explain,
     facts,
     literal,
+    pinned,
     prompt,
     read,
     schema,
@@ -165,6 +166,10 @@ def test_titles_are_pinned_literally_and_odd_quotes_left_out() -> None:
     assert re.fullmatch(a1, "Because of S.T.A.L.K.E.R.: Call of Pripyat (2010).")
     assert not re.fullmatch(a1, "Because of SxTxAxLxKxExRx: Call of Pripyat (2010).")
     assert literal("a.b(c)") == "a\\.b\\(c\\)"
+    marked = pinned("BioShock\u00ae 2: Total War\u2122")
+    assert re.fullmatch(marked, "BioShock 2: Total War")
+    assert re.fullmatch(marked, "BioShock\u00ae 2: Total War\u2122")
+    assert not re.fullmatch(marked, "BioShock 3: Total War")
 
 
 def test_reading_an_answer_attaches_each_facts_evidence() -> None:

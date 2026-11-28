@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any, Literal, Protocol
 
 from whyfinder.rag.claims import (
+    MARKS,
     MAX_CLAIMS,
     MAX_WORDS,
     TOP,
@@ -84,6 +85,12 @@ def literal(text: str) -> str:
     return "".join("\\" + c if c in META else c for c in text)
 
 
+def pinned(title: str) -> str:
+    """A title as a regex: itself, with its trademark signs optional. A model that writes
+    "BioShock 2" for "BioShock® 2" is not forced to splice the sign in mid-word."""
+    return "".join(literal(c) + ("?" if c in MARKS else "") for c in title)
+
+
 def span(most: int) -> str:
     """Up to `most` characters of free text."""
     return f"{FREE}{{0,{most}}}"
@@ -105,7 +112,7 @@ LEAD, TAIL, AFTER = 75, 55, 30
 
 
 def about(title: str) -> str:
-    return f"^{span(LEAD)}{literal(title)}{span(TAIL)}{END}$"
+    return f"^{span(LEAD)}{pinned(title)}{span(TAIL)}{END}$"
 
 
 def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
@@ -124,13 +131,13 @@ def facts(pack: Pack, *, with_attributions: bool = True) -> list[Fact]:
         pct = round(share * 100)
         line = f"{title} counted for {pct}% of the score"
         lead = f"({span(LEAD)}|{span(LEAD)}{pct}%{span(45)})"  # the share may come first
-        pattern = f"^{lead}{literal(title)}{span(TAIL)}({pct}%{span(AFTER)})?{END}$"
+        pattern = f"^{lead}{pinned(title)}{span(TAIL)}({pct}%{span(AFTER)})?{END}$"
         cue = f"{title}, {pct}%"
         out.append(Fact(f"A{n}", line, AttributionRef(gid, share), pattern, cue))
     if pack.removed:
         names = " and ".join(t for _, t in pack.removed)
         line = f"without {names} in the list, {pack.pick_title} would drop out of the picks"
-        joined = f"{FREE}{{1,25}}".join(literal(t) for _, t in pack.removed)
+        joined = f"{FREE}{{1,25}}".join(pinned(t) for _, t in pack.removed)
         pattern = f"^{span(LEAD)}{joined}{span(TAIL)}{END}$"
         cue = names
         ids = tuple(g for g, _ in pack.removed)

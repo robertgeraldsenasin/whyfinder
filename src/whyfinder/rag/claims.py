@@ -195,22 +195,39 @@ def is_verbatim(quote: str, text: str) -> bool:
     return 0 < len(words) <= MAX_QUOTE_WORDS and " ".join(words) in " ".join(text.split())
 
 
+MARKS = ("\u00ae", "\u2122", "\u00a9")  # ® ™ ©, which players rarely type
+
+
+def bare(text: str) -> str:
+    """`text` without trademark signs, whitespace normalised: how a title is usually written."""
+    for mark in MARKS:
+        text = text.replace(mark, "")
+    return " ".join(text.split())
+
+
+def names(text: str, title: str) -> bool:
+    """The sentence names the title, with or without its trademark signs."""
+    return title in text or bare(title) in bare(text)
+
+
 def unlisted_games(
     text: str, quotes: Iterable[str], catalogue: Iterable[str], allowed: set[str]
 ) -> list[str]:
-    """Catalogue titles a sentence names, outside its quotes, that are not allowed. Allowed titles
-    are blanked first, longest first, so "Portal 2" never reads as "Portal"."""
+    """Catalogue titles a sentence names, outside its quotes, that are not allowed, with or without
+    their trademark signs. Allowed titles are blanked first, longest first, so "Portal 2" never
+    reads as "Portal"."""
     rest = text
     for quote in quotes:
         rest = rest.replace(quote, " ")
-    for title in sorted(allowed, key=len, reverse=True):
+    rest = bare(rest)
+    for title in sorted({bare(a) for a in allowed}, key=len, reverse=True):
         rest = re.sub(rf"(?<!\w){re.escape(title)}(?!\w)", " ", rest)
     return [
         title
         for title in catalogue
         if title not in allowed
-        and len(title) > 3
-        and re.search(rf"(?<!\w){re.escape(title)}(?!\w)", rest)
+        and len(bare(title)) > 3
+        and re.search(rf"(?<!\w){re.escape(bare(title))}(?!\w)", rest)
     ]
 
 
@@ -253,7 +270,7 @@ def check(claims: list[Claim], source: Source) -> list[str]:
                 title, share = fact
                 if abs(share - e.share) > 0.005:
                     reasons.append(f"wrong share for {title}: {e.share:.3f}, not {share:.3f}")
-                elif title not in claim.text:
+                elif not names(claim.text, title):
                     reasons.append(f"cites {title} without naming it")
                 cited.append(share)
             elif isinstance(e, ReviewRef):
