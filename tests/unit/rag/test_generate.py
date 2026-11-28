@@ -262,9 +262,9 @@ def server() -> Iterator[tuple[str, list[dict[str, Any]]]]:
         def log_message(self, *args: object) -> None:
             return
 
-        def reply(self, body: dict[str, Any]) -> None:
+        def reply(self, body: dict[str, Any], status: int = 200) -> None:
             raw = json.dumps(body).encode()
-            self.send_response(200)
+            self.send_response(status)
             self.send_header("content-type", "application/json")
             self.send_header("content-length", str(len(raw)))
             self.end_headers()
@@ -276,6 +276,9 @@ def server() -> Iterator[tuple[str, list[dict[str, Any]]]]:
         def do_POST(self) -> None:
             body = json.loads(self.rfile.read(int(self.headers["content-length"])))
             seen.append(body)
+            if body.get("model") == "picky":
+                self.reply({"error": "failed to load model vocabulary required for format"}, 400)
+                return
             self.reply({"response": GOOD})
 
     httpd = HTTPServer(("127.0.0.1", 0), Handler)
@@ -302,6 +305,9 @@ def test_ollama_asks_for_schema_constrained_deterministic_output(
     assert sent["format"] == schema(facts(PACK))
     with pytest.raises(LlmUnavailableError, match="not pulled"):
         _ = Ollama("missing", url=url).digest
+    # Ollama's own reason for refusing a request reaches the error, not just the status line.
+    with pytest.raises(LlmUnavailableError, match=r"400.*failed to load model vocabulary"):
+        Ollama("picky", url=url).complete("hello", seed=7, schema={})
 
 
 def test_ollama_reports_an_unreachable_server() -> None:

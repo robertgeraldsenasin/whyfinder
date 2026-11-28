@@ -87,8 +87,10 @@ def literal(text: str) -> str:
 
 def pinned(title: str) -> str:
     """A title as a regex: itself, with its trademark signs optional. A model that writes
-    "BioShock 2" for "BioShock® 2" is not forced to splice the sign in mid-word."""
-    return "".join(literal(c) + ("?" if c in MARKS else "") for c in title)
+    "BioShock 2" for "BioShock® 2" is not forced to splice the sign in mid-word. Each sign is a
+    group, "(®)?": llama.cpp reads patterns byte by byte, and a bare "®?" would make only the
+    second byte of the sign optional, which Ollama rejects."""
+    return "".join(f"({c})?" if c in MARKS else literal(c) for c in title)
 
 
 def span(most: int) -> str:
@@ -276,6 +278,9 @@ class Ollama:
             with urllib.request.urlopen(req, timeout=self.timeout) as response:  # noqa: S310
                 out: dict[str, Any] = json.loads(response.read())
                 return out
+        except urllib.error.HTTPError as exc:
+            said = exc.read().decode("utf-8", "replace").strip()[:500]
+            raise LlmUnavailableError(f"{self.url}{path}: {exc} {said}".rstrip()) from exc
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             raise LlmUnavailableError(f"{self.url}{path}: {exc}") from exc
 
