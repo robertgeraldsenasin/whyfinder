@@ -5,11 +5,13 @@ import type { ModelFile, Slice } from '../engine/types';
 import type { Evidence as Reviews } from './evidence';
 import {
   aspects,
+  bare,
   check,
   type Claim,
   facts,
   ground,
   isVerbatim,
+  names,
   type Pack,
   quotesFor,
   roundHalfEven,
@@ -76,6 +78,14 @@ describe('the pieces', () => {
     expect(unlistedGames('Thieves and rusty keys', [], catalogue, new Set())).toEqual([]);
     expect(unlistedGames('as a "Thief" would', ['Thief'], catalogue, new Set())).toEqual([]);
     expect(unlistedGames('Café (Deluxe)', [], ['Café (Deluxe)'], new Set())).toEqual(['Café (Deluxe)']);
+  });
+
+  it('reads titles with or without their trademark signs', () => {
+    expect(bare('BioShock\u00ae 2:  Total War\u2122')).toBe('BioShock 2: Total War');
+    expect(names('BioShock 2 drives it.', 'BioShock\u00ae 2')).toBe(true);
+    expect(names('BioShock drives it.', 'BioShock\u00ae 2')).toBe(false);
+    expect(unlistedGames('Like Call of Duty: Black Ops.', [], ['Call of Duty\u00ae: Black Ops'], new Set())).toEqual(['Call of Duty\u00ae: Black Ops']);
+    expect(unlistedGames('BioShock 2 again.', [], ['BioShock\u00ae 2'], new Set(['BioShock\u00ae 2']))).toEqual([]);
   });
 
   it('does not treat chunk IDs that look like object keys as retrieved', () => {

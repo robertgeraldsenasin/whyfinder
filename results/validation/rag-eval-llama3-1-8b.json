@@ -1,0 +1,43 @@
+{
+  "attribution_agreement_outputs": 0,
+  "attribution_agreement_tau": null,
+  "cases": 60,
+  "claim_support_before_fallback": 0.9912280701754386,
+  "digest": "46e0c10c039e019119339687c3c1757cc81b9da49709a3b3924863ba87ca666e",
+  "entailment": {
+    "qwen2.5:7b": {
+      "digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+      "self_judged": false,
+      "served_model_sentences": {
+        "contradicted": 0.09523809523809523,
+        "entailed": 0.6547619047619048,
+        "invalid": 0.0,
+        "neutral": 0.25,
+        "sentences": 84
+      },
+      "template_sentences": {
+        "contradicted": 0.040268456375838924,
+        "entailed": 0.6442953020134228,
+        "invalid": 0.0,
+        "neutral": 0.31543624161073824,
+        "sentences": 149
+      }
+    }
+  },
+  "fallback_rate": 0.3,
+  "first_try_pass_rate": 0.48333333333333334,
+  "first_try_rejections": {
+    "claim schema": 3,
+    "outside the pick and the history": 1,
+    "the limit is": 28
+  },
+  "model": "llama3.1:8b",
+  "pass_within_two_tries": 0.7,
+  "seed": 20261117,
+  "served_adds_nothing": 0.3333333333333333,
+  "served_model_claims": 84,
+  "served_parroted": 0.0,
+  "served_unfinished": 0.023809523809523808,
+  "top1_cited_with_attributions": 0.3333333333333333,
+  "top1_cited_without_attributions": 0.48333333333333334
+}

@@ -139,13 +139,26 @@ const W = '[\\p{L}\\p{N}_]';
 const escape = (s: string): string => s.replace(/[\^$\\.*+?()[\]{}|/]/g, '\\$&');
 const named = (title: string, flags = 'u'): RegExp => new RegExp(`(?<!${W})${escape(title)}(?!${W})`, flags);
 
-/** Catalogue titles a sentence names, outside its quotes, that are not allowed. Allowed titles are
- * blanked first, longest first, so "Portal 2" never reads as "Portal". */
+/** `text` without the trademark signs players rarely type, whitespace normalised. */
+export function bare(text: string): string {
+  return words(text.replace(/[\u00ae\u2122\u00a9]/g, '')).join(' ');
+}
+
+/** The sentence names the title, with or without its trademark signs. */
+export function names(text: string, title: string): boolean {
+  return text.includes(title) || bare(text).includes(bare(title));
+}
+
+/** Catalogue titles a sentence names, outside its quotes, that are not allowed, with or without
+ * their trademark signs. Allowed titles are blanked first, longest first, so "Portal 2" never
+ * reads as "Portal". */
 export function unlistedGames(text: string, quotes: string[], catalogue: string[], allowed: Set<string>): string[] {
   let rest = text;
   for (const quote of quotes) rest = rest.replaceAll(quote, ' ');
-  for (const title of [...allowed].sort((a, b) => b.length - a.length)) rest = rest.replace(named(title, 'gu'), ' ');
-  return catalogue.filter((title) => !allowed.has(title) && title.length > 3 && named(title).test(rest));
+  rest = bare(rest);
+  const blank = [...new Set([...allowed].map(bare))].sort((a, b) => b.length - a.length);
+  for (const title of blank) rest = rest.replace(named(title, 'gu'), ' ');
+  return catalogue.filter((title) => !allowed.has(title) && bare(title).length > 3 && named(bare(title)).test(rest));
 }
 
 /**
@@ -182,7 +195,7 @@ export function check(claims: Claim[], source: Source): string[] {
         }
         if (Math.abs(fact.share - e.share) > 0.005) {
           reasons.push(`wrong share for ${fact.title}: ${e.share.toFixed(3)}, not ${fact.share.toFixed(3)}`);
-        } else if (!claim.text.includes(fact.title)) {
+        } else if (!names(claim.text, fact.title)) {
           reasons.push(`cites ${fact.title} without naming it`);
         }
         cited.push(fact.share);

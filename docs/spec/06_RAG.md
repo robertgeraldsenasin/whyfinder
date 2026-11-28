@@ -32,15 +32,16 @@ pick's reviews, and a quote counts only if BM25 matches it.
 
 Generation runs when a model is configured (`WHYFINDER_LLM_MODEL` for `whyfinder serve run`, the
 llm workflow for the evaluation); otherwise the template sentences are served, through the same
-checker. The model writes one sentence per numbered fact; the per-prompt schema pins each sentence
-to its fact (the exact title, the listed percentage or none, the quote verbatim) and Ollama enforces
-it while decoding; code attaches the evidence. Measured on 60 picks with three CPU-sized models
-(ADR-0009, `results/validation/rag-eval-*.json`), llama3.2:3b keeps 99.4% of its claims on the
-first try and never needs the fallback, meeting the 95% target; before pinning, the best model
-passed within two tries 32% of the time. The checker guards faithfulness, not prose: half of
-llama3.2:3b's sentences only restate a fact line and 8% are cut off by the length bound, so
-generation stays opt-in. Still to come: grades for the 150 retrieval queries (the sheet and guide are in
-`docs/labelling/`) and the NLI entailment score.
+checker. The model writes one or two sentences, each using one numbered fact; the per-prompt schema
+pins each sentence to its fact (the title, trademark signs optional, the listed percentage or none,
+the quote verbatim, a closing full stop) and Ollama enforces it while decoding; code attaches the
+evidence. A judge model labels every served sentence for entailment, with the template sentences
+as its control (`rag/judge.py`). Measured on 60 picks with five models (ADR-0009,
+`results/validation/rag-eval-*.json`), every model keeps at least 93% of its claims on the first
+try and copying is nearly gone, but the judge finds 8% to 20% of model sentences contradicted
+against 4% of the template's. The default, llama3.1:8b, is as often entailed as the template when
+it speaks and falls back on 30% of picks for length, so generation stays opt-in. Still to come:
+grades for the 150 retrieval queries (the sheet and guide are in `docs/labelling/`).
 
 ## One explanation, step by step
 
@@ -51,8 +52,8 @@ generation stays opt-in. Still to come: grades for the 150 retrieval queries (th
 3. **Retrieval:** one query per aspect against the pick's chunks only (metadata filter); BM25 and dense
    rankings fused by RRF (k = 60); keep the top 5 chunks overall.
 4. **Generation:** temperature 0, JSON output validated against `claim.schema.json`, at most 3 claims
-   and 60 words. Default model: a small open instruct model through **Ollama** (ADR-0009). The model
-   name and digest go in every run's metadata.
+   and 60 words (a model writes at most 2). Default model: llama3.1:8b through **Ollama** (ADR-0009).
+   The model name and digest go in every run's metadata.
 5. **Checker** (FR-17), deterministic:
    - attribution claims cite a game in the top 5, and any percentage matches its share within 1 point;
    - quotes are verbatim spans (≤ 25 words) of a retrieved chunk;
@@ -86,7 +87,7 @@ default; the LLM is optional and its output goes through the same validation.
 | Measure | How | Pass mark (proposed) |
 | --- | --- | --- |
 | Claim support | Checker over the CI sample | ≥ 95% before fallback |
-| Entailment | Local NLI cross-encoder scores each claim against its evidence | Reported; gated non-inferior |
+| Entailment | A local instruct model (`rag/judge.py`) labels each served sentence against all the facts; the template sentences are labelled too, as the judge's error rate. An NLI cross-encoder was tried first and could not read these facts (ADR-0009) | Reported next to the template control |
 | Attribution agreement | Kendall τ between the order games are named and attribution order | τ ≥ 0.7 |
 | Retrieval | 150 hand-labelled (pick, aspect) queries, every review of the pick graded 0-2 (docs/labelling/retrieval.md): Recall@5, nDCG@5; Cohen's κ on 30 double-labelled queries | Gated non-inferior |
 | Research ablation | Same prompt without attributions: share of claims that match the model's real top-5 | Reported in the paper |

@@ -45,7 +45,7 @@ jobs:
         run: uv run whyfinder serve openapi --check
       - name: Grounded generation replays its cache (ADR-0009)
         run: |
-          for model in qwen2.5:1.5b qwen2.5:3b llama3.2:3b; do
+          for model in qwen2.5:1.5b qwen2.5:3b llama3.2:3b llama3.1:8b qwen2.5:7b; do
             uv run whyfinder rag eval --mode replay --model "$model" --check
           done
       - name: Coverage report

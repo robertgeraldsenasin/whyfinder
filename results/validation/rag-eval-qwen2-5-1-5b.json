@@ -1,21 +1,42 @@
 {
-  "attribution_agreement_outputs": 37,
+  "attribution_agreement_outputs": 5,
   "attribution_agreement_tau": 1.0,
   "cases": 60,
-  "claim_support_before_fallback": 1.0,
+  "claim_support_before_fallback": 0.9692307692307692,
   "digest": "65ec06548149b04c096a120e4a6da9d4017ea809c91734ea5631e89f96ddc57b",
-  "fallback_rate": 0.03333333333333333,
-  "first_try_pass_rate": 0.8166666666666667,
+  "entailment": {
+    "qwen2.5:7b": {
+      "digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+      "self_judged": false,
+      "served_model_sentences": {
+        "contradicted": 0.07692307692307693,
+        "entailed": 0.3384615384615385,
+        "invalid": 0.0,
+        "neutral": 0.5846153846153846,
+        "sentences": 65
+      },
+      "template_sentences": {
+        "contradicted": 0.040268456375838924,
+        "entailed": 0.6442953020134228,
+        "invalid": 0.0,
+        "neutral": 0.31543624161073824,
+        "sentences": 149
+      }
+    }
+  },
+  "fallback_rate": 0.0,
+  "first_try_pass_rate": 0.95,
   "first_try_rejections": {
-    "claim schema": 5,
-    "the limit is": 6
+    "matches no cited share": 1,
+    "the limit is": 2
   },
   "model": "qwen2.5:1.5b",
-  "pass_within_two_tries": 0.9666666666666667,
+  "pass_within_two_tries": 1.0,
   "seed": 20261117,
-  "served_model_claims": 159,
-  "served_parroted": 0.7987421383647799,
-  "served_unfinished": 0.12578616352201258,
-  "top1_cited_with_attributions": 0.9166666666666666,
-  "top1_cited_without_attributions": 0.36666666666666664
+  "served_adds_nothing": 0.18461538461538463,
+  "served_model_claims": 65,
+  "served_parroted": 0.03076923076923077,
+  "served_unfinished": 0.12307692307692308,
+  "top1_cited_with_attributions": 1.0,
+  "top1_cited_without_attributions": 0.4166666666666667
 }

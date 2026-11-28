@@ -29,6 +29,7 @@ from whyfinder.rag.generate import (
     explain,
     facts,
     literal,
+    pinned,
     prompt,
     read,
     schema,
@@ -92,15 +93,23 @@ def test_the_prompt_lists_the_facts_and_the_ablation_hides_the_shares() -> None:
     for fact in (
         "Write in English",
         "Recommended game: Hades",
-        "A1: Dead Cells counted for 50%",
-        QUOTE,
-        "Roguelite",
+        "Games the player liked, with the share of the reasons for this pick each supplied:\n"
+        "A1: Dead Cells, 50%\nA2: Hollow Knight, 30%\nA3: Celeste, 20%\n",
+        "Had the player not liked these games, Hades would not have been recommended:\n"
+        "C1: Dead Cells\n",
+        f"What players of Hades wrote:\nQ1: on combat, \u201c{QUOTE}\u201d\n",
+        "one or two sentences of at most 25 words each",
+        "Also true, may be mentioned but has no ID: "
+        "Hades shares the tag Roguelite with Dead Cells.",
+        "End every sentence with a full stop.",
     ):
         assert fact in full
+    # Facts are listed as data, not as the sentences a model could copy back.
+    assert "counted for 50% of the score" not in full
     bare = prompt(PACK, with_attributions=False)
     assert "50%" not in bare
     assert QUOTE not in bare
-    assert bare.index("L1: Celeste") < bare.index("L2: Dead Cells")
+    assert "Games the player liked:\nL1: Celeste\nL2: Dead Cells\nL3: Hollow Knight\n" in bare
     again = prompt(PACK, feedback=["wrong share for Dead Cells"])
     assert again.startswith(full)
     assert "- wrong share for Dead Cells" in again
@@ -111,15 +120,29 @@ def test_the_schema_pins_each_sentence_to_its_fact() -> None:
     s = schema(listed)
     options = s["properties"]["claims"]["items"]["anyOf"]
     assert [o["properties"]["fact"]["enum"] for o in options] == [[f.id] for f in listed]
-    assert s["properties"]["claims"]["maxItems"] == 3
+    assert s["properties"]["claims"]["maxItems"] == 2  # the template may use three
     by_id = {f.id: f.pattern for f in listed}
     fits = {
-        "A1": ["Dead Cells is the main reason (50%).", "You liked Dead Cells, so here it is."],
+        "A1": [
+            "Dead Cells is the main reason (50%).",
+            "You liked Dead Cells, so here it is!",
+            "Half of this pick, 50%, comes from the hours you put into Dead Cells.",
+        ],
         "C1": ["Take Dead Cells off your list and Hades drops out."],
-        "Q1": [f"One player puts it simply: \u201c{QUOTE}\u201d."],
+        "Q1": [f"One player puts it simply: \u201c{QUOTE}\u201d.", f"\u201c{QUOTE}\u201d"],
     }
     misses = {
-        "A1": ["Hades is great.", "Dead Cells drove 90% of it.", 'Dead Cells, "they" say.'],
+        "A1": [
+            "Hades is great.",
+            "Dead Cells drove 90% of it.",
+            'Dead Cells, "they" say.',
+            "Dead Cells is the main reason, making it",  # cut off: no full stop
+            "Dead Cells " + "and more " * 20 + ".",  # past the bound
+            "Dead Cells is the main reason. {",  # JSON debris
+            "Dead Cells is the main reason [1].",
+            "Dead Cells is the main\nreason.",
+        ],
+        "C1": ["Take Dead Cells off your list and Hades drops out"],
         "Q1": [f'Players say "{QUOTE}"', f"\u201c{QUOTE[:-1]}\u201d"],
     }
     for fid, texts in fits.items():
@@ -143,6 +166,10 @@ def test_titles_are_pinned_literally_and_odd_quotes_left_out() -> None:
     assert re.fullmatch(a1, "Because of S.T.A.L.K.E.R.: Call of Pripyat (2010).")
     assert not re.fullmatch(a1, "Because of SxTxAxLxKxExRx: Call of Pripyat (2010).")
     assert literal("a.b(c)") == "a\\.b\\(c\\)"
+    marked = pinned("BioShock\u00ae 2: Total War\u2122")
+    assert re.fullmatch(marked, "BioShock 2: Total War")
+    assert re.fullmatch(marked, "BioShock\u00ae 2: Total War\u2122")
+    assert not re.fullmatch(marked, "BioShock 3: Total War")
 
 
 def test_reading_an_answer_attaches_each_facts_evidence() -> None:
@@ -235,9 +262,9 @@ def server() -> Iterator[tuple[str, list[dict[str, Any]]]]:
         def log_message(self, *args: object) -> None:
             return
 
-        def reply(self, body: dict[str, Any]) -> None:
+        def reply(self, body: dict[str, Any], status: int = 200) -> None:
             raw = json.dumps(body).encode()
-            self.send_response(200)
+            self.send_response(status)
             self.send_header("content-type", "application/json")
             self.send_header("content-length", str(len(raw)))
             self.end_headers()
@@ -249,6 +276,12 @@ def server() -> Iterator[tuple[str, list[dict[str, Any]]]]:
         def do_POST(self) -> None:
             body = json.loads(self.rfile.read(int(self.headers["content-length"])))
             seen.append(body)
+            if body.get("model") == "picky":
+                self.reply({"error": "failed to load model vocabulary required for format"}, 400)
+                return
+            if body.get("model") == "loops":
+                self.reply({"error": "prediction aborted, token repeat limit reached"}, 500)
+                return
             self.reply({"response": GOOD})
 
     httpd = HTTPServer(("127.0.0.1", 0), Handler)
@@ -275,6 +308,14 @@ def test_ollama_asks_for_schema_constrained_deterministic_output(
     assert sent["format"] == schema(facts(PACK))
     with pytest.raises(LlmUnavailableError, match="not pulled"):
         _ = Ollama("missing", url=url).digest
+    # Ollama's own reason for refusing a request reaches the error, not just the status line.
+    with pytest.raises(LlmUnavailableError, match=r"400.*failed to load model vocabulary"):
+        Ollama("picky", url=url).complete("hello", seed=7, schema={})
+    # A model stuck repeating itself is a failed answer, not a failed server.
+    stopped = Ollama("loops", url=url).complete("hello", seed=7, schema={})
+    assert json.loads(stopped) == {"error": "prediction aborted"}
+    with pytest.raises(SchemaError, match="the model was stopped: prediction aborted"):
+        read(stopped, facts(PACK))
 
 
 def test_ollama_reports_an_unreachable_server() -> None:
